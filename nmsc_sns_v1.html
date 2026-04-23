@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<script>
+(function() {
+  const K = "nmsc_auth_session";
+  const s = localStorage.getItem(K);
+  const ss = sessionStorage.getItem(K);
+  let valid = false;
+  if (ss === "active") valid = true;
+  else if (s) {
+    try {
+      const { expires } = JSON.parse(s);
+      if (Date.now() < expires) valid = true;
+      else localStorage.removeItem(K);
+    } catch {}
+  }
+  if (!valid) window.location.replace("./index.html");
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NMSC SNS 올인원 v1</title>
