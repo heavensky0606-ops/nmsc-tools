@@ -3,39 +3,335 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>NMSC 도구 모음</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Noto Sans KR', -apple-system, sans-serif; }
-body { background: linear-gradient(135deg, #07101f, #0c1c3d); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.container { max-width: 600px; width: 100%; text-align: center; }
-h1 { color: #fff; font-size: 32px; font-weight: 900; margin-bottom: 12px; letter-spacing: -0.02em; }
-.sub { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 40px; }
-.tools { display: grid; gap: 16px; }
-.tool-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(201,162,39,0.3); border-radius: 12px; padding: 24px; text-decoration: none; transition: 0.2s; }
-.tool-card:hover { background: rgba(201,162,39,0.1); border-color: #c9a227; transform: translateY(-2px); }
-.tool-icon { font-size: 32px; margin-bottom: 8px; }
-.tool-name { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-.tool-desc { color: rgba(255,255,255,0.55); font-size: 12px; }
-.footer { margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px; letter-spacing: 0.1em; }
+body { 
+  background: linear-gradient(135deg, #07101f 0%, #0c1c3d 45%, #081526 100%); 
+  min-height: 100vh; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  padding: 20px;
+  color: #fff;
+}
+
+.lock-screen { max-width: 420px; width: 100%; text-align: center; }
+.lock-logo {
+  width: 64px; height: 64px;
+  background: linear-gradient(135deg, #c9a227, #a87c2a);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 28px; font-weight: 900;
+  color: #0c1c3d;
+  box-shadow: 0 8px 32px rgba(201,162,39,0.4);
+}
+.lock-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; letter-spacing: -0.02em; }
+.lock-sub { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 32px; }
+.pw-form { display: flex; flex-direction: column; gap: 12px; }
+.pw-input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(201,162,39,0.3);
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 15px;
+  color: #fff;
+  outline: none;
+  letter-spacing: 0.05em;
+  font-family: 'Noto Sans KR', monospace;
+  transition: all 0.2s;
+}
+.pw-input::placeholder { color: rgba(255,255,255,0.3); letter-spacing: 0.02em; }
+.pw-input:focus { border-color: #c9a227; background: rgba(201,162,39,0.08); }
+.pw-input.error { border-color: #ef4444; background: rgba(239,68,68,0.1); animation: shake 0.4s ease; }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.pw-btn {
+  background: linear-gradient(135deg, #c9a227, #a87c2a);
+  color: #0c1c3d;
+  border: none;
+  padding: 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: all 0.2s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.pw-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(201,162,39,0.4); }
+.pw-error-msg {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 8px;
+  min-height: 18px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.pw-error-msg.show { opacity: 1; }
+.remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+}
+.remember-row input[type="checkbox"] { accent-color: #c9a227; cursor: pointer; }
+.remember-row label { cursor: pointer; }
+.forgot-link {
+  margin-top: 20px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  display: block;
+  margin: 20px auto 0;
+}
+.forgot-link:hover { color: rgba(255,255,255,0.6); }
+.forgot-modal {
+  display: none;
+  margin-top: 20px;
+  padding: 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.7);
+}
+.forgot-modal.show { display: block; }
+.forgot-modal b { color: #c9a227; }
+.forgot-modal code {
+  background: rgba(0,0,0,0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Consolas, monospace;
+  color: #e8c55a;
+  font-size: 11px;
+}
+.forgot-modal a { color: #c9a227; text-decoration: underline; }
+.forgot-modal ol { margin-top: 8px; padding-left: 20px; }
+.forgot-modal li { margin-bottom: 4px; }
+
+.dashboard { display: none; max-width: 640px; width: 100%; text-align: center; }
+.dashboard.active { display: block; }
+.d-logo {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, #c9a227, #a87c2a);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 24px; font-weight: 900;
+  color: #0c1c3d;
+  box-shadow: 0 8px 24px rgba(201,162,39,0.3);
+}
+h1 { font-size: 32px; font-weight: 900; margin-bottom: 8px; letter-spacing: -0.02em; }
+.d-sub { color: rgba(255,255,255,0.55); font-size: 14px; margin-bottom: 40px; }
+.tools { display: grid; gap: 14px; }
+.tool-card { 
+  background: rgba(255,255,255,0.04); 
+  border: 1px solid rgba(201,162,39,0.3); 
+  border-radius: 12px; 
+  padding: 24px 28px; 
+  text-decoration: none; 
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-align: left;
+}
+.tool-card:hover { 
+  background: rgba(201,162,39,0.1); 
+  border-color: #c9a227; 
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(201,162,39,0.15);
+}
+.tool-icon { font-size: 32px; flex-shrink: 0; }
+.tool-info { flex: 1; }
+.tool-name { color: #fff; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.tool-desc { color: rgba(255,255,255,0.5); font-size: 12px; line-height: 1.5; }
+.tool-arrow { color: #c9a227; font-size: 20px; flex-shrink: 0; }
+.footer { 
+  margin-top: 48px; 
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.3); 
+  font-size: 11px; 
+  letter-spacing: 0.15em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer b { color: #c9a227; font-weight: 700; }
+.logout-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.4);
+  font-size: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.logout-btn:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
 </style>
 </head>
 <body>
-<div class="container">
+
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-logo">🔒</div>
+  <div class="lock-title">NMSC 도구 모음</div>
+  <div class="lock-sub">계속하려면 비밀번호를 입력하세요</div>
+  
+  <form class="pw-form" id="pwForm" onsubmit="handleLogin(event)">
+    <input type="password" class="pw-input" id="pwInput" placeholder="비밀번호" autocomplete="current-password" autofocus>
+    <button type="submit" class="pw-btn">접속</button>
+    <div class="pw-error-msg" id="errorMsg"></div>
+    <div class="remember-row">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe">이 브라우저에서 24시간 기억하기</label>
+    </div>
+  </form>
+  
+  <button class="forgot-link" onclick="toggleForgot()">🔑 비밀번호를 잊으셨나요?</button>
+  
+  <div class="forgot-modal" id="forgotModal">
+    <b>📧 비밀번호 재설정 절차</b>
+    <p style="margin-top: 8px;">
+      이 사이트는 <b>heavensky0606@gmail.com</b> 계정과 연결된 GitHub 저장소에서 관리됩니다. 
+      비밀번호를 변경하려면 해당 Google 계정으로 GitHub 로그인 후 직접 수정하세요.
+    </p>
+    <ol>
+      <li><a href="https://github.com/heavensky0606-ops/nmsc-tools/blob/main/index.html" target="_blank">GitHub 저장소 열기</a></li>
+      <li>GitHub 로그인 (2단계 인증)</li>
+      <li>index.html 파일 ✏️ 편집</li>
+      <li>코드 내 <code>PASSWORD_HASH</code> 값을 새 해시로 변경</li>
+      <li>변경사항 커밋 → 2~3분 후 반영</li>
+    </ol>
+    <p style="margin-top: 8px; color: rgba(255,255,255,0.5); font-size: 11px;">
+      새 비밀번호 해시 생성: 터미널에서<br>
+      <code>echo -n "새비번" | shasum -a 256</code>
+    </p>
+  </div>
+</div>
+
+<div class="dashboard" id="dashboard">
+  <div class="d-logo">N</div>
   <h1>NMSC 도구 모음</h1>
-  <p class="sub">나이스경영지원센터 블로그 · SNS 콘텐츠 도구</p>
+  <p class="d-sub">나이스경영지원센터 · 블로그 · SNS 콘텐츠 도구</p>
+  
   <div class="tools">
     <a href="nmsc_blog_v3.html" class="tool-card">
       <div class="tool-icon">📝</div>
-      <div class="tool-name">블로그 검수 · 썸네일 생성</div>
-      <div class="tool-desc">블로그 본문 검수 및 고품질 썸네일 제작</div>
+      <div class="tool-info">
+        <div class="tool-name">블로그 검수 · 썸네일 생성</div>
+        <div class="tool-desc">블로그 본문 검수 및 고품질 썸네일 제작</div>
+      </div>
+      <div class="tool-arrow">→</div>
     </a>
     <a href="nmsc_sns_v1.html" class="tool-card">
       <div class="tool-icon">📸</div>
-      <div class="tool-name">SNS 배포 도구</div>
-      <div class="tool-desc">인스타그램 · 페이스북 · 카카오채널 동시 배포</div>
+      <div class="tool-info">
+        <div class="tool-name">SNS 배포 도구</div>
+        <div class="tool-desc">인스타그램 · 페이스북 · 카카오채널 동시 배포</div>
+      </div>
+      <div class="tool-arrow">→</div>
     </a>
   </div>
-  <div class="footer">NMSC · 1688-1298</div>
+  
+  <div class="footer">
+    <span>NMSC · <b>1688-1298</b></span>
+    <button class="logout-btn" onclick="logout()">🚪 로그아웃</button>
+  </div>
 </div>
+
+<script>
+const PASSWORD_HASH = "b021bc611dfc1f9801b2308a73aec3eea7913dc4cd2264869971617fa9469216";
+const SESSION_KEY = "nmsc_auth_session";
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+
+async function sha256(str) {
+  const buffer = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function checkSession() {
+  const session = localStorage.getItem(SESSION_KEY);
+  if (!session) return false;
+  try {
+    const { expires } = JSON.parse(session);
+    if (Date.now() > expires) {
+      localStorage.removeItem(SESSION_KEY);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const input = document.getElementById("pwInput");
+  const errorMsg = document.getElementById("errorMsg");
+  const remember = document.getElementById("rememberMe").checked;
+  const hash = await sha256(input.value);
+  
+  if (hash === PASSWORD_HASH) {
+    if (remember) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ expires: Date.now() + SESSION_DURATION_MS }));
+    } else {
+      sessionStorage.setItem(SESSION_KEY, "active");
+    }
+    showDashboard();
+  } else {
+    input.classList.add("error");
+    errorMsg.textContent = "비밀번호가 일치하지 않습니다";
+    errorMsg.classList.add("show");
+    input.value = "";
+    setTimeout(() => { input.classList.remove("error"); input.focus(); }, 400);
+  }
+}
+
+function showDashboard() {
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("dashboard").classList.add("active");
+}
+
+function logout() {
+  if (!confirm("로그아웃 하시겠습니까?")) return;
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+function toggleForgot() {
+  document.getElementById("forgotModal").classList.toggle("show");
+}
+
+(function init() {
+  if (checkSession() || sessionStorage.getItem(SESSION_KEY)) {
+    showDashboard();
+  }
+})();
+</script>
+
 </body>
 </html>
