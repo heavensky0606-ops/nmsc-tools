@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>NMSC 블로그 올인원 v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans KR',sans-serif}
+body{
+  background:#1a1a2e;min-height:100vh;
+  padding:20px 20px 40px;color:#1b2a53
+}
+
+/* ─── 상단 모드 탭 ─── */
+.mode-tabs{
+  max-width:1280px;margin:0 auto 20px;
+  display:flex;gap:0;background:#fff;border-radius:10px;
+  padding:8px;box-shadow:0 8px 32px rgba(0,0,0,.25)
+}
+.mode-tab{
+  flex:1;padding:14px 18px;border-radius:7px;
+  font-size:14px;font-weight:700;color:#888;
+  cursor:pointer;transition:.2s;text-align:center;
+  letter-spacing:-.01em;user-select:none;
+  display:flex;align-items:center;justify-content:center;gap:8px
+}
+.mode-tab:hover{color:#1b2a53;background:#f8f8f8}
+.mode-tab.active{background:#1b2a53;color:#fff;box-shadow:0 4px 14px rgba(27,42,83,.3)}
+.mode-tab .icon{font-size:18px}
+.mode-tab .sub{font-size:10px;color:#888;letter-spacing:.05em;margin-left:4px;font-weight:500}
+.mode-tab.active .sub{color:rgba(201,162,39,.9)}
+
+/* ─── 메인 레이아웃 ─── */
+.workspace{display:none;max-width:1280px;margin:0 auto;gap:24px}
+.workspace.active{display:flex;align-items:flex-start}
+
+.panel{
+  width:320px;flex-shrink:0;
+  background:#fff;border-radius:10px;
+  padding:22px;position:sticky;top:20px;
+  box-shadow:0 8px 32px rgba(0,0,0,.25);
+  max-height:calc(100vh - 40px);overflow-y:auto
+}
+.panel-ttl{
+  font-size:11px;letter-spacing:.22em;color:#c9a227;font-weight:700;
+  margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid #c9a227;
+  display:flex;align-items:center;justify-content:space-between
+}
+.panel-ttl .ver{color:#888;font-size:10px;letter-spacing:.1em}
+
+.main{
+  flex:1;background:#fff;border-radius:10px;
+  padding:28px;min-height:calc(100vh - 40px);
+  box-shadow:0 8px 32px rgba(0,0,0,.25)
+}
+.main-h{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #1b2a53;
+  flex-wrap:wrap;gap:10px
+}
+.main-h h1{font-size:18px;color:#1b2a53;font-weight:900;letter-spacing:-.01em}
+.main-h .stat{font-size:11px;color:#888;letter-spacing:.1em}
+.main-h .stat b{color:#c9a227}
+
+/* ─── 공통 섹션 ─── */
+.sec{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #f0f0f0}
+.sec:last-child{border-bottom:none;margin-bottom:0}
+.sec-h{
+  font-size:12px;color:#1b2a53;font-weight:700;
+  margin-bottom:10px;letter-spacing:.04em;
+  display:flex;align-items:center;gap:6px
+}
+.sec-h::before{content:"";width:3px;height:12px;background:#c9a227;border-radius:2px}
+
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tab{
+  flex:1;padding:7px 4px;font-size:11px;font-weight:700;
+  background:#f5f0e6;color:#888;border:1px solid #e0d8c8;
+  border-radius:4px;cursor:pointer;transition:.15s;text-align:center
+}
+.tab.active{background:#1b2a53;color:#fff;border-color:#1b2a53}
+.tab-body{display:none}
+.tab-body.active{display:block}
+
+.f{margin-bottom:10px}
+.f label{display:block;font-size:10px;color:#888;letter-spacing:.1em;font-weight:600;margin-bottom:4px}
+.f textarea,.f input[type=text]{
+  width:100%;background:#f8f8f8;border:1px solid #e0e0e0;
+  border-radius:4px;padding:8px 10px;color:#1b2a53;
+  font-size:12px;outline:none;resize:none;
+  transition:.15s;font-family:'Noto Sans KR',sans-serif;line-height:1.5
+}
+.f textarea:focus,.f input:focus{border-color:#c9a227;background:#fffdf5}
+.f textarea.big{height:160px}
+
+.dropzone{
+  border:2px dashed #c9a227;border-radius:6px;
+  padding:18px 10px;background:#fffdf5;
+  text-align:center;cursor:pointer;transition:.15s;
+  font-size:12px;color:#a87c2a;font-weight:700;margin-bottom:8px
+}
+.dropzone:hover,.dropzone.drag{background:#c9a227;color:#fff}
+.dropzone.drag{border-style:solid}
+.dropzone .sub{display:block;font-size:10px;color:#888;margin-top:4px;font-weight:500}
+.dropzone:hover .sub,.dropzone.drag .sub{color:rgba(255,255,255,.85)}
+.dropzone input{display:none}
+
+.rowlist{margin-top:8px;max-height:140px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:4px}
+.rowitem{padding:7px 10px;font-size:11px;color:#1b2a53;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:.1s}
+.rowitem:hover{background:#fffdf5}
+.rowitem:last-child{border-bottom:none}
+.rowitem .date{color:#888;font-size:10px;margin-right:6px}
+
+.rules{display:flex;flex-direction:column;gap:6px}
+.rule{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8f8f8;border-radius:4px;cursor:pointer;transition:.15s;user-select:none}
+.rule:hover{background:#fffdf5}
+.rule input{accent-color:#c9a227;cursor:pointer}
+.rule span{font-size:12px;color:#1b2a53;font-weight:500}
+
+.radio-group{display:flex;flex-direction:column;gap:5px}
+.radio{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8f8f8;border-radius:4px;cursor:pointer;transition:.15s;user-select:none;border:2px solid transparent;flex-wrap:wrap}
+.radio:hover{background:#fffdf5}
+.radio input{accent-color:#c9a227;cursor:pointer}
+.radio.selected{border-color:#c9a227;background:#fffdf5}
+.radio span{font-size:12px;color:#1b2a53;font-weight:600}
+.radio small{font-size:10px;color:#888;font-weight:400;margin-left:22px;display:block;line-height:1.4;flex-basis:100%}
+
+.btn{width:100%;padding:11px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;letter-spacing:.02em}
+.btn-primary{background:#1b2a53;color:#fff}
+.btn-primary:hover{background:#263a6e}
+.btn-gold{background:#c9a227;color:#fff}
+.btn-gold:hover{background:#a87c2a}
+.btn-ghost{background:#f5f0e6;color:#1b2a53;border:1px solid #e0d8c8}
+.btn-ghost:hover{background:#ebe2cf}
+.btn-row{display:flex;gap:6px;margin-top:8px}
+.btn-row .btn{flex:1;padding:8px;font-size:11px}
+
+.upload{display:block;padding:10px;border:2px dashed #c9a227;border-radius:6px;background:#fffdf5;text-align:center;cursor:pointer;transition:.15s;font-size:11px;color:#a87c2a;font-weight:700}
+.upload:hover{background:#c9a227;color:#fff}
+.upload input{display:none}
+.upload-info{font-size:10px;color:#888;margin-top:4px;text-align:center}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   워크스페이스 1: 블로그 검수
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.meta{
+  display:grid;grid-template-columns:1fr;gap:10px;
+  margin-bottom:18px;padding:14px 16px;
+  background:linear-gradient(to right,#fffdf5,#fff);
+  border-left:3px solid #c9a227;border-radius:4px
+}
+.meta .m-row{display:flex;align-items:baseline;gap:10px}
+.meta .m-row label{font-size:10px;color:#888;letter-spacing:.1em;font-weight:700;min-width:80px;flex-shrink:0}
+.meta .m-row input,.meta .m-row textarea{flex:1;border:none;background:transparent;color:#1b2a53;outline:none;resize:none;font-family:'Noto Sans KR',sans-serif;line-height:1.5}
+.meta .m-row input:focus,.meta .m-row textarea:focus{background:#fff;padding:4px 8px;border-radius:3px}
+.meta .m-title input{font-size:16px;font-weight:900}
+.meta .m-sub input{font-size:12px;color:#555}
+.meta .m-tags textarea{font-size:10px;color:#a87c2a;line-height:1.6;min-height:30px}
+
+#detectInfo{margin-bottom:14px;padding:10px 14px;background:#fffdf5;border-left:3px solid #c9a227;border-radius:4px;font-size:12px;color:#1b2a53;display:none}
+
+.slot{display:grid;grid-template-columns:200px 1fr;gap:16px;margin-bottom:16px;padding:14px;border-radius:8px;background:#fafafa;border:1px solid #eee;transition:.15s}
+.slot:hover{border-color:#c9a227;background:#fffdf5}
+.slot-idx{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#c9a227;font-weight:700;letter-spacing:.15em;margin-bottom:2px}
+.slot-idx .role{background:#1b2a53;color:#c9a227;padding:2px 8px;border-radius:3px;font-size:10px;letter-spacing:.1em}
+.slot-idx .move{display:flex;gap:4px}
+.slot-idx .move button{background:#1b2a53;color:#fff;border:none;width:24px;height:22px;border-radius:3px;font-size:11px;cursor:pointer;transition:.15s}
+.slot-idx .move button:hover{background:#c9a227}
+.slot-idx .move button:disabled{background:#ccc;cursor:not-allowed}
+.slot-img{width:200px;height:113px;border-radius:4px;background:#eee;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid #ddd}
+.slot-img img{width:100%;height:100%;object-fit:cover}
+.slot-img .empty{font-size:10px;color:#aaa;text-align:center;padding:8px}
+.slot-img input{display:none}
+.slot-content{display:flex;flex-direction:column;gap:6px}
+.slot-heading{width:100%;background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:7px 10px;color:#1b2a53;font-size:14px;font-weight:700;outline:none;font-family:'Noto Sans KR',sans-serif;transition:.15s}
+.slot-heading:focus{border-color:#c9a227;background:#fffdf5}
+.slot-body{width:100%;min-height:90px;background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;color:#1b2a53;font-size:13px;outline:none;resize:vertical;font-family:'Noto Sans KR',sans-serif;line-height:1.6}
+.slot-body:focus{border-color:#c9a227;background:#fffdf5}
+.slot-count{font-size:10px;color:#888;text-align:right;font-weight:500}
+.slot-count.ok{color:#2a9d4a}
+.slot-count.warn{color:#c9a227}
+.slot-count.bad{color:#c94141}
+
+.output-wrap{margin-top:24px;padding-top:20px;border-top:2px solid #1b2a53}
+.output-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+.output-h h2{font-size:14px;color:#1b2a53;font-weight:700}
+.output-h .actions{display:flex;gap:6px;align-items:center}
+.output-h .actions button{padding:7px 14px;font-size:11px;font-weight:700;border:none;border-radius:4px;cursor:pointer;transition:.15s}
+.output{width:100%;height:300px;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:4px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:12px;color:#1b2a53;line-height:1.7;resize:vertical;outline:none}
+.output:focus{border-color:#c9a227;background:#fffdf5}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   워크스페이스 2: 썸네일 생성 (고품질)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#c9a227 var(--p,50%),#e0e0e0 var(--p,50%));border-radius:2px;outline:none;cursor:pointer}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#1b2a53;border:2px solid #c9a227;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.slider-val{min-width:34px;text-align:right;font-size:13px;font-weight:700;color:#1b2a53}
+
+.mode-row{display:flex;gap:8px;margin-bottom:13px}
+.mode-btn{flex:1;padding:8px 0;border-radius:6px;border:2px solid transparent;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;letter-spacing:.04em}
+.mode-btn.dark{background:#1b2a53;color:#fff;border-color:#1b2a53}
+.mode-btn.light{background:#f5f0e6;color:#1b2a53;border-color:#e0d8c8}
+.mode-btn.active{border-color:#c9a227 !important;box-shadow:0 0 0 2px rgba(201,162,39,.3)}
+
+.tag-pool{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.tbtn{background:#f5f0e6;border:1px solid rgba(201,162,39,.4);border-radius:3px;padding:3px 8px;color:#a87c2a;font-size:11px;font-weight:700;cursor:pointer;transition:.15s;user-select:none}
+.tbtn:hover{background:rgba(201,162,39,.2)}
+.tbtn.on{background:#c9a227;color:#fff;border-color:#c9a227}
+.add-row{display:flex;gap:6px;margin-top:8px}
+.add-row input{flex:1;background:#f8f8f8;border:1px solid #e0e0e0;border-radius:4px;padding:6px 10px;font-size:12px;color:#1b2a53;outline:none}
+.add-row input:focus{border-color:#c9a227}
+.add-row button{background:#1b2a53;color:#fff;border:none;border-radius:4px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s}
+.add-row button:hover{background:#263a6e}
+.tag-limit{font-size:10px;color:#bbb;margin-top:4px}
+
+/* 썸네일 미리보기 영역 */
+.thumb-preview{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px}
+.prev-label{font-size:11px;color:#888;letter-spacing:.12em;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{background:#c9a227;color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;letter-spacing:.05em}
+
+.big-box{
+  width:476px;height:476px;position:relative;
+  overflow:hidden;border-radius:6px;
+  box-shadow:0 16px 50px rgba(0,0,0,.3);
+  margin-bottom:8px
+}
+#thumb{
+  width:238px;height:238px;
+  transform:scale(2);transform-origin:top left;
+  position:absolute;top:0;left:0
+}
+
+/* 썸네일 DOM 스타일 (238px 기준) */
+/* v3.2: 외곽 여백(margin frame) 시스템 추가
+   - .t-wrap: 외곽 프레임 (흰색 여백)
+   - .t-inner: 실제 디자인 영역 (기존 dark/light 배경 이동) */
+.t-wrap{
+  width:238px;height:238px;overflow:hidden;
+  position:relative;box-sizing:border-box;
+  padding:var(--t-margin, 8px);        /* ⭐ 외곽 여백 - 기본 8px (보통) */
+  background:var(--t-margin-bg, #FFFFFF); /* ⭐ 여백 배경 - 흰색 */
+}
+.t-inner{
+  width:100%;height:100%;overflow:hidden;
+  display:flex;flex-direction:column;position:relative;
+  border-radius:var(--t-inner-radius, 4px); /* ⭐ 디자인 영역 둥근 모서리 */
+}
+.t-wrap.dark .t-inner{background:linear-gradient(135deg,#07101f 0%,#0c1c3d 45%,#081526 100%)}
+.t-wrap.light .t-inner{background:#f5f0e6}
+/* 여백 없음 모드: border-radius도 0 */
+.t-wrap.margin-none{--t-margin:0px;--t-inner-radius:0px}
+.t-wrap.margin-thin{--t-margin:4px;--t-inner-radius:3px}
+.t-wrap.margin-normal{--t-margin:8px;--t-inner-radius:4px}
+.t-wrap.margin-wide{--t-margin:12px;--t-inner-radius:6px}
+.t-tex{position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(201,162,39,.08),transparent 40%)}
+.t-wrap.light .t-tex{background:radial-gradient(circle at 20% 20%,rgba(168,124,42,.08),transparent 40%)}
+.t-top{height:3px;flex-shrink:0;background:linear-gradient(90deg,#c9a227 0%,rgba(201,162,39,.15) 100%)}
+.t-body{flex:1;padding:18px 18px 8px;display:flex;flex-direction:column;position:relative;z-index:2}
+.t-tags{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.t-tag{font-size:7px;font-weight:700;padding:2px 5px;border-radius:2px;letter-spacing:.03em}
+.t-wrap.dark .t-tag{background:rgba(201,162,39,.15);color:#e8c55a}
+.t-wrap.light .t-tag{background:rgba(168,124,42,.15);color:#a87c2a}
+.t-title{font-weight:900;line-height:1.3;margin-bottom:8px;flex:1}
+.t-wrap.dark .t-title{color:#fff}
+.t-wrap.light .t-title{color:#0c1c3d}
+.t-title .line-2{color:#c9a227;display:block}
+.t-wrap.light .t-title .line-2{color:#c9a227}
+.t-bar{width:24px;height:2px;background:#c9a227;margin-bottom:6px}
+.t-sub{font-weight:500;line-height:1.4}
+.t-wrap.dark .t-sub.sub-default{color:rgba(255,255,255,.55)}
+.t-wrap.light .t-sub.sub-default{color:rgba(12,28,61,.6)}
+.t-sub.sub-white{color:#fff}
+.t-wrap.light .t-sub.sub-white{color:#fff}
+.t-sub.sub-gold{color:#c9a227}
+.t-bot{height:22px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;font-size:8px;letter-spacing:.05em;border-top:1px solid;flex-shrink:0}
+.t-wrap.dark .t-bot{border-color:rgba(201,162,39,.15);background:rgba(0,0,0,.2)}
+.t-wrap.light .t-bot{border-color:rgba(168,124,42,.15);background:rgba(255,255,255,.4)}
+.t-wrap.dark .t-bot-l{color:rgba(255,255,255,.45)}
+.t-wrap.dark .t-bot-r{color:#c9a227;font-weight:700}
+.t-wrap.light .t-bot-l{color:rgba(12,28,61,.55)}
+.t-wrap.light .t-bot-r{color:#a87c2a;font-weight:700}
+
+.actual-label{font-size:10px;color:#888;letter-spacing:.12em;margin-bottom:8px}
+#actualBox{
+  width:238px;height:238px;
+  border-radius:4px;overflow:hidden;position:relative;
+  box-shadow:0 4px 20px rgba(0,0,0,.15)
+}
+
+/* 오프스크린 고해상도 렌더 컨테이너 (다운로드 전용) */
+#renderStage{
+  position:fixed;top:-99999px;left:-99999px;
+  pointer-events:none;opacity:0
+}
+
+/* 품질 체크 결과 */
+.quality-result{padding:16px;background:#f8f8f8;border-radius:6px;margin-bottom:10px}
+.quality-result.good{background:#e8f5e9;border-left:3px solid #2a9d4a}
+.quality-result.warn{background:#fffdf5;border-left:3px solid #c9a227}
+.quality-result.bad{background:#fde8e8;border-left:3px solid #c94141}
+.qr-title{font-size:14px;font-weight:900;color:#1b2a53;margin-bottom:4px}
+.qr-detail{font-size:12px;color:#555;line-height:1.7}
+.qr-detail b{color:#1b2a53}
+
+.qi-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:16px}
+.qi-card{background:#fff;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;transition:.15s}
+.qi-card:hover{border-color:#c9a227;box-shadow:0 4px 12px rgba(201,162,39,.15)}
+.qi-thumb{width:100%;height:100px;background:#eee;overflow:hidden}
+.qi-thumb img{width:100%;height:100%;object-fit:cover}
+.qi-info{padding:10px}
+.qi-name{font-size:11px;font-weight:700;color:#1b2a53;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qi-meta{font-size:10px;color:#888;line-height:1.6}
+.qi-meta .ok{color:#2a9d4a;font-weight:700}
+.qi-meta .warn{color:#c9a227;font-weight:700}
+.qi-meta .bad{color:#c94141;font-weight:700}
+
+/* 알림 */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#1b2a53;color:#fff;padding:12px 24px;
+  border-radius:6px;font-size:13px;font-weight:700;
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+  opacity:0;pointer-events:none;transition:.3s;z-index:1000
+}
+.toast.show{opacity:1;transform:translate(-50%,-8px)}
+.toast.loading{background:#c9a227}
+
+@media (max-width:1280px){
+  .workspace{flex-direction:column}
+  .panel{width:100%;position:static;max-height:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ═════════════════════════════════════════
+     상단 모드 탭
+     ═════════════════════════════════════════ -->
+<div class="mode-tabs">
+  <div class="mode-tab active" data-mode="review">
+    <span class="icon">📝</span>
+    블로그 검수
+    <span class="sub">CSV/JSON/RAW</span>
+  </div>
+  <div class="mode-tab" data-mode="thumb">
+    <span class="icon">🎨</span>
+    썸네일 생성
+    <span class="sub">HIGH-RES</span>
+  </div>
+  <div class="mode-tab" data-mode="quality">
+    <span class="icon">🔍</span>
+    이미지 품질 체크
+    <span class="sub">DIAGNOSIS</span>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════
+     워크스페이스 1: 블로그 검수
+     ═════════════════════════════════════════ -->
+<div class="workspace active" data-ws="review">
+  <!-- 좌측 패널 -->
+  <div class="panel">
+    <div class="panel-ttl"><span>◆ BLOG REVIEW</span><span class="ver">v3.1</span></div>
+
+    <div class="sec">
+      <div class="sec-h">1. 데이터 입력</div>
+      <div class="tabs">
+        <div class="tab active" data-tab="sync">🔄 자동 동기화</div>
+        <div class="tab" data-tab="csv">CSV</div>
+        <div class="tab" data-tab="json">JSON</div>
+        <div class="tab" data-tab="raw">RAW</div>
+      </div>
+
+      <!-- 🆕 자동 동기화 탭 (기본) -->
+      <div class="tab-body active" data-body="sync">
+        <div id="syncNoUrl" style="display:none">
+          <div style="padding:10px 12px;background:#fffdf5;border-left:3px solid #c9a227;border-radius:4px;font-size:11px;color:#555;line-height:1.6;margin-bottom:8px">
+            💡 처음이신가요? 아래 <b>⚙ 시트 URL 설정</b>에서 구글 시트 링크를 한 번 등록해주세요.
+          </div>
+        </div>
+        <div id="syncReady" style="display:none">
+          <button class="btn btn-gold" onclick="fetchSheetData()" id="btnFetchSheet">
+            🔄 오늘 최신 데이터 불러오기
+          </button>
+          <div id="syncStatus" style="font-size:10px;color:#888;margin-top:6px;text-align:center"></div>
+          <div id="recentList" class="rowlist" style="margin-top:10px;display:none"></div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e0e0e0">
+          <details id="urlSetup" style="font-size:11px">
+            <summary style="cursor:pointer;color:#888;user-select:none;padding:4px 0">⚙ 시트 URL 설정</summary>
+            <div style="margin-top:8px">
+              <div class="f">
+                <label>구글 시트 공유 URL (CSV 변환 링크)</label>
+                <textarea id="sheetUrl" rows="2" placeholder="https://docs.google.com/spreadsheets/d/.../gviz/tq?tqx=out:csv&gid=0" style="font-size:10px;height:44px"></textarea>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" style="font-size:10px" onclick="saveSheetUrl()">💾 저장</button>
+                <button class="btn btn-ghost" style="font-size:10px" onclick="clearSheetUrl()">🗑 삭제</button>
+              </div>
+              <div style="font-size:10px;color:#888;margin-top:8px;line-height:1.7">
+                <div style="background:#fffdf5;padding:8px;border-radius:4px;border-left:2px solid #c9a227;margin-bottom:6px">
+                  <b style="color:#c9a227">🌟 권장: GAS 웹앱 방식</b><br>
+                  시트 → <b>확장 프로그램 → Apps Script</b>에서 배포된<br>
+                  <code>script.google.com/macros/s/.../exec</code> URL 사용<br>
+                  <span style="color:#2a9d4a">✓ CORS 문제 없음 · 가장 안정적</span>
+                </div>
+                <b style="color:#888">대안: 공개 CSV 링크</b><br>
+                • <code>.../edit?gid=0</code> (자동 변환됨)<br>
+                • <code>.../pub?output=csv</code> (웹에 게시)
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="tab-body" data-body="csv">
+        <label class="dropzone" id="csvDrop">
+          📊 CSV 파일 드래그
+          <span class="sub">또는 클릭해서 파일 선택</span>
+          <input type="file" id="csvInput" accept=".csv,text/csv">
+        </label>
+        <div id="rowlist" class="rowlist" style="display:none"></div>
+      </div>
+      <div class="tab-body" data-body="json">
+        <div class="f">
+          <label>Claude JSON 출력 붙여넣기</label>
+          <textarea id="jsonInput" class="big" placeholder='{"title":"...","sections":[...]}'></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="loadJSON()">JSON 로드</button>
+      </div>
+      <div class="tab-body" data-body="raw">
+        <div class="f">
+          <label>초안 텍스트 (구버전용)</label>
+          <textarea id="rawInput" class="big" placeholder="--- 안녕하세요..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="loadRaw()">텍스트 분할</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">2. 슬라이드 이미지 8장</div>
+      <label class="upload">
+        일괄 업로드
+        <input type="file" id="imgMulti" accept="image/*" multiple>
+      </label>
+      <div class="upload-info">파일명 숫자로 자동 매칭</div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">3. 네이버 포맷</div>
+      <div class="radio-group" id="formatGroup">
+        <label class="radio selected">
+          <input type="radio" name="fmt" value="a" checked>
+          <span>가) 구분선 + 헤딩</span>
+          <small>섹션마다 ━━━ 구분선 + 📌 헤딩</small>
+        </label>
+        <label class="radio">
+          <input type="radio" name="fmt" value="b">
+          <span>나) 심플 제목</span>
+          <small>▶ 헤딩 + 본문</small>
+        </label>
+        <label class="radio">
+          <input type="radio" name="fmt" value="c">
+          <span>다) 제목 없이 본문만</span>
+          <small>슬라이드 + 본문만</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">4. 정제 옵션</div>
+      <div class="rules">
+        <label class="rule"><input type="checkbox" id="r_emoji"><span>이모티콘 모두 제거</span></label>
+        <label class="rule"><input type="checkbox" id="r_md" checked><span>마크다운(**) 제거</span></label>
+        <label class="rule"><input type="checkbox" id="r_spaces" checked><span>공백·줄바꿈 정리</span></label>
+        <label class="rule"><input type="checkbox" id="r_imgmark" checked><span>이미지 자리 표시자</span></label>
+        <label class="rule"><input type="checkbox" id="r_meta" checked><span>부제·제목 포함</span></label>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">5. 실행</div>
+      <button class="btn btn-gold" onclick="regenOutput()">최종 텍스트 재생성</button>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="clearReview()">초기화</button>
+        <button class="btn btn-primary" onclick="sendToThumb()">→ 썸네일로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 우측 메인 -->
+  <div class="main">
+    <div class="main-h">
+      <h1>블로그 포스팅 검수</h1>
+      <div class="stat">섹션 <b id="secCnt">0</b> / 이미지 <b id="imgCnt">0</b> / 글자수 <b id="charCnt">0</b></div>
+    </div>
+
+    <div class="meta">
+      <div class="m-row m-title"><label>제목</label><input type="text" id="m_title" placeholder="블로그 대표 제목"></div>
+      <div class="m-row m-sub"><label>서브타이틀</label><input type="text" id="m_subtitle" placeholder="서브타이틀"></div>
+      <div class="m-row m-tags"><label>해시태그</label><textarea id="m_hashtags" placeholder="#태그1 #태그2 ..."></textarea></div>
+    </div>
+
+    <div id="detectInfo"></div>
+    <div id="slots"></div>
+
+    <div class="output-wrap">
+      <div class="output-h">
+        <h2>네이버 블로그용 최종 텍스트</h2>
+        <div class="actions">
+          <button style="background:#c9a227;color:#fff" onclick="regenOutput()">재생성</button>
+          <button style="background:#1b2a53;color:#fff" onclick="copyOutput()">📋 복사</button>
+        </div>
+      </div>
+      <textarea id="output" class="output" placeholder="데이터 로드 후 [최종 텍스트 재생성] 버튼을 누르세요."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════
+     워크스페이스 2: 썸네일 생성 (고품질)
+     ═════════════════════════════════════════ -->
+<div class="workspace" data-ws="thumb">
+  <div class="panel">
+    <div class="panel-ttl"><span>◆ THUMBNAIL</span><span class="ver">v3.2</span></div>
+
+    <div class="sec">
+      <div class="sec-h">1. 내용</div>
+      <div class="f">
+        <label>타이틀 (엔터로 줄 나누면 색상 자동 분리)</label>
+        <textarea id="tTitle" rows="3" style="height:60px">2026 창업자 필수
+정부지원금 TOP 5</textarea>
+        <div style="font-size:10px;color:#888;margin-top:4px;line-height:1.5">
+          💡 <b style="color:#1b2a53">첫 줄</b>: 흰색 · <b style="color:#c9a227">둘째 줄</b>: 골드 (키워드 강조용)
+        </div>
+      </div>
+      <div class="f">
+        <label>서브타이틀 (선택)</label>
+        <textarea id="tSub" rows="2" style="height:40px">대표님, 놓치면 손해인 창업 지원금 핵심만 정리했습니다</textarea>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">2. 색상 모드</div>
+      <div class="mode-row">
+        <button class="mode-btn dark active" id="btnDark" onclick="setThumbMode('dark')">DARK</button>
+        <button class="mode-btn light" id="btnLight" onclick="setThumbMode('light')">LIGHT</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">3. 타이틀 크기</div>
+      <div class="slider-row">
+        <input type="range" id="fontSize" min="12" max="30" value="21" step="1">
+        <span class="slider-val" id="fsVal">21px</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">4. 서브타이틀 옵션</div>
+      <div class="f">
+        <label>크기</label>
+        <div class="slider-row">
+          <input type="range" id="subSize" min="8" max="14" value="10" step="1">
+          <span class="slider-val" id="subSizeVal">10px</span>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:0">
+        <label>색상</label>
+        <div class="mode-row" style="margin-bottom:0">
+          <button class="mode-btn active" data-sub-color="default" onclick="setSubColor('default')" style="background:#f5f0e6;color:#888">기본</button>
+          <button class="mode-btn" data-sub-color="white" onclick="setSubColor('white')" style="background:#fff;color:#1b2a53;border:1px solid #e0d8c8">흰색</button>
+          <button class="mode-btn" data-sub-color="gold" onclick="setSubColor('gold')" style="background:#c9a227;color:#fff">골드</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">5. 해시태그 (최대 3개)</div>
+      <div class="tag-pool" id="tagPool">
+        <div class="tbtn on" data-t="#정책자금">#정책자금</div>
+        <div class="tbtn on" data-t="#세금절세">#세금절세</div>
+        <div class="tbtn on" data-t="#중소기업">#중소기업</div>
+        <div class="tbtn" data-t="#경영컨설팅">#경영컨설팅</div>
+        <div class="tbtn" data-t="#고용지원금">#고용지원금</div>
+        <div class="tbtn" data-t="#정부지원금">#정부지원금</div>
+        <div class="tbtn" data-t="#퇴직금계산">#퇴직금계산</div>
+        <div class="tbtn" data-t="#노무관리">#노무관리</div>
+        <div class="tbtn" data-t="#저금리대출">#저금리대출</div>
+        <div class="tbtn" data-t="#절세전략">#절세전략</div>
+        <div class="tbtn" data-t="#창업자금">#창업자금</div>
+        <div class="tbtn" data-t="#R&D지원">#R&D지원</div>
+      </div>
+      <div class="add-row">
+        <input type="text" id="newTag" placeholder="직접 입력 (# 생략 가능)" maxlength="14">
+        <button onclick="addTag()">+ 추가</button>
+      </div>
+      <div class="tag-limit">선택 중: <strong id="tcnt">3</strong> / 3</div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">6. 외곽 여백 <span style="color:#c9a227;font-weight:900">NEW</span></div>
+      <div class="mode-row" style="gap:4px">
+        <button class="mode-btn" data-margin="none" onclick="setThumbMargin('none')" style="font-size:11px;padding:8px 4px">없음</button>
+        <button class="mode-btn" data-margin="thin" onclick="setThumbMargin('thin')" style="font-size:11px;padding:8px 4px">얇게</button>
+        <button class="mode-btn active" data-margin="normal" onclick="setThumbMargin('normal')" style="font-size:11px;padding:8px 4px">보통</button>
+        <button class="mode-btn" data-margin="wide" onclick="setThumbMargin('wide')" style="font-size:11px;padding:8px 4px">넓게</button>
+      </div>
+      <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.5">
+        💡 네이버 블로그 목록에서 썸네일끼리 <b>타이트해 보일 때</b> 여백을 추가하세요
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">7. 출력 해상도 (고품질)</div>
+      <div class="radio-group">
+        <label class="radio">
+          <input type="radio" name="res" value="1024">
+          <span>1024 × 1024</span>
+          <small>파일 ~500KB · 빠름</small>
+        </label>
+        <label class="radio selected">
+          <input type="radio" name="res" value="2048" checked>
+          <span>2048 × 2048 (권장)</span>
+          <small>파일 ~2MB · 고해상도 모니터 선명</small>
+        </label>
+        <label class="radio">
+          <input type="radio" name="res" value="4096">
+          <span>4096 × 4096</span>
+          <small>파일 ~6MB · 초고해상도 · 렌더링 느림</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">8. 다운로드</div>
+      <button class="btn btn-gold" id="btnDownload" onclick="downloadThumb()">
+        ↓ PNG 무손실 저장
+      </button>
+      <div class="upload-info" style="margin-top:8px">Chrome / Edge 권장</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="main-h">
+      <h1>썸네일 생성</h1>
+      <div class="stat">모드 <b id="thumbMode">DARK</b> / 해상도 <b id="thumbRes">2048</b>px</div>
+    </div>
+
+    <div class="thumb-preview">
+      <div class="prev-label">
+        미리보기 <span class="badge">2× 확대</span>
+        <span class="badge" style="background:#1b2a53">238 × 238 원본</span>
+      </div>
+      <div class="big-box">
+        <div id="thumb">
+          <div class="t-wrap dark margin-normal" id="twrap1">
+            <div class="t-inner">
+              <div class="t-tex"></div>
+              <div class="t-top"></div>
+              <div class="t-body">
+                <div class="t-tags" id="ptags1"></div>
+                <div class="t-title" id="ptitle1"></div>
+                <div class="t-bar"></div>
+                <div class="t-sub" id="psub1"></div>
+              </div>
+              <div class="t-bot">
+                <span class="t-bot-l">나이스경영지원센터</span>
+                <span class="t-bot-r">1688-1298</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actual-label">실제 미리보기 (업스케일 전)</div>
+      <div id="actualBox">
+        <div class="t-wrap dark margin-normal" id="twrap2">
+          <div class="t-inner">
+            <div class="t-tex"></div>
+            <div class="t-top"></div>
+            <div class="t-body">
+              <div class="t-tags" id="ptags2"></div>
+              <div class="t-title" id="ptitle2"></div>
+              <div class="t-bar"></div>
+              <div class="t-sub" id="psub2"></div>
+            </div>
+            <div class="t-bot">
+              <span class="t-bot-l">나이스경영지원센터</span>
+              <span class="t-bot-r">1688-1298</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════
+     워크스페이스 3: 이미지 품질 체크
+     ═════════════════════════════════════════ -->
+<div class="workspace" data-ws="quality">
+  <div class="panel">
+    <div class="panel-ttl"><span>◆ QUALITY CHECK</span><span class="ver">v3.0</span></div>
+
+    <div class="sec">
+      <div class="sec-h">이미지 업로드</div>
+      <label class="dropzone" id="qDrop">
+        🔍 이미지 파일 드래그
+        <span class="sub">PPT 슬라이드 JPG/PNG 여러 장 동시 가능</span>
+        <input type="file" id="qInput" accept="image/*" multiple>
+      </label>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">권장 사이즈</div>
+      <div style="font-size:11px;color:#555;line-height:1.8">
+        <b style="color:#2a9d4a">✓ 최적</b>: 3840×2160 이상 (4K)<br>
+        <b style="color:#c9a227">▲ 허용</b>: 1920×1080 이상 (FHD)<br>
+        <b style="color:#c94141">✗ 부족</b>: 1280×720 미만<br>
+        <br>
+        <span style="color:#888">네이버 블로그 본문 너비 ~900px 기준으로, 2배 이상 해상도가 있어야 Retina 디스플레이에서 선명합니다.</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">업스케일 옵션</div>
+      <div class="rules">
+        <label class="rule"><input type="checkbox" id="q_upscale"><span>부족한 이미지 자동 2배 업스케일</span></label>
+      </div>
+      <div class="upload-info" style="margin-top:8px;text-align:left">⚠ 업스케일은 완벽하지 않습니다. 가능하면 원본을 고해상도로 생성하는 게 최선입니다.</div>
+      <button class="btn btn-gold" style="margin-top:10px" onclick="runUpscale()">선택한 이미지 업스케일 저장</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="main-h">
+      <h1>이미지 품질 체크</h1>
+      <div class="stat">총 <b id="qiCnt">0</b>개 / 평균 <b id="qiAvg">—</b>px</div>
+    </div>
+
+    <div id="qualitySummary"></div>
+    <div id="qiList" class="qi-list"></div>
+  </div>
+</div>
+
+<!-- 오프스크린 고해상도 렌더 스테이지 (다운로드 전용) -->
+<div id="renderStage"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═════════════════════════════════════════
+// 전역 상태
+// ═════════════════════════════════════════
+const STATE = {
+  currentMode: 'review',
+
+  // 블로그 검수 상태
+  meta: { title: '', subtitle: '', hashtags: '', keywords: '' },
+  slots: Array(8).fill(null).map((_, i) => ({
+    idx: i + 1,
+    role: ['cover','program_01','program_02','program_03','program_04','program_05','summary','cta'][i],
+    img: null, heading: '', body: ''
+  })),
+  csvRows: [],
+  format: 'a',
+
+  // 썸네일 상태
+  thumbMode: 'dark',
+  activeTags: new Set(['#정책자금','#세금절세','#중소기업']),
+  thumbFontSize: 21,
+  thumbSubSize: 10,
+  thumbSubColor: 'default',
+  thumbRes: 2048,
+  thumbMargin: 'normal', // v3.2: none / thin / normal / wide
+
+  // 품질 체크 상태
+  qImages: []
+};
+
+const ROLE_LABEL = {
+  cover: 'COVER', program_01: 'PROGRAM 01', program_02: 'PROGRAM 02',
+  program_03: 'PROGRAM 03', program_04: 'PROGRAM 04', program_05: 'PROGRAM 05',
+  summary: 'SUMMARY', cta: 'CTA'
+};
+
+// ═════════════════════════════════════════
+// 모드 탭 전환
+// ═════════════════════════════════════════
+document.querySelectorAll('.mode-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    const m = t.dataset.mode;
+    document.querySelectorAll('.mode-tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.workspace').forEach(w => w.classList.toggle('active', w.dataset.ws === m));
+    STATE.currentMode = m;
+  });
+});
+
+// 내부 탭 (CSV/JSON/RAW)
+document.querySelectorAll('[data-ws="review"] .tab').forEach(t => {
+  t.addEventListener('click', () => {
+    const name = t.dataset.tab;
+    document.querySelectorAll('[data-ws="review"] .tab').forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('[data-ws="review"] .tab-body').forEach(x => x.classList.toggle('active', x.dataset.body === name));
+  });
+});
+
+// 라디오 스타일
+document.querySelectorAll('input[name="fmt"]').forEach(r => {
+  r.addEventListener('change', () => {
+    STATE.format = r.value;
+    document.querySelectorAll('[data-ws="review"] .radio').forEach(rd => {
+      rd.classList.toggle('selected', rd.querySelector('input').checked);
+    });
+    regenOutput();
+  });
+});
+document.querySelectorAll('input[name="res"]').forEach(r => {
+  r.addEventListener('change', () => {
+    STATE.thumbRes = parseInt(r.value);
+    document.getElementById('thumbRes').textContent = STATE.thumbRes;
+    document.querySelectorAll('[data-ws="thumb"] .radio').forEach(rd => {
+      rd.classList.toggle('selected', rd.querySelector('input').checked);
+    });
+  });
+});
+
+// ═════════════════════════════════════════
+// [블로그 검수] 슬롯 렌더링
+// ═════════════════════════════════════════
+function renderSlots(){
+  const box = document.getElementById('slots');
+  box.innerHTML = STATE.slots.map((s, i) => `
+    <div class="slot">
+      <div class="slot-idx">
+        <span>SLIDE ${String(s.idx).padStart(2,'0')} <span class="role">${ROLE_LABEL[s.role]}</span></span>
+        <div class="move">
+          <button onclick="moveSlot(${i},-1)" ${i===0?'disabled':''}>↑</button>
+          <button onclick="moveSlot(${i},1)" ${i===7?'disabled':''}>↓</button>
+        </div>
+      </div>
+      <label class="slot-img" onclick="document.getElementById('img${i}').click()">
+        ${s.img ? `<img src="${s.img}">` : `<div class="empty">클릭<br>slide_${String(i+1).padStart(2,'0')}.jpg</div>`}
+        <input type="file" id="img${i}" accept="image/*" onchange="loadImg(${i}, this)">
+      </label>
+      <div class="slot-content">
+        <input type="text" class="slot-heading" id="hd${i}" value="${esc(s.heading)}" placeholder="헤딩" oninput="updateHeading(${i}, this.value)">
+        <textarea class="slot-body" id="bd${i}" oninput="updateBody(${i}, this.value)" placeholder="본문...">${esc(s.body)}</textarea>
+        <div class="slot-count" id="cnt${i}">0자</div>
+      </div>
+    </div>
+  `).join('');
+  STATE.slots.forEach((_, i) => updateCount(i));
+  updateStats();
+}
+function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function loadImg(idx, input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { STATE.slots[idx].img = e.target.result; renderSlots(); };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('imgMulti').addEventListener('change', function(e){
+  const files = Array.from(e.target.files);
+  files.sort((a,b) => a.name.localeCompare(b.name));
+  files.forEach(file => {
+    const match = file.name.match(/(\d+)/);
+    const idx = match ? Math.min(parseInt(match[1])-1, 7) : -1;
+    if(idx < 0 || idx > 7) return;
+    const reader = new FileReader();
+    reader.onload = ev => { STATE.slots[idx].img = ev.target.result; renderSlots(); };
+    reader.readAsDataURL(file);
+  });
+  toast(`이미지 ${files.length}장 업로드 완료`);
+});
+
+// ═════════════════════════════════════════
+// [블로그 검수] 🆕 Google Sheets 자동 동기화
+// ═════════════════════════════════════════
+const SHEET_URL_KEY = 'nmsc_sheet_url_v31';
+
+function initSheetSync(){
+  const saved = localStorage.getItem(SHEET_URL_KEY);
+  const urlEl = document.getElementById('sheetUrl');
+  if(saved){
+    if(urlEl) urlEl.value = saved;
+    document.getElementById('syncReady').style.display = 'block';
+    document.getElementById('syncNoUrl').style.display = 'none';
+  } else {
+    document.getElementById('syncReady').style.display = 'none';
+    document.getElementById('syncNoUrl').style.display = 'block';
+    // URL 설정 펼쳐두기
+    const d = document.getElementById('urlSetup');
+    if(d) d.open = true;
+  }
+}
+
+function saveSheetUrl(){
+  const url = document.getElementById('sheetUrl').value.trim();
+  if(!url){ toast('URL을 입력해주세요'); return; }
+
+  let finalUrl = url;
+  let urlType = 'unknown';
+
+  // 1. Google Apps Script 웹앱 URL (가장 안정적, CORS 없음) ⭐
+  if(url.includes('script.google.com/macros/s/')){
+    finalUrl = url;
+    urlType = 'gas';
+    toast('✓ GAS 웹앱 URL 저장 완료 (권장 방식)');
+  }
+  // 2. 이미 CSV 변환 URL
+  else if(url.includes('/gviz/tq?tqx=out:csv')){
+    finalUrl = url;
+    urlType = 'csv';
+    toast('✓ CSV URL 저장 완료');
+  }
+  // 3. /pub?output=csv 공개 발행 URL
+  else if(url.includes('/pub') && url.includes('output=csv')){
+    finalUrl = url;
+    urlType = 'pub';
+    toast('✓ 공개 발행 URL 저장 완료');
+  }
+  // 4. /edit URL → CSV 변환
+  else if(url.includes('docs.google.com/spreadsheets')){
+    const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if(!idMatch){ toast('❌ 시트 ID를 찾을 수 없습니다'); return; }
+    const sheetId = idMatch[1];
+    let gid = '0';
+    const gidMatch = url.match(/[?&#]gid=(\d+)/);
+    if(gidMatch) gid = gidMatch[1];
+    finalUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+    urlType = 'csv';
+    document.getElementById('sheetUrl').value = finalUrl;
+    toast(`✓ URL 변환 완료 (gid=${gid})`);
+  }
+  else {
+    toast('❌ 올바른 구글 시트 또는 GAS URL이 아닙니다');
+    return;
+  }
+
+  localStorage.setItem(SHEET_URL_KEY, finalUrl);
+  localStorage.setItem(SHEET_URL_KEY + '_type', urlType);
+  initSheetSync();
+  setTimeout(fetchSheetData, 300);
+}
+
+function clearSheetUrl(){
+  if(!confirm('저장된 시트 URL을 삭제할까요?')) return;
+  localStorage.removeItem(SHEET_URL_KEY);
+  document.getElementById('sheetUrl').value = '';
+  document.getElementById('recentList').style.display = 'none';
+  initSheetSync();
+  toast('시트 URL 삭제 완료');
+}
+
+async function fetchSheetData(){
+  const url = localStorage.getItem(SHEET_URL_KEY);
+  const urlType = localStorage.getItem(SHEET_URL_KEY + '_type') || 'csv';
+  if(!url){ toast('먼저 시트 URL을 설정해주세요'); return; }
+
+  const btn = document.getElementById('btnFetchSheet');
+  const status = document.getElementById('syncStatus');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ 불러오는 중...';
+  status.textContent = '';
+
+  showLog('clear');
+  showLog('info', `모드: ${urlType === 'gas' ? '🌟 GAS 웹앱 (직접 연결)' : 'CSV 프록시'}`);
+
+  // ═══════════════════════════════════════════
+  // GAS 웹앱 방식 (가장 안정적)
+  // ═══════════════════════════════════════════
+  if(urlType === 'gas'){
+    try {
+      showLog('try', 'Google Apps Script 호출 중...');
+      const resp = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+
+      if(!resp.ok){
+        showLog('fail', `HTTP ${resp.status}`);
+        throw new Error(`HTTP ${resp.status}`);
+      }
+
+      const text = await resp.text();
+      showLog('ok', `응답 수신 (${text.length} bytes)`);
+
+      const jsonData = JSON.parse(text);
+      if(!Array.isArray(jsonData)){
+        if(jsonData.error) throw new Error(jsonData.error);
+        throw new Error('응답 형식 오류 (배열이 아님)');
+      }
+
+      if(jsonData.length === 0){
+        status.innerHTML = '<span style="color:#c94141">⚠ 데이터 행이 0개</span>';
+        showLog('warn', '데이터 없음');
+        btn.disabled = false;
+        btn.innerHTML = '🔄 오늘 최신 데이터 불러오기';
+        return;
+      }
+
+      // Date 문자열 정규화
+      STATE.csvRows = jsonData.map(row => {
+        const clean = {};
+        for(const k in row){
+          let v = row[k];
+          if(typeof v === 'string' && v.match(/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d+ \d{4}/)){
+            const d = new Date(v);
+            if(!isNaN(d)){
+              v = d.getFullYear() + '-' +
+                  String(d.getMonth()+1).padStart(2,'0') + '-' +
+                  String(d.getDate()).padStart(2,'0') + ' ' +
+                  String(d.getHours()).padStart(2,'0') + ':' +
+                  String(d.getMinutes()).padStart(2,'0');
+            }
+          }
+          clean[k.trim()] = String(v || '').trim();
+        }
+        return clean;
+      });
+
+      STATE.csvRows.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      renderRecentList();
+
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2,'0');
+      const mm = String(now.getMinutes()).padStart(2,'0');
+      status.innerHTML = `✓ ${STATE.csvRows.length}개 행 · 최신화 ${hh}:${mm} · 🌟 GAS`;
+
+      loadRow(0);
+      toast(`✓ GAS 연동 성공 · ${STATE.csvRows.length}개 포스팅 로드`);
+      showLog('ok', `완료 · ${STATE.csvRows.length}개 행 로드됨`);
+      setTimeout(() => showLog('hide'), 3000);
+      btn.disabled = false;
+      btn.innerHTML = '🔄 오늘 최신 데이터 불러오기';
+      return;
+
+    } catch(err) {
+      showLog('error', `GAS 호출 실패: ${err.message}`);
+      console.error('[GAS]', err);
+      status.innerHTML = `<span style="color:#c94141">❌ GAS 실패: ${err.message}</span>`;
+      toast('GAS 실패 — 배포 권한/URL 재확인');
+      btn.disabled = false;
+      btn.innerHTML = '🔄 오늘 최신 데이터 불러오기';
+      return;
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // CSV 방식 (구버전 폴백) — 5단계 프록시 시도
+  // ═══════════════════════════════════════════
+  const attempts = [
+    { label: '직접 연결', url: url },
+    { label: 'corsproxy.io', url: 'https://corsproxy.io/?' + encodeURIComponent(url) },
+    { label: 'allorigins.win', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) },
+    { label: 'codetabs.com', url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url) },
+    { label: 'thingproxy', url: 'https://thingproxy.freeboard.io/fetch/' + url }
+  ];
+
+  let lastError = null;
+  let text = null;
+
+  for(const attempt of attempts){
+    try {
+      status.textContent = `⏳ ${attempt.label} 시도 중...`;
+      showLog('try', `${attempt.label} 시도 중...`);
+
+      const resp = await fetch(attempt.url, {
+        cache: 'no-store',
+        mode: 'cors',
+        redirect: 'follow'
+      });
+
+      if(!resp.ok) {
+        showLog('fail', `${attempt.label} → HTTP ${resp.status}`);
+        lastError = new Error(`${attempt.label} → HTTP ${resp.status}`);
+        continue;
+      }
+      const content = await resp.text();
+
+      if(content.trim().startsWith('<') || content.includes('<!DOCTYPE')){
+        showLog('fail', `${attempt.label} → HTML 응답 (공개 설정 재확인 필요)`);
+        lastError = new Error(`${attempt.label} → HTML 응답`);
+        continue;
+      }
+
+      if(!content.trim()){
+        showLog('fail', `${attempt.label} → 빈 응답`);
+        lastError = new Error(`${attempt.label} → 빈 응답`);
+        continue;
+      }
+
+      text = content;
+      showLog('ok', `${attempt.label} 성공 (${content.length} bytes)`);
+      break;
+
+    } catch(err) {
+      showLog('fail', `${attempt.label} → ${err.message}`);
+      lastError = err;
+    }
+  }
+
+  if(!text){
+    const errMsg = lastError ? lastError.message : '모든 연결 시도 실패';
+    status.innerHTML = `<span style="color:#c94141">❌ 연결 실패 — 아래 로그 확인</span>`;
+    showLog('error', '모든 경로 실패. 로컬 서버 방식 권장 (아래 도움말 참고)');
+    toast('연결 실패 — 로그 창 확인');
+    btn.disabled = false;
+    btn.innerHTML = '🔄 오늘 최신 데이터 불러오기';
+    return;
+  }
+
+  try {
+    parseCSV(text);
+
+    if(STATE.csvRows.length === 0){
+      status.innerHTML = '<span style="color:#c94141">⚠ 데이터 행이 없습니다</span>';
+      showLog('warn', 'CSV에 헤더만 있고 데이터 행이 0개입니다');
+      return;
+    }
+
+    STATE.csvRows.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    renderRecentList();
+
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    status.innerHTML = `✓ ${STATE.csvRows.length}개 행 로드 · 최신화 ${hh}:${mm}`;
+
+    loadRow(0);
+    toast(`✓ 최신 포스팅 자동 로드 완료`);
+    showLog('ok', `완료 · ${STATE.csvRows.length}개 행 로드됨`);
+    // 성공 후 3초 뒤 로그 창 자동 숨김
+    setTimeout(() => showLog('hide'), 3000);
+
+  } catch(err) {
+    showLog('error', `CSV 파싱 실패: ${err.message}`);
+    status.innerHTML = `<span style="color:#c94141">❌ 파싱 실패</span>`;
+    toast('CSV 파싱 실패');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 오늘 최신 데이터 불러오기';
+  }
+}
+
+// ─── 화면 내 로그 창 ───
+function showLog(type, msg){
+  let logBox = document.getElementById('diagLog');
+  if(!logBox){
+    logBox = document.createElement('div');
+    logBox.id = 'diagLog';
+    logBox.style.cssText = `
+      position:fixed;bottom:16px;right:16px;width:420px;max-width:calc(100vw - 32px);
+      max-height:300px;overflow-y:auto;
+      background:#0c1c3d;color:#fff;border-radius:8px;
+      box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:9999;
+      font-family:'SF Mono',Consolas,monospace;font-size:11px;
+      padding:10px 14px;line-height:1.6;display:none
+    `;
+    logBox.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(201,162,39,.3)">
+        <span style="color:#c9a227;font-weight:700;letter-spacing:.1em">🔍 진단 로그</span>
+        <span onclick="document.getElementById('diagLog').style.display='none'" style="cursor:pointer;color:rgba(255,255,255,.4);font-size:14px">✕</span>
+      </div>
+      <div id="diagLogBody"></div>
+    `;
+    document.body.appendChild(logBox);
+  }
+  const body = document.getElementById('diagLogBody');
+  if(type === 'clear'){ body.innerHTML = ''; logBox.style.display = 'block'; return; }
+  if(type === 'hide'){ logBox.style.display = 'none'; return; }
+
+  logBox.style.display = 'block';
+  const colors = { info:'#888', try:'#c9a227', ok:'#5bc77a', fail:'#e8883a', error:'#e66', warn:'#e8c55a' };
+  const icons = { info:'ℹ', try:'▸', ok:'✓', fail:'✗', error:'⚠', warn:'▲' };
+  const d = new Date();
+  const t = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  const line = document.createElement('div');
+  line.style.cssText = `padding:2px 0;color:${colors[type] || '#fff'}`;
+  line.innerHTML = `<span style="color:rgba(255,255,255,.3)">[${t}]</span> ${icons[type] || '·'} ${msg}`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+function renderRecentList(){
+  const box = document.getElementById('recentList');
+  if(!box) return;
+  const rows = STATE.csvRows.slice(0, 10);
+  box.style.display = 'block';
+  box.innerHTML = `<div style="padding:6px 10px;background:#f8f8f8;font-size:10px;color:#888;font-weight:700;letter-spacing:.05em">📋 최근 ${rows.length}개 포스팅</div>` +
+    rows.map((r, i) => {
+      const date = (r.created_at || '').slice(5, 10).replace('-', '/');
+      const title = (r.title || r.category || '(제목 없음)').slice(0, 34);
+      const star = i === 0 ? '<span style="color:#c9a227;margin-right:4px">★</span>' : '';
+      return `<div class="rowitem" onclick="loadRow(${i})">
+        <span class="date">${date || '—'}</span>${star}${esc(title)}
+      </div>`;
+    }).join('');
+}
+
+// ═════════════════════════════════════════
+// [블로그 검수] CSV 로드 (수동)
+// ═════════════════════════════════════════
+const csvDrop = document.getElementById('csvDrop');
+const csvInput = document.getElementById('csvInput');
+csvDrop.addEventListener('dragover', e => { e.preventDefault(); csvDrop.classList.add('drag'); });
+csvDrop.addEventListener('dragleave', () => csvDrop.classList.remove('drag'));
+csvDrop.addEventListener('drop', e => {
+  e.preventDefault(); csvDrop.classList.remove('drag');
+  if(e.dataTransfer.files[0]) readCSV(e.dataTransfer.files[0]);
+});
+csvInput.addEventListener('change', e => { if(e.target.files[0]) readCSV(e.target.files[0]); });
+
+function readCSV(file){
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text){
+  const rows = []; let row = [], field = '', inQ = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i], n = text[i+1];
+    if(inQ){
+      if(c === '"' && n === '"'){ field += '"'; i++; }
+      else if(c === '"') inQ = false;
+      else field += c;
+    } else {
+      if(c === '"') inQ = true;
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else if(c !== '\r') field += c;
+    }
+  }
+  if(field.length > 0 || row.length > 0){ row.push(field); rows.push(row); }
+
+  if(rows.length < 2){ toast('CSV에 데이터 행이 없습니다'); return; }
+  const headers = rows[0].map(h => h.trim());
+  const dataRows = rows.slice(1).filter(r => r.some(c => c && c.trim()));
+  STATE.csvRows = dataRows.map(r => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (r[i] || '').trim());
+    return obj;
+  });
+  renderRowList();
+  toast(`CSV 로드: ${STATE.csvRows.length}개 행 발견`);
+}
+
+function renderRowList(){
+  const box = document.getElementById('rowlist');
+  if(STATE.csvRows.length === 0){ box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = STATE.csvRows.map((r, i) => `
+    <div class="rowitem" onclick="loadRow(${i})">
+      <span class="date">${(r.created_at || '').slice(5, 16) || '?'}</span>
+      ${esc(r.title || r.category || '(제목 없음)').slice(0, 40)}
+    </div>
+  `).join('');
+}
+
+function loadRow(i){
+  const r = STATE.csvRows[i]; if(!r) return;
+  STATE.meta.title = r.title || '';
+  STATE.meta.subtitle = r.subtitle || '';
+  STATE.meta.hashtags = r.hashtags || '';
+  STATE.meta.keywords = r.keywords || '';
+  for(let k=0; k<8; k++){
+    const no = String(k+1).padStart(2, '0');
+    STATE.slots[k].heading = r[`heading_${no}`] || '';
+    STATE.slots[k].body = r[`body_${no}`] || '';
+  }
+  document.getElementById('m_title').value = STATE.meta.title;
+  document.getElementById('m_subtitle').value = STATE.meta.subtitle;
+  document.getElementById('m_hashtags').value = STATE.meta.hashtags;
+  renderSlots();
+  regenOutput();
+  const info = document.getElementById('detectInfo');
+  info.style.display = 'block';
+  info.innerHTML = `<b>CSV 로드:</b> ${r.created_at || ''} &nbsp;·&nbsp; <b>카테고리:</b> ${r.category || '-'} &nbsp;·&nbsp; <b>상태:</b> ${r.status || '-'}`;
+  toast('행 로드 완료');
+}
+
+// ═════════════════════════════════════════
+// [블로그 검수] JSON / RAW 로드
+// ═════════════════════════════════════════
+function loadJSON(){
+  const raw = document.getElementById('jsonInput').value.trim();
+  if(!raw){ toast('JSON을 붙여넣어 주세요'); return; }
+  let text = raw;
+  const m = text.match(/\{[\s\S]*\}/);
+  if(m) text = m[0];
+  try {
+    const d = JSON.parse(text);
+    if(!Array.isArray(d.sections) || d.sections.length !== 8){
+      throw new Error(`섹션 수 오류: ${d.sections?.length || 0}개`);
+    }
+    STATE.meta.title = d.title || '';
+    STATE.meta.subtitle = d.subtitle || '';
+    STATE.meta.hashtags = (d.hashtags || []).join(' ');
+    STATE.meta.keywords = (d.keywords || []).join(', ');
+    d.sections.forEach((s, i) => {
+      STATE.slots[i].heading = s.heading || '';
+      STATE.slots[i].body = s.body || '';
+    });
+    document.getElementById('m_title').value = STATE.meta.title;
+    document.getElementById('m_subtitle').value = STATE.meta.subtitle;
+    document.getElementById('m_hashtags').value = STATE.meta.hashtags;
+    renderSlots();
+    regenOutput();
+    toast('JSON 로드 완료 — 8섹션 매칭');
+  } catch (err) {
+    toast('JSON 파싱 실패: ' + err.message);
+  }
+}
+
+function loadRaw(){
+  const raw = document.getElementById('rawInput').value.trim();
+  if(!raw){ toast('초안 텍스트를 붙여넣어 주세요'); return; }
+  let sections = raw.split(/\s*-{3,}\s*/).filter(s => s.trim().length > 10);
+  if(sections.length < 3) sections = raw.split(/\n\s*(?=##\s)/).filter(s => s.trim().length > 10);
+  if(sections.length < 3) sections = raw.split(/\n{2,}/).filter(s => s.trim().length > 10);
+
+  const result = Array(8).fill('');
+  if(sections.length === 8) sections.forEach((s, i) => result[i] = s);
+  else if(sections.length < 8) sections.forEach((s, i) => { if(i < 8) result[i] = s; });
+  else {
+    const diff = sections.length - 8;
+    if(diff <= 3){
+      result[0] = sections.slice(0, diff + 1).join('\n\n');
+      for(let i=1; i<8; i++) result[i] = sections[diff + i] || '';
+    } else {
+      result[0] = sections[0] || '';
+      result[7] = sections[sections.length - 1] || '';
+      const mid = sections.slice(1, -1);
+      const cs = Math.ceil(mid.length / 6);
+      for(let i=0; i<6; i++) result[i+1] = mid.slice(i*cs, (i+1)*cs).join('\n\n');
+    }
+  }
+  result.forEach((s, i) => {
+    STATE.slots[i].body = s;
+    const firstLine = s.split('\n')[0].replace(/^#{1,3}\s*/, '').trim();
+    if(firstLine && firstLine.length < 50) STATE.slots[i].heading = firstLine;
+  });
+  renderSlots(); regenOutput();
+  toast(`RAW 분할: ${sections.length}섹션 → 8슬롯`);
+}
+
+// ═════════════════════════════════════════
+// [블로그 검수] 메타/슬롯 업데이트
+// ═════════════════════════════════════════
+document.getElementById('m_title').addEventListener('input', e => { STATE.meta.title = e.target.value; });
+document.getElementById('m_subtitle').addEventListener('input', e => { STATE.meta.subtitle = e.target.value; });
+document.getElementById('m_hashtags').addEventListener('input', e => { STATE.meta.hashtags = e.target.value; });
+
+function updateHeading(i, v){ STATE.slots[i].heading = v; }
+function updateBody(i, v){ STATE.slots[i].body = v; updateCount(i); updateStats(); }
+function updateCount(i){
+  const el = document.getElementById(`cnt${i}`); if(!el) return;
+  const len = (STATE.slots[i].body || '').length;
+  el.textContent = `${len}자`;
+  el.className = 'slot-count ' + (len === 0 ? 'bad' : len < 150 ? 'warn' : 'ok');
+}
+function moveSlot(i, dir){
+  const j = i + dir; if(j < 0 || j > 7) return;
+  ['heading','body','img'].forEach(k => {
+    [STATE.slots[i][k], STATE.slots[j][k]] = [STATE.slots[j][k], STATE.slots[i][k]];
+  });
+  renderSlots(); regenOutput();
+}
+
+// ═════════════════════════════════════════
+// [블로그 검수] 정제 + 출력
+// ═════════════════════════════════════════
+function clean(text){
+  if(!text) return ''; let t = String(text);
+  const r = id => document.getElementById(id).checked;
+  if(r('r_emoji')){
+    t = t.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{27BF}]|[\u{1F000}-\u{1F2FF}]|[\u{1FA00}-\u{1FAFF}]|[\u{2700}-\u{27BF}]/gu, '');
+    t = t.replace(/[😊💡🚨✔️📌📞🌐📍👉✅❌💪📋📊🔍👀🎯🔖]/g, '');
+  }
+  if(r('r_md')){
+    t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+    t = t.replace(/__(.+?)__/g, '$1');
+    t = t.replace(/^#{1,6}\s+/gm, '');
+  }
+  if(r('r_spaces')){
+    t = t.replace(/[ \t]+/g, ' ');
+    t = t.replace(/\n{3,}/g, '\n\n');
+    t = t.split('\n').map(l => l.trim()).join('\n');
+  }
+  return t.trim();
+}
+
+function regenOutput(){
+  const fmt = STATE.format;
+  const withImgMark = document.getElementById('r_imgmark').checked;
+  const withMeta = document.getElementById('r_meta').checked;
+  let out = '';
+  if(withMeta){
+    if(STATE.meta.title) out += `[제목] ${STATE.meta.title}\n`;
+    if(STATE.meta.subtitle) out += `[부제] ${STATE.meta.subtitle}\n`;
+    if(STATE.meta.title || STATE.meta.subtitle) out += '\n';
+  }
+  STATE.slots.forEach((s, i) => {
+    const heading = clean(s.heading), body = clean(s.body);
+    if(!heading && !body) return;
+    const imgMark = withImgMark ? `[slide_${String(i+1).padStart(2,'0')}.jpg]\n\n` : '';
+    if(fmt === 'a'){
+      out += '━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+      if(heading) out += `📌 ${heading}\n`;
+      out += '━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+      out += imgMark + body + '\n\n\n';
+    } else if(fmt === 'b'){
+      out += imgMark;
+      if(heading) out += `▶ ${heading}\n\n`;
+      out += body + '\n\n\n';
+    } else {
+      out += imgMark + body + '\n\n\n';
+    }
+  });
+  const tags = (STATE.meta.hashtags || '').trim();
+  if(tags) out += '\n' + tags;
+  document.getElementById('output').value = out.trim();
+  updateStats();
+}
+
+function updateStats(){
+  const sec = STATE.slots.filter(s => (s.body || '').trim()).length;
+  const img = STATE.slots.filter(s => s.img).length;
+  const ch = STATE.slots.reduce((a, s) => a + (s.body || '').length, 0);
+  document.getElementById('secCnt').textContent = sec;
+  document.getElementById('imgCnt').textContent = img;
+  document.getElementById('charCnt').textContent = ch.toLocaleString();
+}
+
+function copyOutput(){
+  const out = document.getElementById('output');
+  out.select(); document.execCommand('copy');
+  toast('클립보드에 복사 완료 — 네이버 블로그에 붙여넣으세요');
+}
+
+function clearReview(){
+  if(!confirm('블로그 검수 데이터를 모두 초기화할까요?')) return;
+  STATE.slots.forEach(s => { s.heading = ''; s.body = ''; s.img = null; });
+  STATE.meta = { title: '', subtitle: '', hashtags: '', keywords: '' };
+  STATE.csvRows = [];
+  ['m_title','m_subtitle','m_hashtags','jsonInput','rawInput'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('output').value = '';
+  document.getElementById('detectInfo').style.display = 'none';
+  document.getElementById('rowlist').style.display = 'none';
+  renderSlots();
+  toast('초기화 완료');
+}
+
+// 블로그 검수 → 썸네일로 연동
+function sendToThumb(){
+  if(STATE.meta.title){
+    // 제목을 2줄로 자동 분리 시도: 공백 기준으로 대략 반으로 나눔
+    const title = STATE.meta.title.trim();
+    const words = title.split(/\s+/);
+    if(words.length >= 3){
+      // 단어 수의 대략 절반 지점에서 나누기
+      const mid = Math.ceil(words.length / 2);
+      const line1 = words.slice(0, mid).join(' ');
+      const line2 = words.slice(mid).join(' ');
+      document.getElementById('tTitle').value = line1 + '\n' + line2;
+    } else {
+      document.getElementById('tTitle').value = title;
+    }
+  }
+  if(STATE.meta.subtitle){
+    document.getElementById('tSub').value = STATE.meta.subtitle;
+  }
+  document.querySelector('.mode-tab[data-mode="thumb"]').click();
+  updateThumb();
+  toast('블로그 제목·부제가 썸네일로 전달되었습니다 (2줄 자동 분리)');
+}
+
+// ═════════════════════════════════════════
+// [썸네일 생성] 미리보기 업데이트
+// ═════════════════════════════════════════
+function setThumbMode(m){
+  STATE.thumbMode = m;
+  ['twrap1','twrap2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('dark','light');
+    el.classList.add(m);
+  });
+  document.getElementById('btnDark').classList.toggle('active', m === 'dark');
+  document.getElementById('btnLight').classList.toggle('active', m === 'light');
+  document.getElementById('thumbMode').textContent = m.toUpperCase();
+}
+
+// v3.2: 외곽 여백 토글 (none / thin / normal / wide)
+function setThumbMargin(m){
+  STATE.thumbMargin = m;
+  ['twrap1','twrap2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('margin-none','margin-thin','margin-normal','margin-wide');
+    el.classList.add('margin-' + m);
+  });
+  document.querySelectorAll('[data-margin]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.margin === m);
+  });
+}
+
+document.getElementById('fontSize').addEventListener('input', e => {
+  STATE.thumbFontSize = parseInt(e.target.value);
+  document.getElementById('fsVal').textContent = e.target.value + 'px';
+  const pct = ((e.target.value - 12) / (30 - 12) * 100).toFixed(1) + '%';
+  e.target.style.setProperty('--p', pct);
+  updateThumb();
+});
+// 초기 slider 색상
+(function(){
+  const sl = document.getElementById('fontSize');
+  const pct = ((sl.value - 12) / (30 - 12) * 100).toFixed(1) + '%';
+  sl.style.setProperty('--p', pct);
+})();
+
+// 태그 토글
+document.getElementById('tagPool').addEventListener('click', e => {
+  if(!e.target.classList.contains('tbtn')) return;
+  const tag = e.target.dataset.t;
+  if(STATE.activeTags.has(tag)){
+    STATE.activeTags.delete(tag);
+    e.target.classList.remove('on');
+  } else {
+    if(STATE.activeTags.size >= 3){ toast('최대 3개까지 선택 가능'); return; }
+    STATE.activeTags.add(tag);
+    e.target.classList.add('on');
+  }
+  updateThumb();
+});
+
+function addTag(){
+  const input = document.getElementById('newTag');
+  let v = input.value.trim();
+  if(!v) return;
+  if(!v.startsWith('#')) v = '#' + v;
+  if(STATE.activeTags.size >= 3){ toast('최대 3개까지 선택 가능'); return; }
+  if([...document.querySelectorAll('.tbtn')].some(b => b.dataset.t === v)){ toast('이미 존재하는 태그'); return; }
+  const btn = document.createElement('div');
+  btn.className = 'tbtn on';
+  btn.dataset.t = v;
+  btn.textContent = v;
+  document.getElementById('tagPool').appendChild(btn);
+  STATE.activeTags.add(v);
+  input.value = '';
+  updateThumb();
+}
+
+['tTitle','tSub'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateThumb);
+});
+
+// 서브타이틀 크기 슬라이더
+document.getElementById('subSize').addEventListener('input', e => {
+  STATE.thumbSubSize = parseInt(e.target.value);
+  document.getElementById('subSizeVal').textContent = e.target.value + 'px';
+  const pct = ((e.target.value - 8) / (14 - 8) * 100).toFixed(1) + '%';
+  e.target.style.setProperty('--p', pct);
+  updateThumb();
+});
+(function(){
+  const sl = document.getElementById('subSize');
+  const pct = ((sl.value - 8) / (14 - 8) * 100).toFixed(1) + '%';
+  sl.style.setProperty('--p', pct);
+})();
+
+// 서브타이틀 색상 토글
+function setSubColor(c){
+  STATE.thumbSubColor = c;
+  document.querySelectorAll('[data-sub-color]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.subColor === c);
+  });
+  updateThumb();
+}
+
+function updateThumb(){
+  const titleRaw = document.getElementById('tTitle').value;
+  const sub = document.getElementById('tSub').value;
+  const tagsHTML = [...STATE.activeTags].map(t => `<span class="t-tag">${t}</span>`).join('');
+  ['ptags1','ptags2'].forEach(id => document.getElementById(id).innerHTML = tagsHTML);
+
+  // 타이틀 2줄 분리 — 첫 줄: 기본 색상 / 둘째 줄 이후: 골드
+  const lines = titleRaw.split('\n');
+  const line1 = lines[0] || '';
+  const line2 = lines.slice(1).filter(l => l.trim()).join(' ');
+
+  let titleHTML;
+  if(line2){
+    // 2줄 이상 → 첫 줄 + 둘째 줄(골드)
+    titleHTML = `${escapeHTML(line1)}<span class="line-2">${escapeHTML(line2)}</span>`;
+  } else {
+    // 1줄만 → 전체 흰색
+    titleHTML = escapeHTML(line1);
+  }
+
+  ['ptitle1','ptitle2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = titleHTML;
+    el.style.fontSize = STATE.thumbFontSize + 'px';
+  });
+
+  // 서브타이틀: 크기 + 색상
+  ['psub1','psub2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = sub;
+    el.style.fontSize = STATE.thumbSubSize + 'px';
+    el.classList.remove('sub-default','sub-white','sub-gold');
+    el.classList.add('sub-' + STATE.thumbSubColor);
+  });
+
+  document.getElementById('tcnt').textContent = STATE.activeTags.size;
+}
+
+function escapeHTML(s){
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═════════════════════════════════════════
+// [썸네일 생성] 고품질 다운로드 — 핵심 개선
+// ═════════════════════════════════════════
+async function downloadThumb(){
+  const btn = document.getElementById('btnDownload');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ 고해상도 렌더링 중...';
+  toast('고해상도 렌더링 중... (최대 10초)', 'loading');
+
+  try {
+    const targetSize = STATE.thumbRes; // 1024 / 2048 / 4096
+    const baseSize = 238;
+    const scale = targetSize / baseSize;
+
+    // 오프스크린 스테이지에 고해상도 DOM 복제
+    const stage = document.getElementById('renderStage');
+    stage.innerHTML = '';
+
+    // 원본 actualBox를 복제
+    const source = document.getElementById('actualBox');
+    const clone = source.cloneNode(true);
+    clone.id = 'renderTarget';
+    // 스테이지에 추가 (가시성 유지, 위치만 오프스크린)
+    stage.appendChild(clone);
+
+    // 미리보기 폰트 반영
+    const titleEl = clone.querySelector('.t-title');
+    if(titleEl) titleEl.style.fontSize = STATE.thumbFontSize + 'px';
+
+    // 폰트 로딩 대기 (매우 중요 - Noto Sans KR)
+    if(document.fonts && document.fonts.ready){
+      await document.fonts.ready;
+    }
+    await new Promise(r => setTimeout(r, 200));
+
+    // html2canvas로 고해상도 렌더링
+    const canvas = await html2canvas(clone, {
+      scale: scale,                    // ← 핵심: 8.6배 (2048 기준)
+      useCORS: true,
+      backgroundColor: null,
+      width: baseSize,
+      height: baseSize,
+      logging: false,
+      imageTimeout: 0,
+      // 폰트 smoothing 최대화
+      onclone: (clonedDoc) => {
+        const target = clonedDoc.getElementById('renderTarget');
+        if(target){
+          target.style.fontSmoothing = 'antialiased';
+          target.style.webkitFontSmoothing = 'antialiased';
+          target.style.textRendering = 'optimizeLegibility';
+        }
+      }
+    });
+
+    // 스테이지 정리
+    stage.innerHTML = '';
+
+    // PNG 무손실로 저장 (toBlob 사용 - 메모리 효율적)
+    canvas.toBlob((blob) => {
+      if(!blob){ toast('저장 실패'); return; }
+
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+      const titleSlug = (document.getElementById('tTitle').value || 'thumbnail')
+        .slice(0, 20).replace(/[^\w가-힣]/g, '_');
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NMSC_썸네일_${titleSlug}_${targetSize}px_${stamp}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+      toast(`✓ PNG 저장 완료: ${targetSize}×${targetSize}px · ${sizeMB}MB`);
+    }, 'image/png');
+
+  } catch (err) {
+    console.error(err);
+    toast('오류: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+// ═════════════════════════════════════════
+// [이미지 품질 체크]
+// ═════════════════════════════════════════
+const qDrop = document.getElementById('qDrop');
+const qInput = document.getElementById('qInput');
+qDrop.addEventListener('dragover', e => { e.preventDefault(); qDrop.classList.add('drag'); });
+qDrop.addEventListener('dragleave', () => qDrop.classList.remove('drag'));
+qDrop.addEventListener('drop', e => {
+  e.preventDefault(); qDrop.classList.remove('drag');
+  handleQualityFiles(e.dataTransfer.files);
+});
+qInput.addEventListener('change', e => handleQualityFiles(e.target.files));
+
+function handleQualityFiles(files){
+  const list = Array.from(files);
+  if(list.length === 0) return;
+  toast(`${list.length}개 이미지 분석 중...`);
+
+  list.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        STATE.qImages.push({
+          file: file,
+          name: file.name,
+          size: file.size,
+          src: e.target.result,
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          grade: gradeImage(img.naturalWidth, img.naturalHeight)
+        });
+        renderQualityList();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function gradeImage(w, h){
+  const short = Math.min(w, h);
+  if(short >= 2160) return { level: 'ok', label: '최적' };
+  if(short >= 1080) return { level: 'warn', label: '허용' };
+  return { level: 'bad', label: '부족' };
+}
+
+function renderQualityList(){
+  const list = document.getElementById('qiList');
+  const summary = document.getElementById('qualitySummary');
+  const cntEl = document.getElementById('qiCnt');
+  const avgEl = document.getElementById('qiAvg');
+
+  if(STATE.qImages.length === 0){
+    list.innerHTML = ''; summary.innerHTML = '';
+    cntEl.textContent = '0'; avgEl.textContent = '—';
+    return;
+  }
+
+  cntEl.textContent = STATE.qImages.length;
+  const avgShort = Math.round(
+    STATE.qImages.reduce((a, i) => a + Math.min(i.width, i.height), 0) / STATE.qImages.length
+  );
+  avgEl.textContent = avgShort;
+
+  // 요약
+  const good = STATE.qImages.filter(i => i.grade.level === 'ok').length;
+  const warn = STATE.qImages.filter(i => i.grade.level === 'warn').length;
+  const bad = STATE.qImages.filter(i => i.grade.level === 'bad').length;
+  const total = STATE.qImages.length;
+
+  let klass = 'good', title = '전체 이미지 품질 양호 ✓';
+  if(bad > 0){ klass = 'bad'; title = `⚠ ${bad}개 이미지 해상도 부족 — 재생성 권장`; }
+  else if(warn > 0){ klass = 'warn'; title = `▲ ${warn}개 이미지 허용 수준 — 가능하면 재생성`; }
+
+  summary.innerHTML = `
+    <div class="quality-result ${klass}">
+      <div class="qr-title">${title}</div>
+      <div class="qr-detail">
+        <b>${good}</b>개 최적 · <b>${warn}</b>개 허용 · <b>${bad}</b>개 부족 (총 ${total}개)<br>
+        평균 짧은 변: <b>${avgShort}px</b>
+      </div>
+    </div>
+  `;
+
+  list.innerHTML = STATE.qImages.map((i, idx) => {
+    const short = Math.min(i.width, i.height);
+    const sizeMB = (i.size / 1024 / 1024).toFixed(2);
+    return `
+      <div class="qi-card">
+        <div class="qi-thumb"><img src="${i.src}"></div>
+        <div class="qi-info">
+          <div class="qi-name">${esc(i.name)}</div>
+          <div class="qi-meta">
+            해상도: <b>${i.width}×${i.height}</b><br>
+            크기: ${sizeMB}MB<br>
+            판정: <span class="${i.grade.level}">${i.grade.label}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function runUpscale(){
+  const upscaleFlag = document.getElementById('q_upscale').checked;
+  if(!upscaleFlag){
+    toast('업스케일 옵션을 체크해주세요'); return;
+  }
+  const targets = STATE.qImages.filter(i => i.grade.level !== 'ok');
+  if(targets.length === 0){ toast('업스케일할 이미지가 없습니다 (모두 최적 품질)'); return; }
+
+  toast(`${targets.length}개 이미지 업스케일 중...`, 'loading');
+
+  for(const img of targets){
+    await upscaleOne(img);
+  }
+  toast(`✓ ${targets.length}개 이미지 업스케일 저장 완료`);
+}
+
+async function upscaleOne(imgData){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      // 2배 업스케일 (bicubic 가까운 효과)
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth * 2;
+      canvas.height = img.naturalHeight * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      // 2단계 렌더링으로 품질 상승
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'upscaled_' + imgData.name.replace(/\.[^.]+$/, '') + '.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        resolve();
+      }, 'image/png');
+    };
+    img.src = imgData.src;
+  });
+}
+
+// ═════════════════════════════════════════
+// 공통 유틸
+// ═════════════════════════════════════════
+function toast(msg, type = ''){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), type === 'loading' ? 10000 : 2400);
+}
+
+// ═════════════════════════════════════════
+// 초기화
+// ═════════════════════════════════════════
+renderSlots();
+updateThumb();
+initSheetSync();
+</script>
+</body>
+</html>
