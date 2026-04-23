@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NMSC 도구 모음</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Noto Sans KR', -apple-system, sans-serif; }
+body { background: linear-gradient(135deg, #07101f, #0c1c3d); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.container { max-width: 600px; width: 100%; text-align: center; }
+h1 { color: #fff; font-size: 32px; font-weight: 900; margin-bottom: 12px; letter-spacing: -0.02em; }
+.sub { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 40px; }
+.tools { display: grid; gap: 16px; }
+.tool-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(201,162,39,0.3); border-radius: 12px; padding: 24px; text-decoration: none; transition: 0.2s; }
+.tool-card:hover { background: rgba(201,162,39,0.1); border-color: #c9a227; transform: translateY(-2px); }
+.tool-icon { font-size: 32px; margin-bottom: 8px; }
+.tool-name { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.tool-desc { color: rgba(255,255,255,0.55); font-size: 12px; }
+.footer { margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>NMSC 도구 모음</h1>
+  <p class="sub">나이스경영지원센터 블로그 · SNS 콘텐츠 도구</p>
+  <div class="tools">
+    <a href="nmsc_blog_v3.html" class="tool-card">
+      <div class="tool-icon">📝</div>
+      <div class="tool-name">블로그 검수 · 썸네일 생성</div>
+      <div class="tool-desc">블로그 본문 검수 및 고품질 썸네일 제작</div>
+    </a>
+    <a href="nmsc_sns_v1.html" class="tool-card">
+      <div class="tool-icon">📸</div>
+      <div class="tool-name">SNS 배포 도구</div>
+      <div class="tool-desc">인스타그램 · 페이스북 · 카카오채널 동시 배포</div>
+    </a>
+  </div>
+  <div class="footer">NMSC · 1688-1298</div>
+</div>
+</body>
+</html>
