@@ -90,7 +90,7 @@
   }
   #resLabel { font-size: 13px; color: #6b6b66; margin-bottom: 10px; }
   #resDate { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
-  #resSub {
+  #resSub, #tSub {
     display: inline-block;
     font-size: 15px;
     font-weight: 600;
@@ -98,6 +98,22 @@
     background: #e6f1fb;
     padding: 4px 14px;
     border-radius: 8px;
+  }
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0;
+  }
+  .divider::before, .divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e3e1da;
+  }
+  .divider span {
+    font-size: 13px;
+    color: #888780;
   }
 </style>
 </head>
@@ -126,6 +142,19 @@
       <div id="resLabel">버튼을 눌러 날짜를 계산하세요</div>
       <div id="resDate">—</div>
       <div id="resSub" style="display:none;"></div>
+    </div>
+
+    <div class="divider"><span>목표일까지 며칠 남았나</span></div>
+
+    <div class="card">
+      <label for="targetDate">목표 날짜 (이 날까지 남은 일수 계산)</label>
+      <input type="date" id="targetDate">
+    </div>
+
+    <div class="card result">
+      <div id="tLabel">목표 날짜를 선택하세요</div>
+      <div id="tDate">—</div>
+      <div id="tSub" style="display:none;"></div>
     </div>
   </div>
 
@@ -170,6 +199,38 @@
     resLabel.textContent = '버튼을 눌러 날짜를 계산하세요';
     resDate.textContent = '—';
     resSub.style.display = 'none';
+  });
+
+  var target = document.getElementById('targetDate');
+  var tLabel = document.getElementById('tLabel');
+  var tDate = document.getElementById('tDate');
+  var tSub = document.getElementById('tSub');
+
+  target.addEventListener('change', function(){
+    if(!target.value){
+      tLabel.textContent = '목표 날짜를 선택하세요';
+      tDate.textContent = '—';
+      tSub.style.display = 'none';
+      return;
+    }
+    var d = new Date(target.value + 'T00:00:00');
+    var w = W[d.getDay()];
+    var now0 = new Date(); now0.setHours(0,0,0,0);
+    var diff = Math.round((d - now0)/86400000);
+
+    tDate.textContent = d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+w+')';
+    tSub.style.display = 'inline-block';
+
+    if(diff > 0){
+      tLabel.textContent = '오늘부터 '+diff+'일 남음';
+      tSub.textContent = 'D-'+diff;
+    } else if(diff === 0){
+      tLabel.textContent = '오늘이 목표일입니다';
+      tSub.textContent = 'D-DAY';
+    } else {
+      tLabel.textContent = Math.abs(diff)+'일 지났습니다';
+      tSub.textContent = 'D+'+Math.abs(diff);
+    }
   });
 })();
 </script>
