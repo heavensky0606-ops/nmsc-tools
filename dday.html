@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D-DAY 계산기</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f4f4f2;
+    color: #1f1f1d;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #e3e1da;
+    border-radius: 14px;
+    padding: 20px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #6b6b66;
+    margin-bottom: 8px;
+  }
+  input[type="date"], input[type="number"] {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px;
+    border: 1px solid #d3d1c7;
+    border-radius: 10px;
+    background: #fff;
+    color: #1f1f1d;
+    font-family: inherit;
+  }
+  .btns {
+    display: flex;
+    gap: 8px;
+  }
+  .btns button {
+    flex: 1;
+    font-size: 16px;
+    padding: 14px 0;
+    border: 1px solid #d3d1c7;
+    border-radius: 10px;
+    background: #fff;
+    color: #1f1f1d;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btns button:hover { background: #f1efe8; }
+  .btns button:active { transform: scale(.98); }
+  .custom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .custom input { flex: 1; }
+  .custom span { font-size: 14px; color: #6b6b66; white-space: nowrap; }
+  .custom button {
+    padding: 12px 18px;
+    border: 1px solid #d3d1c7;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .custom button:hover { background: #f1efe8; }
+  .result {
+    text-align: center;
+    padding: 28px 20px;
+  }
+  #resLabel { font-size: 13px; color: #6b6b66; margin-bottom: 10px; }
+  #resDate { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+  #resSub {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 600;
+    color: #185fa5;
+    background: #e6f1fb;
+    padding: 4px 14px;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>D-DAY 계산기</h1>
+
+    <div class="card">
+      <label for="baseDate">기준일 (오늘 자동 입력 · 수정 가능)</label>
+      <input type="date" id="baseDate">
+    </div>
+
+    <div class="btns">
+      <button data-days="30">+30일</button>
+      <button data-days="60">+60일</button>
+      <button data-days="90">+90일</button>
+    </div>
+
+    <div class="card custom">
+      <input type="number" id="customDays" placeholder="직접 입력">
+      <span>일 뒤</span>
+      <button id="customBtn">계산</button>
+    </div>
+
+    <div class="card result">
+      <div id="resLabel">버튼을 눌러 날짜를 계산하세요</div>
+      <div id="resDate">—</div>
+      <div id="resSub" style="display:none;"></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var base = document.getElementById('baseDate');
+  var resLabel = document.getElementById('resLabel');
+  var resDate = document.getElementById('resDate');
+  var resSub = document.getElementById('resSub');
+  var W = ['일','월','화','수','목','금','토'];
+
+  var t = new Date();
+  base.value = t.getFullYear() + '-' +
+    String(t.getMonth()+1).padStart(2,'0') + '-' +
+    String(t.getDate()).padStart(2,'0');
+
+  function calc(days){
+    if(!base.value) return;
+    var d = new Date(base.value + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    var w = W[d.getDay()];
+    resLabel.textContent = (days>=0 ? '+'+days : days) + '일 뒤';
+    resDate.textContent = d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+w+')';
+
+    var now0 = new Date(); now0.setHours(0,0,0,0);
+    var diff = Math.round((d - now0)/86400000);
+    resSub.style.display = 'inline-block';
+    resSub.textContent = diff>0 ? 'D-'+diff : (diff===0 ? 'D-DAY' : 'D+'+Math.abs(diff));
+  }
+
+  var btns = document.querySelectorAll('.btns button');
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener('click', function(){
+      calc(parseInt(this.getAttribute('data-days')));
+    });
+  }
+  document.getElementById('customBtn').addEventListener('click', function(){
+    var v = parseInt(document.getElementById('customDays').value);
+    if(!isNaN(v)) calc(v);
+  });
+  base.addEventListener('change', function(){
+    resLabel.textContent = '버튼을 눌러 날짜를 계산하세요';
+    resDate.textContent = '—';
+    resSub.style.display = 'none';
+  });
+})();
+</script>
+</body>
+</html>
