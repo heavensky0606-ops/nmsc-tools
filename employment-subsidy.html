@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>전 제도 고용지원금 진단 | NMSC</title>
+<title>고용지원금 진단 | NMSC</title>
 <style>
   :root{
     --blue:#0A84FF;--blue-d:#0060df;--blue-l:#e8f2ff;--blue-ll:#f4f9ff;
@@ -139,10 +139,10 @@
   .pbody{padding:0 18px 16px;display:none}
   .person.open .pbody{display:block}
 
-  .flag{border-radius:11px;padding:14px;margin-top:10px;border-left:4px solid;background:var(--blue-ll)}
-  .flag.high{border-color:var(--blue)}
-  .flag.check{border-color:var(--blue);border-left-style:solid}
-  .flag.verify{border-color:#9db4cf;background:#f6f9fc}
+  .flag{border-radius:11px;padding:14px;margin-top:10px;border:1px solid var(--line);background:var(--blue-ll)}
+  .flag.high{border-color:#cfdbe8}
+  .flag.check{border-color:#cfdbe8}
+  .flag.verify{border-color:#cfdbe8;background:#f6f9fc}
   .ftop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .flv{font-size:10px;font-weight:900;padding:2px 8px;border-radius:5px;color:#fff;background:var(--blue)}
   .flv.high{background:var(--blue-d)}.flv.check{background:var(--blue)}.flv.verify{background:#9db4cf;color:var(--ink)}
@@ -180,7 +180,7 @@
 </head>
 <body>
 <header><div class="hwrap">
-  <div class="logo">NMSC · 전 제도 고용지원금 진단</div>
+  <div class="logo">NMSC · 고용지원금 진단</div>
   <h1>4대보험 명부로<br>받을 수 있는 지원금 전부 찾기</h1>
   <div class="sub">청년만? 아니요. 중장년·고령자·외국인까지 — 노무사가 놓치는 케이스도 빠짐없이</div>
 </div></header>
@@ -222,7 +222,7 @@
       </div>
     </div>
     <div class="region-hint" id="regionHint">시/군/구까지 선택하면 청년 제도에 담당 운영기관이 자동으로 연결됩니다.</div>
-    <button class="btn" id="run">전 제도 진단하기</button>
+    <button class="btn" id="run">고용지원금 진단하기</button>
     <button class="btn ghost" id="histBtn">📋 조회 이력 보기</button>
     <div id="err"></div>
   </div>
@@ -574,7 +574,7 @@ function render(roster,region,size,matchedOrgs,ctx){
   h+='<div class="warn"><b>⚠️ 이 진단은 "가능성 스크리닝"입니다.</b> 명부의 생년·입사일만으로 자동 판정한 결과라, 실제 수급은 '
     +'취업규칙·계약형태·취약계층 증빙·고용조정 이력 등에 따라 달라집니다. <b>공통 결격사유</b>(신청 전후 권고사직·해고, 임금체불 명단공개, 보험료 체납, 대표자 친족, 유흥·도박업)에 해당하면 부지급됩니다. '
     +'각 제도는 위 담당 기관 전화 확인 후 고용24에서 신청하세요.</div>';
-  h+=`<div class="footer">2026년 고용장려금 지원제도 기준 · NMSC 전 제도 진단 엔진<br>최종 수급요건·금액은 관할 고용센터·근로복지공단·운영기관에서 확인 필요 · © NMSC</div>`;
+  h+=`<div class="footer">2026년 고용장려금 지원제도 기준 · NMSC 고용지원금 진단<br>최종 수급요건·금액은 관할 고용센터·근로복지공단·운영기관에서 확인 필요 · © NMSC</div>`;
 
   const result=document.getElementById('result');
   result.innerHTML=h;
