@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전 제도 고용지원금 진단 | NMSC</title>
+<style>
+  :root{
+    --blue:#0A84FF;--blue-d:#0060df;--blue-l:#e8f2ff;--blue-ll:#f4f9ff;
+    --ink:#0b2545;--gray:#5b6b80;--line:#dce6f2;--bg:#f4f8ff;--white:#fff;
+    --red:#e8202a;--red-l:#fff0f0;
+    /* 확정도: 색이 아닌 진하기로 구분 (모두 블루 계열) */
+    --green:var(--blue);--green-l:var(--blue-l);
+    --amber:var(--blue-d);--amber-l:var(--blue-ll);
+    --purple:var(--gray);--purple-l:#f0f4f9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:840px;margin:0 auto;padding:0 16px 80px}
+  header{background:var(--blue);color:#fff;padding:30px 16px 26px}
+  .hwrap{max-width:840px;margin:0 auto}
+  .logo{font-size:13px;font-weight:900;letter-spacing:2px;opacity:.85;margin-bottom:10px}
+  h1{font-size:25px;font-weight:900;letter-spacing:-.5px;line-height:1.25}
+  .sub{font-size:14px;opacity:.92;margin-top:8px;font-weight:500}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:18px;
+    box-shadow:0 2px 14px rgba(10,132,255,.06)}
+  .step{font-size:12px;font-weight:900;color:var(--blue);letter-spacing:1px;margin-bottom:14px;
+    display:flex;align-items:center;gap:7px}
+  .step::before{content:"";width:18px;height:3px;background:var(--blue);border-radius:2px}
+  .howto{font-size:13px;color:var(--gray);margin-bottom:12px;line-height:1.6;font-weight:500}
+  .howto b{color:var(--ink);font-weight:800}
+  textarea{width:100%;min-height:150px;padding:14px;font-size:13px;border:2px solid var(--line);
+    border-radius:11px;font-family:'SF Mono',Menlo,monospace;color:var(--ink);resize:vertical;line-height:1.7;margin-top:12px}
+  textarea:focus{outline:none;border-color:var(--blue)}
+  .hidden{display:none!important}
+  .selrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .selrow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+  .region-hint{font-size:12px;color:var(--blue);font-weight:700;margin-top:9px;padding-left:2px}
+  /* 운영기관 배너 */
+  .orgbanner{background:#fff;border:2px solid var(--blue-l);border-radius:14px;padding:16px 18px;margin-bottom:18px}
+  .orgbanner .obt{font-size:14px;font-weight:900;color:var(--blue-d);margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .orgbanner .obloc{font-size:12px;color:var(--gray);font-weight:700;margin-bottom:12px}
+  .orgitem{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+  .orgitem:first-of-type{border-top:none}
+  .orgitem .on{font-size:14px;font-weight:800;flex:1;min-width:130px}
+  .orgitem .oq{font-size:11px;font-weight:800;color:var(--blue-d);background:var(--blue-l);padding:2px 8px;border-radius:6px}
+  .orgitem .oq.low{color:var(--amber);background:var(--amber-l)}
+  .orgitem .ot{font-size:14px;font-weight:900;color:#fff;background:var(--blue);padding:7px 13px;border-radius:8px;text-decoration:none}
+  .orgitem .ot:hover{background:var(--blue-d)}
+  .orgbanner .obnone{font-size:13px;color:var(--gray);font-weight:600}
+  /* 카드 내 운영기관 미니 */
+  .org-inline{background:#fff;border:1px dashed var(--blue);border-radius:9px;padding:10px 13px;margin-top:10px}
+  .org-inline .oil{font-size:11px;font-weight:900;color:var(--blue);margin-bottom:7px}
+  .org-inline .oirow{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap}
+  .org-inline .oin{font-size:13px;font-weight:700;flex:1;min-width:110px}
+  .org-inline .oit{font-size:13px;font-weight:900;color:var(--blue);text-decoration:none}
+  .org-inline .oimore{font-size:11px;color:var(--gray);font-weight:600;margin-top:5px}
+  /* 수령주체 섹션 */
+  .recipient-head{font-size:16px;font-weight:900;margin:22px 0 4px;display:flex;align-items:center;gap:8px}
+  .recipient-head .rsub{font-size:12px;font-weight:600;color:var(--gray)}
+  .rbadge{font-size:10px;font-weight:900;padding:2px 8px;border-radius:5px;color:#fff}
+  .rbadge.company{background:var(--blue)}
+  .rbadge.worker{background:var(--red)}
+  label{display:block;font-size:13px;font-weight:800;margin-bottom:7px}
+  select{width:100%;padding:12px 14px;font-size:14px;border:2px solid var(--line);border-radius:11px;
+    background:#fff;font-weight:700;color:var(--ink);-webkit-appearance:none;appearance:none;cursor:pointer}
+  select:focus{outline:none;border-color:var(--blue)}
+  .btn{width:100%;padding:15px;font-size:16px;font-weight:900;color:#fff;background:var(--blue);
+    border:none;border-radius:12px;cursor:pointer;margin-top:16px;letter-spacing:-.3px}
+  .btn:hover{background:var(--blue-d)}
+  .btn.ghost{background:#fff;color:var(--blue);border:2px solid var(--blue-l);margin-top:10px}
+  .ex{font-size:12px;color:var(--blue);cursor:pointer;font-weight:800;margin-top:10px;display:inline-block}
+  .ex:hover{text-decoration:underline}
+
+  /* 결과 */
+  #result{margin-top:22px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .stat{flex:1;min-width:90px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:13px;text-align:center}
+  .stat .n{font-size:24px;font-weight:900;color:var(--blue)}
+  .stat .l{font-size:11px;color:var(--gray);font-weight:700;margin-top:2px}
+  .rtitle{font-size:19px;font-weight:900;margin:22px 0 5px}
+  .rdesc{font-size:13px;color:var(--gray);margin-bottom:14px;font-weight:500}
+
+  .company-box{background:var(--blue-l);border-radius:14px;padding:16px 18px;margin-bottom:18px}
+  .company-box .ct{font-size:14px;font-weight:900;color:var(--blue-d);margin-bottom:9px;display:flex;gap:7px;align-items:center}
+  .company-prog{font-size:13px;padding:8px 0;border-bottom:1px solid rgba(10,132,255,.12);font-weight:600}
+  .company-prog:last-child{border:none}
+  .company-prog b{font-weight:900;color:var(--ink)}
+
+  .person{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;background:#fff;overflow:hidden}
+  .phead{padding:14px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
+  .phead:hover{background:#fafcff}
+  .pname{font-size:16px;font-weight:900}
+  .pmeta{font-size:13px;color:var(--gray);font-weight:600}
+  .pcount{margin-left:auto;font-size:12px;font-weight:900;color:#fff;background:var(--blue);
+    padding:3px 10px;border-radius:20px}
+  .pcount.zero{background:#c2cdd9}
+  .ptag{font-size:10px;font-weight:900;padding:2px 7px;border-radius:5px}
+  .ptag.f{background:var(--red-l);color:var(--red)}
+  .pbody{padding:0 18px 16px;display:none}
+  .person.open .pbody{display:block}
+
+  .flag{border-radius:11px;padding:14px;margin-top:10px;border-left:4px solid;background:var(--blue-ll)}
+  .flag.high{border-color:var(--blue)}
+  .flag.check{border-color:var(--blue);border-left-style:solid}
+  .flag.verify{border-color:#9db4cf;background:#f6f9fc}
+  .ftop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .flv{font-size:10px;font-weight:900;padding:2px 8px;border-radius:5px;color:#fff;background:var(--blue)}
+  .flv.high{background:var(--blue-d)}.flv.check{background:var(--blue)}.flv.verify{background:#9db4cf;color:var(--ink)}
+  .fprog{font-size:15px;font-weight:900}
+  .forg{font-size:12px;font-weight:800;color:var(--gray);margin-left:auto}
+  .fdesc{font-size:13px;color:var(--ink);margin-top:7px;font-weight:500;line-height:1.5}
+  /* 대표님 멘트 박스 (영업) */
+  .pitch{background:var(--blue);border-radius:9px;padding:12px 14px;margin-top:10px}
+  .pitch .pl{font-size:11px;font-weight:900;color:#fff;margin-bottom:6px;display:flex;align-items:center;gap:6px;opacity:.95}
+  .pitch .ptext{color:#fff;font-weight:600;font-size:13px;line-height:1.6}
+  .pitch .ptext b{font-weight:900;color:#fff;background:rgba(255,255,255,.22);padding:0 4px;border-radius:3px}
+  .pitch .scopy{font-size:11px;font-weight:800;color:#fff;cursor:pointer;margin-top:8px;display:inline-block;
+    border:1px solid rgba(255,255,255,.5);padding:3px 9px;border-radius:6px}
+  .pitch .scopy:hover{background:rgba(255,255,255,.18)}
+  .script{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-top:10px;
+    font-size:13px;line-height:1.6}
+  .script .sl{font-size:11px;font-weight:900;color:var(--blue);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+  .script .stext{color:var(--ink);font-weight:500;font-style:italic}
+  .script .scopy{font-size:11px;font-weight:800;color:var(--blue);cursor:pointer;margin-top:7px;display:inline-block}
+  .script .scopy:hover{text-decoration:underline}
+  .fcheck{font-size:12px;color:var(--gray);margin-top:8px;font-weight:600}
+  .fcheck b{color:var(--red);font-weight:800}
+  .pnone{font-size:13px;color:var(--gray);padding:10px 0;font-weight:500}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 4px;font-size:11px;font-weight:700}
+  .legend span{display:flex;align-items:center;gap:5px;color:var(--gray)}
+  .ldot{width:10px;height:10px;border-radius:3px}
+  .warn{background:var(--red-l);border-left:4px solid var(--red);border-radius:10px;
+    padding:14px 16px;margin-top:18px;font-size:12.5px;color:#8a1a1f;line-height:1.6;font-weight:500}
+  .warn b{font-weight:900;color:var(--red)}
+  .footer{text-align:center;font-size:11px;color:#9aa8b8;margin-top:26px;line-height:1.7}
+  .err{background:#fde8e8;color:var(--red);padding:13px;border-radius:10px;font-size:13px;font-weight:700;margin-top:12px}
+  @media(max-width:560px){.selrow{grid-template-columns:1fr}h1{font-size:21px}.forg{margin-left:0;width:100%}}
+</style>
+</head>
+<body>
+<header><div class="hwrap">
+  <div class="logo">NMSC · 전 제도 고용지원금 진단</div>
+  <h1>4대보험 명부로<br>받을 수 있는 지원금 전부 찾기</h1>
+  <div class="sub">청년만? 아니요. 중장년·고령자·외국인까지 — 노무사가 놓치는 케이스도 빠짐없이</div>
+</div></header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="step">명부 붙여넣기</div>
+    <div class="howto"><b>4대보험 사업장 가입자 명부</b>를 화면에서 드래그해 복사(Ctrl+C) 후 아래에 붙여넣으세요(Ctrl+V).<br>이름·주민번호·자격취득일이 함께 복사되면 자동으로 읽습니다. 엑셀·한글 명부도 그대로 됩니다.</div>
+
+    <textarea id="input" placeholder="명부 표를 드래그 복사해서 여기에 붙여넣기 ↓
+
+예시)
+1  590309-2******  이원자  -  2018.09.01  -  -
+2  730218-1******  김성호  2025.05.08  2025.05.08  ...
+8  990116-2******  김정미  2025.12.11  2025.12.11  ..."></textarea>
+    <span class="ex" id="loadEx">▶ 예시 데이터로 먼저 체험해보기</span>
+
+    <div class="selrow3">
+      <div>
+        <label>회사 소재지 (시/도)</label>
+        <select id="sido"><option value="">선택</option></select>
+      </div>
+      <div>
+        <label>시/군/구</label>
+        <select id="sigungu" disabled><option value="">먼저 시/도 선택</option></select>
+      </div>
+      <div>
+        <label>기업 규모</label>
+        <select id="size">
+          <option value="우선">우선지원대상기업</option>
+          <option value="중견">중견기업</option>
+          <option value="대규모">대규모기업</option>
+        </select>
+      </div>
+    </div>
+    <div class="region-hint" id="regionHint">시/군/구까지 선택하면 청년 제도에 담당 운영기관이 자동으로 연결됩니다.</div>
+    <button class="btn" id="run">전 제도 진단하기</button>
+    <div id="err"></div>
+  </div>
+  <div id="result"></div>
+</div>
+
+<script>
+const THIS_YEAR=2026;
+const ORGS=[{"n": "강릉상공회의소", "a": "강원 강릉시, 강원 동해시, 강원 속초시, 강원 고성군, 강원 양양군", "t": "033-643-4411", "q": 817, "r": [{"sido": "강원", "sigungu": "강릉시"}, {"sido": "강원", "sigungu": "동해시"}, {"sido": "강원", "sigungu": "속초시"}, {"sido": "강원", "sigungu": "고성군"}, {"sido": "강원", "sigungu": "양양군"}]}, {"n": "경산상공회의소", "a": "대구 중구, 대구 동구, 대구 북구, 대구 수성구, 대구 군위군, 경북 영천시, 경북 경산시, 경북 청도군", "t": "053-811-3031", "q": 504, "r": [{"sido": "대구", "sigungu": "중구"}, {"sido": "대구", "sigungu": "동구"}, {"sido": "대구", "sigungu": "북구"}, {"sido": "대구", "sigungu": "수성구"}, {"sido": "대구", "sigungu": "군위군"}, {"sido": "경북", "sigungu": "영천시"}, {"sido": "경북", "sigungu": "경산시"}, {"sido": "경북", "sigungu": "청도군"}]}, {"n": "고양상공회의소", "a": "경기 고양시, 경기 파주시", "t": "031-969-5817", "q": 260, "r": [{"sido": "경기", "sigungu": "고양시"}, {"sido": "경기", "sigungu": "파주시"}]}, {"n": "광양상공회의소", "a": "전남 여수시, 전남 순천시, 전남 광양시, 전남 고흥군, 전남 보성군", "t": "061-793-0012", "q": 290, "r": [{"sido": "전남", "sigungu": "여수시"}, {"sido": "전남", "sigungu": "순천시"}, {"sido": "전남", "sigungu": "광양시"}, {"sido": "전남", "sigungu": "고흥군"}, {"sido": "전남", "sigungu": "보성군"}]}, {"n": "광주하남상공회의소", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-761-9090", "q": 400, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "국제커리어센터", "a": "광주, 광주 서구, 광주 남구, 광주 북구, 광주 광산구, 전남 나주시, 전남 담양군, 전남 곡성군, 전남 구례군, 전남 화순군, 전남 함평군, 전남 영광군, 전남 장성군, 제주 제주시, 제주 서귀포시", "t": "062-464-5411", "q": 957, "r": [{"sido": "광주", "sigungu": ""}, {"sido": "광주", "sigungu": "서구"}, {"sido": "광주", "sigungu": "남구"}, {"sido": "광주", "sigungu": "북구"}, {"sido": "광주", "sigungu": "광산구"}, {"sido": "전남", "sigungu": "나주시"}, {"sido": "전남", "sigungu": "담양군"}, {"sido": "전남", "sigungu": "곡성군"}, {"sido": "전남", "sigungu": "구례군"}, {"sido": "전남", "sigungu": "화순군"}, {"sido": "전남", "sigungu": "함평군"}, {"sido": "전남", "sigungu": "영광군"}, {"sido": "전남", "sigungu": "장성군"}, {"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "국제커리어센터 부산남구", "a": "부산 중구, 부산 서구, 부산 동구, 부산 영도구, 부산 부산진구, 부산 남구, 부산 사하구, 부산 연제구", "t": "051-626-9114", "q": 360, "r": [{"sido": "부산", "sigungu": "중구"}, {"sido": "부산", "sigungu": "서구"}, {"sido": "부산", "sigungu": "동구"}, {"sido": "부산", "sigungu": "영도구"}, {"sido": "부산", "sigungu": "부산진구"}, {"sido": "부산", "sigungu": "남구"}, {"sido": "부산", "sigungu": "사하구"}, {"sido": "부산", "sigungu": "연제구"}]}, {"n": "국제커리어센터 서울강남지점", "a": "서울 강남구", "t": "02-555-8114", "q": 500, "r": [{"sido": "서울", "sigungu": "강남구"}]}, {"n": "내일엔광주", "a": "광주, 광주 서구, 광주 남구, 광주 북구, 광주 광산구, 전남 나주시, 전남 담양군, 전남 곡성군, 전남 구례군, 전남 화순군, 전남 함평군, 전남 영광군, 전남 장성군, 제주 제주시, 제주 서귀포시", "t": "062-716-2841", "q": 691, "r": [{"sido": "광주", "sigungu": ""}, {"sido": "광주", "sigungu": "서구"}, {"sido": "광주", "sigungu": "남구"}, {"sido": "광주", "sigungu": "북구"}, {"sido": "광주", "sigungu": "광산구"}, {"sido": "전남", "sigungu": "나주시"}, {"sido": "전남", "sigungu": "담양군"}, {"sido": "전남", "sigungu": "곡성군"}, {"sido": "전남", "sigungu": "구례군"}, {"sido": "전남", "sigungu": "화순군"}, {"sido": "전남", "sigungu": "함평군"}, {"sido": "전남", "sigungu": "영광군"}, {"sido": "전남", "sigungu": "장성군"}, {"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "당진상공회의소", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-357-2500", "q": 450, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "대구경영자총협회", "a": "대구 서구, 대구 남구, 대구 달서구, 대구 달성군, 경북 고령군, 경북 성주군, 경북 칠곡군", "t": "053-560-7812", "q": 400, "r": [{"sido": "대구", "sigungu": "서구"}, {"sido": "대구", "sigungu": "남구"}, {"sido": "대구", "sigungu": "달서구"}, {"sido": "대구", "sigungu": "달성군"}, {"sido": "경북", "sigungu": "고령군"}, {"sido": "경북", "sigungu": "성주군"}, {"sido": "경북", "sigungu": "칠곡군"}]}, {"n": "대전상공회의소", "a": "대전 동구, 대전 중구, 대전 서구, 대전 유성구, 대전 대덕구, 충남 공주시, 충남 논산시, 충남 계룡시, 충남 금산군", "t": "042-480-3071", "q": 740, "r": [{"sido": "대전", "sigungu": "동구"}, {"sido": "대전", "sigungu": "중구"}, {"sido": "대전", "sigungu": "서구"}, {"sido": "대전", "sigungu": "유성구"}, {"sido": "대전", "sigungu": "대덕구"}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}, {"sido": "충남", "sigungu": "금산군"}]}, {"n": "목포상공회의소", "a": "전남 목포시, 전남 장흥군, 전남 강진군, 전남 해남군, 전남 영암군, 전남 무안군, 전남 완도군, 전남 진도군, 전남 신안군", "t": "061-242-8581", "q": 779, "r": [{"sido": "전남", "sigungu": "목포시"}, {"sido": "전남", "sigungu": "장흥군"}, {"sido": "전남", "sigungu": "강진군"}, {"sido": "전남", "sigungu": "해남군"}, {"sido": "전남", "sigungu": "영암군"}, {"sido": "전남", "sigungu": "무안군"}, {"sido": "전남", "sigungu": "완도군"}, {"sido": "전남", "sigungu": "진도군"}, {"sido": "전남", "sigungu": "신안군"}]}, {"n": "부산상공회의소", "a": "부산 중구, 부산 서구, 부산 동구, 부산 영도구, 부산 부산진구, 부산 남구, 부산 사하구, 부산 연제구", "t": "051-990-7083", "q": 820, "r": [{"sido": "부산", "sigungu": "중구"}, {"sido": "부산", "sigungu": "서구"}, {"sido": "부산", "sigungu": "동구"}, {"sido": "부산", "sigungu": "영도구"}, {"sido": "부산", "sigungu": "부산진구"}, {"sido": "부산", "sigungu": "남구"}, {"sido": "부산", "sigungu": "사하구"}, {"sido": "부산", "sigungu": "연제구"}]}, {"n": "사단법인 전남경영자총협회", "a": "전남 여수시, 전남 순천시, 전남 광양시, 전남 고흥군, 전남 보성군", "t": "061-741-8108", "q": 655, "r": [{"sido": "전남", "sigungu": "여수시"}, {"sido": "전남", "sigungu": "순천시"}, {"sido": "전남", "sigungu": "광양시"}, {"sido": "전남", "sigungu": "고흥군"}, {"sido": "전남", "sigungu": "보성군"}]}, {"n": "사단법인 충남산학융합원", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-357-8720", "q": 320, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "사단법인 한국커리어 경남지사", "a": "경남 통영시, 경남 거제시, 경남 고성군", "t": "055-990-8829", "q": 832, "r": [{"sido": "경남", "sigungu": "통영시"}, {"sido": "경남", "sigungu": "거제시"}, {"sido": "경남", "sigungu": "고성군"}]}, {"n": "사회적협동조합 제주내일", "a": "제주 제주시, 제주 서귀포시", "t": "064-756-5425", "q": 769, "r": [{"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "사회적협동조합 희망리본", "a": "경기 가평군, 강원 춘천시, 강원 홍천군, 강원 화천군, 강원 양구군, 강원 인제군", "t": "033-256-8828", "q": 436, "r": [{"sido": "경기", "sigungu": "가평군"}, {"sido": "강원", "sigungu": "춘천시"}, {"sido": "강원", "sigungu": "홍천군"}, {"sido": "강원", "sigungu": "화천군"}, {"sido": "강원", "sigungu": "양구군"}, {"sido": "강원", "sigungu": "인제군"}]}, {"n": "사회적협동조합 희망리본(원주)", "a": "강원 원주시, 강원 횡성군", "t": "033-813-0013", "q": 585, "r": [{"sido": "강원", "sigungu": "원주시"}, {"sido": "강원", "sigungu": "횡성군"}]}, {"n": "사회적협동조합내일로 서울지점", "a": "서울 구로구, 서울 금천구, 서울 동작구, 서울 관악구", "t": "02-889-7502", "q": 700, "r": [{"sido": "서울", "sigungu": "구로구"}, {"sido": "서울", "sigungu": "금천구"}, {"sido": "서울", "sigungu": "동작구"}, {"sido": "서울", "sigungu": "관악구"}]}, {"n": "상주상공회의소", "a": "경북 영주시, 경북 상주시, 경북 문경시, 경북 봉화군", "t": "054-533-5842", "q": 135, "r": [{"sido": "경북", "sigungu": "영주시"}, {"sido": "경북", "sigungu": "상주시"}, {"sido": "경북", "sigungu": "문경시"}, {"sido": "경북", "sigungu": "봉화군"}]}, {"n": "서산상공회의소", "a": "충남 서산시, 충남 태안군", "t": "041-663-3063", "q": 268, "r": [{"sido": "충남", "sigungu": "서산시"}, {"sido": "충남", "sigungu": "태안군"}]}, {"n": "서초여성인력개발센터", "a": "서울 서초구", "t": "070-4048-6236", "q": 500, "r": [{"sido": "서울", "sigungu": "서초구"}]}, {"n": "성남상공회의소", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-781-7903", "q": 300, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "수원상공회의소", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-244-3454", "q": 870, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "스탭스(주)", "a": "서울 종로구, 서울 중구, 서울 동대문구", "t": "02-2178-8079", "q": 900, "r": [{"sido": "서울", "sigungu": "종로구"}, {"sido": "서울", "sigungu": "중구"}, {"sido": "서울", "sigungu": "동대문구"}]}, {"n": "스탭스(주) 안산센터", "a": "경기 안산시, 경기 안산시 상록구, 경기 안산시 단원구, 경기 시흥시", "t": "031-482-1413", "q": 500, "r": [{"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "시흥시"}]}, {"n": "스탭스(주) 천안센터", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-417-2050", "q": 400, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "스탭스(주)성남센터", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-759-0993", "q": 700, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "시흥상공회의소", "a": "경기 안산시, 경기 안산시 상록구, 경기 안산시 단원구, 경기 시흥시", "t": "031-501-5700", "q": 400, "r": [{"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "시흥시"}]}, {"n": "안산상공회의소", "a": "경기 안산시, 경기 안산시 상록구, 경기 안산시 단원구, 경기 시흥시", "t": "031-410-3030", "q": 500, "r": [{"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "시흥시"}]}, {"n": "안성상공회의소", "a": "경기 평택시, 경기 오산시, 경기 안성시", "t": "070-4261-1909", "q": 422, "r": [{"sido": "경기", "sigungu": "평택시"}, {"sido": "경기", "sigungu": "오산시"}, {"sido": "경기", "sigungu": "안성시"}]}, {"n": "안양과천상공회의소", "a": "경기 안양시, 경기 안양시 만안구, 경기 안양시 동안구, 경기 광명시, 경기 과천시, 경기 군포시, 경기 의왕시", "t": "031-447-9170", "q": 500, "r": [{"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "광명시"}, {"sido": "경기", "sigungu": "과천시"}, {"sido": "경기", "sigungu": "군포시"}, {"sido": "경기", "sigungu": "의왕시"}]}, {"n": "여수상공회의소", "a": "전남 여수시, 전남 순천시, 전남 광양시, 전남 고흥군, 전남 보성군", "t": "061-641-4004", "q": 549, "r": [{"sido": "전남", "sigungu": "여수시"}, {"sido": "전남", "sigungu": "순천시"}, {"sido": "전남", "sigungu": "광양시"}, {"sido": "전남", "sigungu": "고흥군"}, {"sido": "전남", "sigungu": "보성군"}]}, {"n": "오산상공회의소", "a": "경기 평택시, 경기 오산시, 경기 안성시", "t": "031-373-7442", "q": 600, "r": [{"sido": "경기", "sigungu": "평택시"}, {"sido": "경기", "sigungu": "오산시"}, {"sido": "경기", "sigungu": "안성시"}]}, {"n": "용인상공회의소", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-332-9812", "q": 870, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "원주상공회의소", "a": "강원 원주시, 강원 횡성군", "t": "033-743-2991", "q": 506, "r": [{"sido": "강원", "sigungu": "원주시"}, {"sido": "강원", "sigungu": "횡성군"}]}, {"n": "원주상공회의소(영월)", "a": "강원 영월군, 강원 평창군, 강원 정선군", "t": "033-743-2991", "q": 51, "r": [{"sido": "강원", "sigungu": "영월군"}, {"sido": "강원", "sigungu": "평창군"}, {"sido": "강원", "sigungu": "정선군"}]}, {"n": "유한회사드림워크", "a": "전북 익산시, 전북 김제시", "t": "063-835-5335", "q": 736, "r": [{"sido": "전북", "sigungu": "익산시"}, {"sido": "전북", "sigungu": "김제시"}]}, {"n": "음성상공회의소", "a": "충북 충주시, 충북 음성군", "t": "043-873-9911", "q": 422, "r": [{"sido": "충북", "sigungu": "충주시"}, {"sido": "충북", "sigungu": "음성군"}]}, {"n": "인지어스(유)김해지사", "a": "경남 김해시, 경남 밀양시", "t": "055-904-3560", "q": 618, "r": [{"sido": "경남", "sigungu": "김해시"}, {"sido": "경남", "sigungu": "밀양시"}]}, {"n": "인지어스(유)포항남구지사", "a": "경북 포항시, 경북 포항시 남구, 경북 포항시 북구, 경북 경주시, 경북 영덕군, 경북 울진군, 경북 울릉군", "t": "054-614-0465", "q": 613, "r": [{"sido": "경북", "sigungu": "포항시"}, {"sido": "경북", "sigungu": "포항시"}, {"sido": "경북", "sigungu": "포항시"}, {"sido": "경북", "sigungu": "경주시"}, {"sido": "경북", "sigungu": "영덕군"}, {"sido": "경북", "sigungu": "울진군"}, {"sido": "경북", "sigungu": "울릉군"}]}, {"n": "전주상공회의소", "a": "전북 전주시, 전북 전주시 완산구, 전북 전주시 덕진구, 전북 정읍시, 전북 남원시, 전북 완주군, 전북 진안군, 전북 무주군, 전북 장수군, 전북 임실군, 전북 순창군", "t": "063-280-1100", "q": 379, "r": [{"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "정읍시"}, {"sido": "전북", "sigungu": "남원시"}, {"sido": "전북", "sigungu": "완주군"}, {"sido": "전북", "sigungu": "진안군"}, {"sido": "전북", "sigungu": "무주군"}, {"sido": "전북", "sigungu": "장수군"}, {"sido": "전북", "sigungu": "임실군"}, {"sido": "전북", "sigungu": "순창군"}]}, {"n": "제천단양상공회의소", "a": "충북 제천시, 충북 단양군", "t": "043-642-3114", "q": 244, "r": [{"sido": "충북", "sigungu": "제천시"}, {"sido": "충북", "sigungu": "단양군"}]}, {"n": "주식회사 아이피시", "a": "서울 양천구, 서울 강서구, 서울 영등포구", "t": "070-4801-3865", "q": 1, "r": [{"sido": "서울", "sigungu": "양천구"}, {"sido": "서울", "sigungu": "강서구"}, {"sido": "서울", "sigungu": "영등포구"}]}, {"n": "주식회사 아이피시 관악지사", "a": "서울 구로구, 서울 금천구, 서울 동작구, 서울 관악구", "t": "070-4901-6562", "q": 1, "r": [{"sido": "서울", "sigungu": "구로구"}, {"sido": "서울", "sigungu": "금천구"}, {"sido": "서울", "sigungu": "동작구"}, {"sido": "서울", "sigungu": "관악구"}]}, {"n": "주식회사 아이피시 서부지사", "a": "서울 용산구, 서울 은평구, 서울 서대문구, 서울 마포구", "t": "070-4111-5123", "q": 650, "r": [{"sido": "서울", "sigungu": "용산구"}, {"sido": "서울", "sigungu": "은평구"}, {"sido": "서울", "sigungu": "서대문구"}, {"sido": "서울", "sigungu": "마포구"}]}, {"n": "주식회사조인스잡", "a": "경기 평택시, 경기 오산시, 경기 안성시", "t": "031-647-3161", "q": 600, "r": [{"sido": "경기", "sigungu": "평택시"}, {"sido": "경기", "sigungu": "오산시"}, {"sido": "경기", "sigungu": "안성시"}]}, {"n": "진주상공회의소", "a": "경남 진주시, 경남 사천시, 경남 남해군, 경남 하동군, 경남 산청군, 경남 함양군, 경남 거창군, 경남 합천군", "t": "055-753-0412", "q": 560, "r": [{"sido": "경남", "sigungu": "진주시"}, {"sido": "경남", "sigungu": "사천시"}, {"sido": "경남", "sigungu": "남해군"}, {"sido": "경남", "sigungu": "하동군"}, {"sido": "경남", "sigungu": "산청군"}, {"sido": "경남", "sigungu": "함양군"}, {"sido": "경남", "sigungu": "거창군"}, {"sido": "경남", "sigungu": "합천군"}]}, {"n": "청주상공회의소", "a": "충북 청주시, 충북 청주시 상당구, 충북 청주시 서원구, 충북 청주시 흥덕구, 충북 청주시 청원구, 충북 보은군, 충북 옥천군, 충북 영동군, 충북 증평군, 충북 진천군, 충북 괴산군", "t": "043-263-2669", "q": 636, "r": [{"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "보은군"}, {"sido": "충북", "sigungu": "옥천군"}, {"sido": "충북", "sigungu": "영동군"}, {"sido": "충북", "sigungu": "증평군"}, {"sido": "충북", "sigungu": "진천군"}, {"sido": "충북", "sigungu": "괴산군"}]}, {"n": "충남북부상공회의소", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-559-5724", "q": 850, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "충주상공회의소", "a": "충북 충주시, 충북 음성군", "t": "043-843-7003", "q": 725, "r": [{"sido": "충북", "sigungu": "충주시"}, {"sido": "충북", "sigungu": "음성군"}]}, {"n": "칠곡상공회의소", "a": "대구 서구, 대구 남구, 대구 달서구, 대구 달성군, 경북 고령군, 경북 성주군, 경북 칠곡군", "t": "054-974-0850", "q": 575, "r": [{"sido": "대구", "sigungu": "서구"}, {"sido": "대구", "sigungu": "남구"}, {"sido": "대구", "sigungu": "달서구"}, {"sido": "대구", "sigungu": "달성군"}, {"sido": "경북", "sigungu": "고령군"}, {"sido": "경북", "sigungu": "성주군"}, {"sido": "경북", "sigungu": "칠곡군"}]}, {"n": "파주상공회의소", "a": "경기 고양시, 경기 파주시", "t": "031-8071-4240", "q": 100, "r": [{"sido": "경기", "sigungu": "고양시"}, {"sido": "경기", "sigungu": "파주시"}]}, {"n": "화성상공회의소", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-350-7969", "q": 1, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "(사)경기경영자총협회", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-8014-5462", "q": 600, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "(사)경남경영자총협회", "a": "경남 창원시, 경남 의령군, 경남 함안군, 경남 창녕군", "t": "055-263-0283", "q": 1, "r": [{"sido": "경남", "sigungu": "창원시"}, {"sido": "경남", "sigungu": "의령군"}, {"sido": "경남", "sigungu": "함안군"}, {"sido": "경남", "sigungu": "창녕군"}]}, {"n": "(사)경북경영자총협회", "a": "경북 김천시, 경북 구미시", "t": "054-463-3370", "q": 662, "r": [{"sido": "경북", "sigungu": "김천시"}, {"sido": "경북", "sigungu": "구미시"}]}, {"n": "(사)고양시기업경제인연합회", "a": "경기 고양시, 경기 파주시", "t": "031-914-7119", "q": 100, "r": [{"sido": "경기", "sigungu": "고양시"}, {"sido": "경기", "sigungu": "파주시"}]}, {"n": "(사)광주경영자총협회", "a": "광주 동구, 광주 서구, 광주 남구, 광주 북구, 광주 광산구, 전남 나주시, 전남 담양군, 전남 곡성군, 전남 구례군, 전남 화순군, 전남 함평군, 전남 영광군, 전남 장성군, 제주 제주시, 제주 서귀포시", "t": "062-608-9979", "q": 1, "r": [{"sido": "광주", "sigungu": "동구"}, {"sido": "광주", "sigungu": "서구"}, {"sido": "광주", "sigungu": "남구"}, {"sido": "광주", "sigungu": "북구"}, {"sido": "광주", "sigungu": "광산구"}, {"sido": "전남", "sigungu": "나주시"}, {"sido": "전남", "sigungu": "담양군"}, {"sido": "전남", "sigungu": "곡성군"}, {"sido": "전남", "sigungu": "구례군"}, {"sido": "전남", "sigungu": "화순군"}, {"sido": "전남", "sigungu": "함평군"}, {"sido": "전남", "sigungu": "영광군"}, {"sido": "전남", "sigungu": "장성군"}, {"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "(사)구미중소기업협의회", "a": "경북 김천시, 경북 구미시", "t": "054-475-9290", "q": 375, "r": [{"sido": "경북", "sigungu": "김천시"}, {"sido": "경북", "sigungu": "구미시"}]}, {"n": "(사)국제직업능력개발교류협회", "a": "서울 서초구", "t": "02-6949-3930", "q": 1, "r": [{"sido": "서울", "sigungu": "서초구"}]}, {"n": "(사)대구경북고용복지연구원(달성분원)", "a": "대구 서구, 대구 남구, 대구 달서구, 대구 달성군, 경북 고령군, 경북 성주군, 경북 칠곡군", "t": "053-955-1953", "q": 340, "r": [{"sido": "대구", "sigungu": "서구"}, {"sido": "대구", "sigungu": "남구"}, {"sido": "대구", "sigungu": "달서구"}, {"sido": "대구", "sigungu": "달성군"}, {"sido": "경북", "sigungu": "고령군"}, {"sido": "경북", "sigungu": "성주군"}, {"sido": "경북", "sigungu": "칠곡군"}]}, {"n": "(사)대구경북첨단벤처기업연합회", "a": "대구 중구, 대구 동구, 대구 북구, 대구 수성구, 대구 군위군, 경북 영천시, 경북 경산시, 경북 청도군", "t": "053-742-1775", "q": 404, "r": [{"sido": "대구", "sigungu": "중구"}, {"sido": "대구", "sigungu": "동구"}, {"sido": "대구", "sigungu": "북구"}, {"sido": "대구", "sigungu": "수성구"}, {"sido": "대구", "sigungu": "군위군"}, {"sido": "경북", "sigungu": "영천시"}, {"sido": "경북", "sigungu": "경산시"}, {"sido": "경북", "sigungu": "청도군"}]}, {"n": "(사)부산경영자총협회", "a": "부산 중구, 부산 서구, 부산 동구, 부산 영도구, 부산 부산진구, 부산 남구, 부산 사하구, 부산 연제구", "t": "051-647-5540", "q": 1, "r": [{"sido": "부산", "sigungu": "중구"}, {"sido": "부산", "sigungu": "서구"}, {"sido": "부산", "sigungu": "동구"}, {"sido": "부산", "sigungu": "영도구"}, {"sido": "부산", "sigungu": "부산진구"}, {"sido": "부산", "sigungu": "남구"}, {"sido": "부산", "sigungu": "사하구"}, {"sido": "부산", "sigungu": "연제구"}]}, {"n": "(사)부산경영자총협회 동부산지소", "a": "부산 동래구, 부산 해운대구, 부산 금정구, 부산 수영구, 부산 기장군", "t": "051-741-1162", "q": 1, "r": [{"sido": "부산", "sigungu": "동래구"}, {"sido": "부산", "sigungu": "해운대구"}, {"sido": "부산", "sigungu": "금정구"}, {"sido": "부산", "sigungu": "수영구"}, {"sido": "부산", "sigungu": "기장군"}]}, {"n": "(사)부산경영자총협회 서부산지소", "a": "부산 북구, 부산 강서구, 부산 사상구", "t": "051-328-9193", "q": 1, "r": [{"sido": "부산", "sigungu": "북구"}, {"sido": "부산", "sigungu": "강서구"}, {"sido": "부산", "sigungu": "사상구"}]}, {"n": "(사)부산여성의전화 부산진여성인력개발센터", "a": "부산 중구, 부산 서구, 부산 동구, 부산 영도구, 부산 부산진구, 부산 남구, 부산 사하구, 부산 연제구", "t": "051-807-7904", "q": 820, "r": [{"sido": "부산", "sigungu": "중구"}, {"sido": "부산", "sigungu": "서구"}, {"sido": "부산", "sigungu": "동구"}, {"sido": "부산", "sigungu": "영도구"}, {"sido": "부산", "sigungu": "부산진구"}, {"sido": "부산", "sigungu": "남구"}, {"sido": "부산", "sigungu": "사하구"}, {"sido": "부산", "sigungu": "연제구"}]}, {"n": "(사)세종시과학기술인협회", "a": "세종, 충남 공주시, 충남 논산시, 충남 계룡시", "t": "044-905-1614", "q": 760, "r": [{"sido": "세종", "sigungu": ""}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}]}, {"n": "(사)여성중앙회종로여성인력개발센터", "a": "서울 종로구, 서울 중구, 서울 동대문구", "t": "070-4048-6709", "q": 700, "r": [{"sido": "서울", "sigungu": "종로구"}, {"sido": "서울", "sigungu": "중구"}, {"sido": "서울", "sigungu": "동대문구"}]}, {"n": "(사)울산양산경영자총협회", "a": "울산 중구, 울산 남구, 울산 동구, 울산 북구, 울산 울주군", "t": "052-277-9984", "q": 682, "r": [{"sido": "울산", "sigungu": "중구"}, {"sido": "울산", "sigungu": "남구"}, {"sido": "울산", "sigungu": "동구"}, {"sido": "울산", "sigungu": "북구"}, {"sido": "울산", "sigungu": "울주군"}]}, {"n": "(사)이노폴리스벤처협회", "a": "대전 동구, 대전 중구, 대전 서구, 대전 유성구, 대전 대덕구, 충남 공주시, 충남 논산시, 충남 계룡시, 충남 금산군", "t": "042-368-9715", "q": 1, "r": [{"sido": "대전", "sigungu": "동구"}, {"sido": "대전", "sigungu": "중구"}, {"sido": "대전", "sigungu": "서구"}, {"sido": "대전", "sigungu": "유성구"}, {"sido": "대전", "sigungu": "대덕구"}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}, {"sido": "충남", "sigungu": "금산군"}]}, {"n": "(사)인천경영자총협회", "a": "인천 중구, 인천 동구, 인천 미추홀구, 인천 연수구, 인천 남동구, 인천 옹진군", "t": "032-428-8040", "q": 464, "r": [{"sido": "인천", "sigungu": "중구"}, {"sido": "인천", "sigungu": "동구"}, {"sido": "인천", "sigungu": "미추홀구"}, {"sido": "인천", "sigungu": "연수구"}, {"sido": "인천", "sigungu": "남동구"}, {"sido": "인천", "sigungu": "옹진군"}]}, {"n": "(사)전북경영자총협회", "a": "전북 전주시, 전북 전주시 완산구, 전북 전주시 덕진구, 전북 정읍시, 전북 남원시, 전북 완주군, 전북 진안군, 전북 무주군, 전북 장수군, 전북 임실군, 전북 순창군", "t": "063-282-3393", "q": 681, "r": [{"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "정읍시"}, {"sido": "전북", "sigungu": "남원시"}, {"sido": "전북", "sigungu": "완주군"}, {"sido": "전북", "sigungu": "진안군"}, {"sido": "전북", "sigungu": "무주군"}, {"sido": "전북", "sigungu": "장수군"}, {"sido": "전북", "sigungu": "임실군"}, {"sido": "전북", "sigungu": "순창군"}]}, {"n": "(사)중소기업기술혁신협회", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-628-9659", "q": 500, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "(사)중소기업기술혁신협회 강원지회", "a": "강원 태백시, 강원 삼척시", "t": "033-262-2098", "q": 65, "r": [{"sido": "강원", "sigungu": "태백시"}, {"sido": "강원", "sigungu": "삼척시"}]}, {"n": "(사)중소기업기술혁신협회 광주전남지회", "a": "광주, 광주 서구, 광주 남구, 광주 북구, 광주 광산구, 전남 나주시, 전남 담양군, 전남 곡성군, 전남 구례군, 전남 화순군, 전남 함평군, 전남 영광군, 전남 장성군, 제주 제주시, 제주 서귀포시", "t": "062-363-1333", "q": 785, "r": [{"sido": "광주", "sigungu": ""}, {"sido": "광주", "sigungu": "서구"}, {"sido": "광주", "sigungu": "남구"}, {"sido": "광주", "sigungu": "북구"}, {"sido": "광주", "sigungu": "광산구"}, {"sido": "전남", "sigungu": "나주시"}, {"sido": "전남", "sigungu": "담양군"}, {"sido": "전남", "sigungu": "곡성군"}, {"sido": "전남", "sigungu": "구례군"}, {"sido": "전남", "sigungu": "화순군"}, {"sido": "전남", "sigungu": "함평군"}, {"sido": "전남", "sigungu": "영광군"}, {"sido": "전남", "sigungu": "장성군"}, {"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "(사)중소기업기술혁신협회 대구경북지회", "a": "대구 서구, 대구 남구, 대구 달서구, 대구 달성군, 경북 고령군, 경북 성주군, 경북 칠곡군", "t": "053-745-4703", "q": 909, "r": [{"sido": "대구", "sigungu": "서구"}, {"sido": "대구", "sigungu": "남구"}, {"sido": "대구", "sigungu": "달서구"}, {"sido": "대구", "sigungu": "달성군"}, {"sido": "경북", "sigungu": "고령군"}, {"sido": "경북", "sigungu": "성주군"}, {"sido": "경북", "sigungu": "칠곡군"}]}, {"n": "(사)중소기업기술혁신협회 대전세종충남지회 천안지부", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-553-1193", "q": 885, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "(사)중소기업기술혁신협회 전북지회", "a": "전북 전주시, 전북 전주시 완산구, 전북 전주시 덕진구, 전북 정읍시, 전북 남원시, 전북 완주군, 전북 진안군, 전북 무주군, 전북 장수군, 전북 임실군, 전북 순창군", "t": "063-213-2356", "q": 379, "r": [{"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "정읍시"}, {"sido": "전북", "sigungu": "남원시"}, {"sido": "전북", "sigungu": "완주군"}, {"sido": "전북", "sigungu": "진안군"}, {"sido": "전북", "sigungu": "무주군"}, {"sido": "전북", "sigungu": "장수군"}, {"sido": "전북", "sigungu": "임실군"}, {"sido": "전북", "sigungu": "순창군"}]}, {"n": "(사)중소기업기술혁신협회 충북지회", "a": "충북 청주시, 충북 청주시 상당구, 충북 청주시 서원구, 충북 청주시 흥덕구, 충북 청주시 청원구, 충북 보은군, 충북 옥천군, 충북 영동군, 충북 증평군, 충북 진천군, 충북 괴산군", "t": "043-235-2884", "q": 670, "r": [{"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "보은군"}, {"sido": "충북", "sigungu": "옥천군"}, {"sido": "충북", "sigungu": "영동군"}, {"sido": "충북", "sigungu": "증평군"}, {"sido": "충북", "sigungu": "진천군"}, {"sido": "충북", "sigungu": "괴산군"}]}, {"n": "(사)중소기업기술혁신협회경남지회", "a": "경남 창원시, 경남 의령군, 경남 함안군, 경남 창녕군", "t": "055-295-2360", "q": 728, "r": [{"sido": "경남", "sigungu": "창원시"}, {"sido": "경남", "sigungu": "의령군"}, {"sido": "경남", "sigungu": "함안군"}, {"sido": "경남", "sigungu": "창녕군"}]}, {"n": "(사)중소기업융합 대전세종충남연합회", "a": "대전 동구, 대전 중구, 대전 서구, 대전 유성구, 대전 대덕구, 충남 공주시, 충남 논산시, 충남 계룡시, 충남 금산군", "t": "042-861-2200", "q": 605, "r": [{"sido": "대전", "sigungu": "동구"}, {"sido": "대전", "sigungu": "중구"}, {"sido": "대전", "sigungu": "서구"}, {"sido": "대전", "sigungu": "유성구"}, {"sido": "대전", "sigungu": "대덕구"}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}, {"sido": "충남", "sigungu": "금산군"}]}, {"n": "(사)중소기업융합충북연합회", "a": "충북 청주시, 충북 청주시 상당구, 충북 청주시 서원구, 충북 청주시 흥덕구, 충북 청주시 청원구, 충북 보은군, 충북 옥천군, 충북 영동군, 충북 증평군, 충북 진천군, 충북 괴산군", "t": "043-714-3043", "q": 500, "r": [{"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "보은군"}, {"sido": "충북", "sigungu": "옥천군"}, {"sido": "충북", "sigungu": "영동군"}, {"sido": "충북", "sigungu": "증평군"}, {"sido": "충북", "sigungu": "진천군"}, {"sido": "충북", "sigungu": "괴산군"}]}, {"n": "(사)지역고용정책연구원", "a": "광주, 광주 서구, 광주 남구, 광주 북구, 광주 광산구, 전남 나주시, 전남 담양군, 전남 곡성군, 전남 구례군, 전남 화순군, 전남 함평군, 전남 영광군, 전남 장성군, 제주 제주시, 제주 서귀포시", "t": "062-652-2070", "q": 1, "r": [{"sido": "광주", "sigungu": ""}, {"sido": "광주", "sigungu": "서구"}, {"sido": "광주", "sigungu": "남구"}, {"sido": "광주", "sigungu": "북구"}, {"sido": "광주", "sigungu": "광산구"}, {"sido": "전남", "sigungu": "나주시"}, {"sido": "전남", "sigungu": "담양군"}, {"sido": "전남", "sigungu": "곡성군"}, {"sido": "전남", "sigungu": "구례군"}, {"sido": "전남", "sigungu": "화순군"}, {"sido": "전남", "sigungu": "함평군"}, {"sido": "전남", "sigungu": "영광군"}, {"sido": "전남", "sigungu": "장성군"}, {"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "(사)충북경영자총협회", "a": "충북 청주시, 충북 청주시 상당구, 충북 청주시 서원구, 충북 청주시 흥덕구, 충북 청주시 청원구, 충북 보은군, 충북 옥천군, 충북 영동군, 충북 증평군, 충북 진천군, 충북 괴산군", "t": "043-271-9805", "q": 750, "r": [{"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "보은군"}, {"sido": "충북", "sigungu": "옥천군"}, {"sido": "충북", "sigungu": "영동군"}, {"sido": "충북", "sigungu": "증평군"}, {"sido": "충북", "sigungu": "진천군"}, {"sido": "충북", "sigungu": "괴산군"}]}, {"n": "(사)한국경영혁신중소기업협회", "a": "서울 종로구, 서울 중구, 서울 동대문구", "t": "02-2230-2120", "q": 600, "r": [{"sido": "서울", "sigungu": "종로구"}, {"sido": "서울", "sigungu": "중구"}, {"sido": "서울", "sigungu": "동대문구"}]}, {"n": "(사)한국고용복지센터 의정부동점", "a": "경기 의정부시, 경기 동두천시, 경기 구리시, 경기 남양주시, 경기 양주시, 경기 포천시", "t": "031-566-3100", "q": 530, "r": [{"sido": "경기", "sigungu": "의정부시"}, {"sido": "경기", "sigungu": "동두천시"}, {"sido": "경기", "sigungu": "구리시"}, {"sido": "경기", "sigungu": "남양주시"}, {"sido": "경기", "sigungu": "양주시"}, {"sido": "경기", "sigungu": "포천시"}]}, {"n": "(사)한국취업능력개발원", "a": "서울 구로구, 서울 금천구, 서울 동작구, 서울 관악구", "t": "02-6951-1716", "q": 850, "r": [{"sido": "서울", "sigungu": "구로구"}, {"sido": "서울", "sigungu": "금천구"}, {"sido": "서울", "sigungu": "동작구"}, {"sido": "서울", "sigungu": "관악구"}]}, {"n": "(사)한국취업능력개발원_서울동부센터", "a": "서울 성동구, 서울 광진구, 서울 송파구, 서울 강동구", "t": "02-3409-8215", "q": 820, "r": [{"sido": "서울", "sigungu": "성동구"}, {"sido": "서울", "sigungu": "광진구"}, {"sido": "서울", "sigungu": "송파구"}, {"sido": "서울", "sigungu": "강동구"}]}, {"n": "(주)경남취업지원센터 김해지사", "a": "경남 김해시, 경남 밀양시", "t": "055-723-2042", "q": 988, "r": [{"sido": "경남", "sigungu": "김해시"}, {"sido": "경남", "sigungu": "밀양시"}]}, {"n": "(주)굿잡", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-8067-5433", "q": 500, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "(주)대신능력개발취업센터", "a": "서울 성동구, 서울 광진구, 서울 송파구, 서울 강동구", "t": "02-486-5353", "q": 1, "r": [{"sido": "서울", "sigungu": "성동구"}, {"sido": "서울", "sigungu": "광진구"}, {"sido": "서울", "sigungu": "송파구"}, {"sido": "서울", "sigungu": "강동구"}]}, {"n": "(주)두원잡", "a": "부산 북구, 부산 강서구, 부산 사상구", "t": "051-321-3342", "q": 1, "r": [{"sido": "부산", "sigungu": "북구"}, {"sido": "부산", "sigungu": "강서구"}, {"sido": "부산", "sigungu": "사상구"}]}, {"n": "(주)두원잡 부산동부사무소", "a": "부산 동래구, 부산 해운대구, 부산 금정구, 부산 수영구, 부산 기장군", "t": "051-321-3343", "q": 367, "r": [{"sido": "부산", "sigungu": "동래구"}, {"sido": "부산", "sigungu": "해운대구"}, {"sido": "부산", "sigungu": "금정구"}, {"sido": "부산", "sigungu": "수영구"}, {"sido": "부산", "sigungu": "기장군"}]}, {"n": "(주)두원잡 양산사무소", "a": "경남 양산시", "t": "055-785-0160", "q": 968, "r": [{"sido": "경남", "sigungu": "양산시"}]}, {"n": "(주)메이크인", "a": "서울 종로구, 서울 중구, 서울 동대문구", "t": "02-2291-7070", "q": 500, "r": [{"sido": "서울", "sigungu": "종로구"}, {"sido": "서울", "sigungu": "중구"}, {"sido": "서울", "sigungu": "동대문구"}]}, {"n": "(주)메이크인 성남지사", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-778-6299", "q": 500, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "(주)명은커리어", "a": "경기 고양시, 경기 파주시", "t": "031-926-3422", "q": 810, "r": [{"sido": "경기", "sigungu": "고양시"}, {"sido": "경기", "sigungu": "파주시"}]}, {"n": "(주)명은커리어 경기지사", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-895-6265", "q": 700, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "(주)명은커리어 김포센터", "a": "경기 김포시", "t": "031-548-0590", "q": 400, "r": [{"sido": "경기", "sigungu": "김포시"}]}, {"n": "(주)명은커리어 북부지사", "a": "경기 의정부시, 경기 동두천시, 경기 구리시, 경기 남양주시, 경기 양주시, 경기 포천시, 경기 연천군, 강원 철원군", "t": "031-928-6226", "q": 800, "r": [{"sido": "경기", "sigungu": "의정부시"}, {"sido": "경기", "sigungu": "동두천시"}, {"sido": "경기", "sigungu": "구리시"}, {"sido": "경기", "sigungu": "남양주시"}, {"sido": "경기", "sigungu": "양주시"}, {"sido": "경기", "sigungu": "포천시"}, {"sido": "경기", "sigungu": "연천군"}, {"sido": "강원", "sigungu": "철원군"}]}, {"n": "(주)베스트인 전북지사", "a": "전북 전주시, 전북 전주시 완산구, 전북 전주시 덕진구, 전북 정읍시, 전북 남원시, 전북 완주군, 전북 진안군, 전북 무주군, 전북 장수군, 전북 임실군, 전북 순창군", "t": "063-714-3576", "q": 552, "r": [{"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "전주시"}, {"sido": "전북", "sigungu": "정읍시"}, {"sido": "전북", "sigungu": "남원시"}, {"sido": "전북", "sigungu": "완주군"}, {"sido": "전북", "sigungu": "진안군"}, {"sido": "전북", "sigungu": "무주군"}, {"sido": "전북", "sigungu": "장수군"}, {"sido": "전북", "sigungu": "임실군"}, {"sido": "전북", "sigungu": "순창군"}]}, {"n": "(주)브레인풀", "a": "대구 중구, 대구 동구, 대구 북구, 대구 수성구, 대구 군위군, 경북 영천시, 경북 경산시, 경북 청도군", "t": "053-627-3400", "q": 554, "r": [{"sido": "대구", "sigungu": "중구"}, {"sido": "대구", "sigungu": "동구"}, {"sido": "대구", "sigungu": "북구"}, {"sido": "대구", "sigungu": "수성구"}, {"sido": "대구", "sigungu": "군위군"}, {"sido": "경북", "sigungu": "영천시"}, {"sido": "경북", "sigungu": "경산시"}, {"sido": "경북", "sigungu": "청도군"}]}, {"n": "(주)에이케이지", "a": "서울 강남구", "t": "070-8633-6949", "q": 1, "r": [{"sido": "서울", "sigungu": "강남구"}]}, {"n": "(주)와이즈임플로이먼트코리아", "a": "경기 김포시", "t": "070-7510-8711", "q": 410, "r": [{"sido": "경기", "sigungu": "김포시"}]}, {"n": "(주)와이즈임플로이먼트코리아 부천지사", "a": "경기 부천시", "t": "032-325-3301", "q": 350, "r": [{"sido": "경기", "sigungu": "부천시"}]}, {"n": "(주)유니에스 강남센터", "a": "서울 강남구", "t": "02-6011-1447", "q": 600, "r": [{"sido": "서울", "sigungu": "강남구"}]}, {"n": "(주)유니에스 동부센터", "a": "서울 성동구, 서울 광진구, 서울 송파구, 서울 강동구", "t": "02-6011-1471", "q": 800, "r": [{"sido": "서울", "sigungu": "성동구"}, {"sido": "서울", "sigungu": "광진구"}, {"sido": "서울", "sigungu": "송파구"}, {"sido": "서울", "sigungu": "강동구"}]}, {"n": "(주)유니에스서부센터", "a": "서울 용산구, 서울 은평구, 서울 서대문구, 서울 마포구", "t": "02-6011-1326", "q": 900, "r": [{"sido": "서울", "sigungu": "용산구"}, {"sido": "서울", "sigungu": "은평구"}, {"sido": "서울", "sigungu": "서대문구"}, {"sido": "서울", "sigungu": "마포구"}]}, {"n": "(주)일로이룸 달서취업지원센터", "a": "대구 서구, 대구 남구, 대구 달서구, 대구 달성군, 경북 고령군, 경북 성주군, 경북 칠곡군", "t": "053-350-1032", "q": 230, "r": [{"sido": "대구", "sigungu": "서구"}, {"sido": "대구", "sigungu": "남구"}, {"sido": "대구", "sigungu": "달서구"}, {"sido": "대구", "sigungu": "달성군"}, {"sido": "경북", "sigungu": "고령군"}, {"sido": "경북", "sigungu": "성주군"}, {"sido": "경북", "sigungu": "칠곡군"}]}, {"n": "(주)잡모아", "a": "서울 양천구, 서울 강서구, 서울 영등포구", "t": "02-2602-6566", "q": 1, "r": [{"sido": "서울", "sigungu": "양천구"}, {"sido": "서울", "sigungu": "강서구"}, {"sido": "서울", "sigungu": "영등포구"}]}, {"n": "(주)잡모아 관악지점", "a": "서울 구로구, 서울 금천구, 서울 동작구, 서울 관악구", "t": "02-878-0045", "q": 1, "r": [{"sido": "서울", "sigungu": "구로구"}, {"sido": "서울", "sigungu": "금천구"}, {"sido": "서울", "sigungu": "동작구"}, {"sido": "서울", "sigungu": "관악구"}]}, {"n": "(주)잡모아 광명지점", "a": "경기 안양시, 경기 안양시 만안구, 경기 안양시 동안구, 경기 광명시, 경기 과천시, 경기 군포시, 경기 의왕시", "t": "02-2685-1112", "q": 630, "r": [{"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "광명시"}, {"sido": "경기", "sigungu": "과천시"}, {"sido": "경기", "sigungu": "군포시"}, {"sido": "경기", "sigungu": "의왕시"}]}, {"n": "(주)잡모아 부천지점", "a": "경기 부천시", "t": "032-322-8669", "q": 700, "r": [{"sido": "경기", "sigungu": "부천시"}]}, {"n": "(주)잡모아 북부지점", "a": "서울 중랑구, 서울 성북구, 서울 강북구, 서울 도봉구, 서울 노원구", "t": "02-991-7743", "q": 650, "r": [{"sido": "서울", "sigungu": "중랑구"}, {"sido": "서울", "sigungu": "성북구"}, {"sido": "서울", "sigungu": "강북구"}, {"sido": "서울", "sigungu": "도봉구"}, {"sido": "서울", "sigungu": "노원구"}]}, {"n": "(주)잡모아 성남지점", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-744-8886", "q": 560, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "(주)잡모아 수원지점", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-271-6404", "q": 710, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "(주)잡모아 안양지점", "a": "경기 안양시, 경기 안양시 만안구, 경기 안양시 동안구, 경기 광명시, 경기 과천시, 경기 군포시, 경기 의왕시", "t": "031-464-8885", "q": 850, "r": [{"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "안양시"}, {"sido": "경기", "sigungu": "광명시"}, {"sido": "경기", "sigungu": "과천시"}, {"sido": "경기", "sigungu": "군포시"}, {"sido": "경기", "sigungu": "의왕시"}]}, {"n": "(주)잡모아 의정부지점", "a": "경기 의정부시, 경기 동두천시, 경기 구리시, 경기 남양주시, 경기 양주시, 경기 포천시, 경기 연천군, 강원 철원군", "t": "031-836-9111", "q": 1, "r": [{"sido": "경기", "sigungu": "의정부시"}, {"sido": "경기", "sigungu": "동두천시"}, {"sido": "경기", "sigungu": "구리시"}, {"sido": "경기", "sigungu": "남양주시"}, {"sido": "경기", "sigungu": "양주시"}, {"sido": "경기", "sigungu": "포천시"}, {"sido": "경기", "sigungu": "연천군"}, {"sido": "강원", "sigungu": "철원군"}]}, {"n": "(주)잡모아 인천남부지점", "a": "인천 중구, 인천 동구, 인천 미추홀구, 인천 연수구, 인천 남동구", "t": "032-811-9112", "q": 520, "r": [{"sido": "인천", "sigungu": "중구"}, {"sido": "인천", "sigungu": "동구"}, {"sido": "인천", "sigungu": "미추홀구"}, {"sido": "인천", "sigungu": "연수구"}, {"sido": "인천", "sigungu": "남동구"}]}, {"n": "(주)잡모아 인천서부지점", "a": "인천 서구, 인천 강화군", "t": "032-563-2265", "q": 979, "r": [{"sido": "인천", "sigungu": "서구"}, {"sido": "인천", "sigungu": "강화군"}]}, {"n": "(주)잡모아 천호지점", "a": "서울 성동구, 서울 광진구, 서울 송파구, 서울 강동구", "t": "02-472-0045", "q": 500, "r": [{"sido": "서울", "sigungu": "성동구"}, {"sido": "서울", "sigungu": "광진구"}, {"sido": "서울", "sigungu": "송파구"}, {"sido": "서울", "sigungu": "강동구"}]}, {"n": "(주)잡모아서부지점", "a": "서울 용산구, 서울 은평구, 서울 서대문구, 서울 마포구", "t": "02-332-8380", "q": 750, "r": [{"sido": "서울", "sigungu": "용산구"}, {"sido": "서울", "sigungu": "은평구"}, {"sido": "서울", "sigungu": "서대문구"}, {"sido": "서울", "sigungu": "마포구"}]}, {"n": "(주)제니엘", "a": "서울 서초구", "t": "02-580-0193", "q": 700, "r": [{"sido": "서울", "sigungu": "서초구"}]}, {"n": "(주)제니엘 성남지점", "a": "경기 성남시, 경기 하남시, 경기 이천시, 경기 광주시, 경기 여주시, 경기 양평군", "t": "031-713-1361", "q": 350, "r": [{"sido": "경기", "sigungu": "성남시"}, {"sido": "경기", "sigungu": "하남시"}, {"sido": "경기", "sigungu": "이천시"}, {"sido": "경기", "sigungu": "광주시"}, {"sido": "경기", "sigungu": "여주시"}, {"sido": "경기", "sigungu": "양평군"}]}, {"n": "(주)제니엘 인천지점", "a": "인천 중구, 인천 동구, 인천 미추홀구, 인천 연수구, 인천 남동구", "t": "032-710-8790", "q": 390, "r": [{"sido": "인천", "sigungu": "중구"}, {"sido": "인천", "sigungu": "동구"}, {"sido": "인천", "sigungu": "미추홀구"}, {"sido": "인천", "sigungu": "연수구"}, {"sido": "인천", "sigungu": "남동구"}]}, {"n": "(주)제이앤비컨설팅", "a": "서울 양천구, 서울 강서구, 서울 영등포구", "t": "02-2098-1059", "q": 1, "r": [{"sido": "서울", "sigungu": "양천구"}, {"sido": "서울", "sigungu": "강서구"}, {"sido": "서울", "sigungu": "영등포구"}]}, {"n": "(주)제이엠커리어 대구동부지사", "a": "대구 중구, 대구 동구, 대구 북구, 대구 수성구, 대구 군위군, 경북 영천시, 경북 경산시, 경북 청도군", "t": "053-710-1263", "q": 826, "r": [{"sido": "대구", "sigungu": "중구"}, {"sido": "대구", "sigungu": "동구"}, {"sido": "대구", "sigungu": "북구"}, {"sido": "대구", "sigungu": "수성구"}, {"sido": "대구", "sigungu": "군위군"}, {"sido": "경북", "sigungu": "영천시"}, {"sido": "경북", "sigungu": "경산시"}, {"sido": "경북", "sigungu": "청도군"}]}, {"n": "(주)제이엠커리어 북부지사", "a": "서울 중랑구, 서울 성북구, 서울 강북구, 서울 도봉구, 서울 노원구", "t": "02-6953-7551", "q": 310, "r": [{"sido": "서울", "sigungu": "중랑구"}, {"sido": "서울", "sigungu": "성북구"}, {"sido": "서울", "sigungu": "강북구"}, {"sido": "서울", "sigungu": "도봉구"}, {"sido": "서울", "sigungu": "노원구"}]}, {"n": "(주)제이엠커리어 진주지사", "a": "경남 진주시, 경남 사천시, 경남 남해군, 경남 하동군, 경남 산청군, 경남 함양군, 경남 거창군, 경남 합천군", "t": "055-794-1012", "q": 773, "r": [{"sido": "경남", "sigungu": "진주시"}, {"sido": "경남", "sigungu": "사천시"}, {"sido": "경남", "sigungu": "남해군"}, {"sido": "경남", "sigungu": "하동군"}, {"sido": "경남", "sigungu": "산청군"}, {"sido": "경남", "sigungu": "함양군"}, {"sido": "경남", "sigungu": "거창군"}, {"sido": "경남", "sigungu": "합천군"}]}, {"n": "(주)제이엠커리어 천안지사", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-522-7980", "q": 1, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "(주)제이엠커리어대전지사", "a": "대전 동구, 대전 중구, 대전 서구, 대전 유성구, 대전 대덕구, 충남 공주시, 충남 논산시, 충남 계룡시, 충남 금산군", "t": "042-223-0135", "q": 605, "r": [{"sido": "대전", "sigungu": "동구"}, {"sido": "대전", "sigungu": "중구"}, {"sido": "대전", "sigungu": "서구"}, {"sido": "대전", "sigungu": "유성구"}, {"sido": "대전", "sigungu": "대덕구"}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}, {"sido": "충남", "sigungu": "금산군"}]}, {"n": "(주)제이엠커리어서울서부", "a": "서울 용산구, 서울 은평구, 서울 서대문구, 서울 마포구", "t": "02-2038-7979", "q": 760, "r": [{"sido": "서울", "sigungu": "용산구"}, {"sido": "서울", "sigungu": "은평구"}, {"sido": "서울", "sigungu": "서대문구"}, {"sido": "서울", "sigungu": "마포구"}]}, {"n": "(주)제이엠커리어서울숲센터", "a": "서울 성동구, 서울 광진구, 서울 송파구, 서울 강동구", "t": "02-2284-0077", "q": 650, "r": [{"sido": "서울", "sigungu": "성동구"}, {"sido": "서울", "sigungu": "광진구"}, {"sido": "서울", "sigungu": "송파구"}, {"sido": "서울", "sigungu": "강동구"}]}, {"n": "(주)제이엠커리어창원지사", "a": "경남 창원시, 경남 의령군, 경남 함안군, 경남 창녕군", "t": "055-261-3264", "q": 1, "r": [{"sido": "경남", "sigungu": "창원시"}, {"sido": "경남", "sigungu": "의령군"}, {"sido": "경남", "sigungu": "함안군"}, {"sido": "경남", "sigungu": "창녕군"}]}, {"n": "(주)조인스잡 고양지사", "a": "경기 고양시, 경기 파주시", "t": "031-926-3154", "q": 500, "r": [{"sido": "경기", "sigungu": "고양시"}, {"sido": "경기", "sigungu": "파주시"}]}, {"n": "(주)좋은일자리", "a": "울산 중구, 울산 남구, 울산 동구, 울산 북구, 울산 울주군", "t": "052-966-5013", "q": 1, "r": [{"sido": "울산", "sigungu": "중구"}, {"sido": "울산", "sigungu": "남구"}, {"sido": "울산", "sigungu": "동구"}, {"sido": "울산", "sigungu": "북구"}, {"sido": "울산", "sigungu": "울주군"}]}, {"n": "(주)지에스씨넷", "a": "세종, 충남 공주시, 충남 논산시, 충남 계룡시", "t": "044-864-1490", "q": 655, "r": [{"sido": "세종", "sigungu": ""}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}]}, {"n": "(주)지에스씨넷 고양지점", "a": "경기 고양시, 경기 파주시", "t": "031-948-1480", "q": 323, "r": [{"sido": "경기", "sigungu": "고양시"}, {"sido": "경기", "sigungu": "파주시"}]}, {"n": "(주)지에스씨넷 구미지점", "a": "경북 김천시, 경북 구미시", "t": "054-456-1470", "q": 486, "r": [{"sido": "경북", "sigungu": "김천시"}, {"sido": "경북", "sigungu": "구미시"}]}, {"n": "(주)지에스씨넷 대구수성지점", "a": "대구 중구, 대구 동구, 대구 북구, 대구 수성구, 대구 군위군, 경북 영천시, 경북 경산시, 경북 청도군", "t": "053-742-1949", "q": 584, "r": [{"sido": "대구", "sigungu": "중구"}, {"sido": "대구", "sigungu": "동구"}, {"sido": "대구", "sigungu": "북구"}, {"sido": "대구", "sigungu": "수성구"}, {"sido": "대구", "sigungu": "군위군"}, {"sido": "경북", "sigungu": "영천시"}, {"sido": "경북", "sigungu": "경산시"}, {"sido": "경북", "sigungu": "청도군"}]}, {"n": "(주)지에스씨넷 대구지점", "a": "대구 서구, 대구 남구, 대구 달서구, 대구 달성군, 경북 고령군, 경북 성주군, 경북 칠곡군", "t": "053-525-1470", "q": 800, "r": [{"sido": "대구", "sigungu": "서구"}, {"sido": "대구", "sigungu": "남구"}, {"sido": "대구", "sigungu": "달서구"}, {"sido": "대구", "sigungu": "달성군"}, {"sido": "경북", "sigungu": "고령군"}, {"sido": "경북", "sigungu": "성주군"}, {"sido": "경북", "sigungu": "칠곡군"}]}, {"n": "(주)지에스씨넷 안동지점", "a": "경북 안동시, 경북 의성군, 경북 청송군, 경북 영양군, 경북 예천군", "t": "054-854-1470", "q": 168, "r": [{"sido": "경북", "sigungu": "안동시"}, {"sido": "경북", "sigungu": "의성군"}, {"sido": "경북", "sigungu": "청송군"}, {"sido": "경북", "sigungu": "영양군"}, {"sido": "경북", "sigungu": "예천군"}]}, {"n": "(주)지에스씨넷 영주지점", "a": "경북 영주시, 경북 상주시, 경북 문경시, 경북 봉화군", "t": "054-631-1470", "q": 125, "r": [{"sido": "경북", "sigungu": "영주시"}, {"sido": "경북", "sigungu": "상주시"}, {"sido": "경북", "sigungu": "문경시"}, {"sido": "경북", "sigungu": "봉화군"}]}, {"n": "(주)지에스씨넷 청주지점", "a": "충북 청주시, 충북 청주시 상당구, 충북 청주시 서원구, 충북 청주시 흥덕구, 충북 청주시 청원구, 충북 보은군, 충북 옥천군, 충북 영동군, 충북 증평군, 충북 진천군, 충북 괴산군", "t": "043-264-1951", "q": 550, "r": [{"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "청주시"}, {"sido": "충북", "sigungu": "보은군"}, {"sido": "충북", "sigungu": "옥천군"}, {"sido": "충북", "sigungu": "영동군"}, {"sido": "충북", "sigungu": "증평군"}, {"sido": "충북", "sigungu": "진천군"}, {"sido": "충북", "sigungu": "괴산군"}]}, {"n": "(주)지에스씨넷 포항지점", "a": "경북 포항시, 경북 포항시 남구, 경북 포항시 북구, 경북 경주시, 경북 영덕군, 경북 울진군, 경북 울릉군", "t": "054-285-1950", "q": 966, "r": [{"sido": "경북", "sigungu": "포항시"}, {"sido": "경북", "sigungu": "포항시"}, {"sido": "경북", "sigungu": "포항시"}, {"sido": "경북", "sigungu": "경주시"}, {"sido": "경북", "sigungu": "영덕군"}, {"sido": "경북", "sigungu": "울진군"}, {"sido": "경북", "sigungu": "울릉군"}]}, {"n": "(주)지에스씨넷_서울지점", "a": "서울 서초구", "t": "02-1811-8652", "q": 570, "r": [{"sido": "서울", "sigungu": "서초구"}]}, {"n": "(주)지이라인", "a": "충남 보령시, 충남 부여군, 충남 서천군, 충남 청양군, 충남 홍성군", "t": "041-933-9655", "q": 450, "r": [{"sido": "충남", "sigungu": "보령시"}, {"sido": "충남", "sigungu": "부여군"}, {"sido": "충남", "sigungu": "서천군"}, {"sido": "충남", "sigungu": "청양군"}, {"sido": "충남", "sigungu": "홍성군"}]}, {"n": "(주)채움에이치알디 부평지사", "a": "인천 부평구, 인천 계양구", "t": "032-262-0753", "q": 200, "r": [{"sido": "인천", "sigungu": "부평구"}, {"sido": "인천", "sigungu": "계양구"}]}, {"n": "(주)채움에이치알디 수원지사", "a": "경기 수원시, 경기 용인시, 경기 화성시", "t": "031-546-3549", "q": 657, "r": [{"sido": "경기", "sigungu": "수원시"}, {"sido": "경기", "sigungu": "용인시"}, {"sido": "경기", "sigungu": "화성시"}]}, {"n": "(주)채움에이치알디 안산지사", "a": "경기 안산시, 경기 안산시 상록구, 경기 안산시 단원구, 경기 시흥시", "t": "070-5165-6034", "q": 536, "r": [{"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "안산시"}, {"sido": "경기", "sigungu": "시흥시"}]}, {"n": "(주)채움에이치알디 인천지사", "a": "인천 중구, 인천 동구, 인천 미추홀구, 인천 연수구, 인천 남동구", "t": "032-225-3139", "q": 480, "r": [{"sido": "인천", "sigungu": "중구"}, {"sido": "인천", "sigungu": "동구"}, {"sido": "인천", "sigungu": "미추홀구"}, {"sido": "인천", "sigungu": "연수구"}, {"sido": "인천", "sigungu": "남동구"}]}, {"n": "(주)커리어다움", "a": "부산 동래구, 부산 해운대구, 부산 금정구, 부산 수영구, 부산 기장군", "t": "051-582-8633", "q": 850, "r": [{"sido": "부산", "sigungu": "동래구"}, {"sido": "부산", "sigungu": "해운대구"}, {"sido": "부산", "sigungu": "금정구"}, {"sido": "부산", "sigungu": "수영구"}, {"sido": "부산", "sigungu": "기장군"}]}, {"n": "(주)커리어스타", "a": "대구 중구, 대구 동구, 대구 북구, 대구 수성구, 대구 군위군, 경북 영천시, 경북 경산시, 경북 청도군", "t": "053-384-8890", "q": 474, "r": [{"sido": "대구", "sigungu": "중구"}, {"sido": "대구", "sigungu": "동구"}, {"sido": "대구", "sigungu": "북구"}, {"sido": "대구", "sigungu": "수성구"}, {"sido": "대구", "sigungu": "군위군"}, {"sido": "경북", "sigungu": "영천시"}, {"sido": "경북", "sigungu": "경산시"}, {"sido": "경북", "sigungu": "청도군"}]}, {"n": "(주)티이에스", "a": "서울 강남구", "t": "02-2088-8757", "q": 2, "r": [{"sido": "서울", "sigungu": "강남구"}]}, {"n": "(주)하이테커 강남지사", "a": "서울 강남구", "t": "02-6953-2313", "q": 500, "r": [{"sido": "서울", "sigungu": "강남구"}]}, {"n": "(주)한국취업센터", "a": "서울 강남구", "t": "02-6956-5784", "q": 400, "r": [{"sido": "서울", "sigungu": "강남구"}]}, {"n": "(주)한국커리어잡스", "a": "충남 천안시, 충남 아산시, 충남 당진시, 충남 예산군", "t": "041-556-2829", "q": 1, "r": [{"sido": "충남", "sigungu": "천안시"}, {"sido": "충남", "sigungu": "아산시"}, {"sido": "충남", "sigungu": "당진시"}, {"sido": "충남", "sigungu": "예산군"}]}, {"n": "(주)한국커리어잡스 대전지사", "a": "대전 중구, 대전 서구, 대전 유성구, 대전 대덕구, 충남 공주시, 충남 논산시, 충남 계룡시, 충남 금산군", "t": "042-484-2810", "q": 605, "r": [{"sido": "대전", "sigungu": "중구"}, {"sido": "대전", "sigungu": "서구"}, {"sido": "대전", "sigungu": "유성구"}, {"sido": "대전", "sigungu": "대덕구"}, {"sido": "충남", "sigungu": "공주시"}, {"sido": "충남", "sigungu": "논산시"}, {"sido": "충남", "sigungu": "계룡시"}, {"sido": "충남", "sigungu": "금산군"}]}, {"n": "(주)휴먼잡트러스트", "a": "인천 중구, 인천 동구, 인천 미추홀구, 인천 연수구, 인천 남동구", "t": "032-822-1821", "q": 600, "r": [{"sido": "인천", "sigungu": "중구"}, {"sido": "인천", "sigungu": "동구"}, {"sido": "인천", "sigungu": "미추홀구"}, {"sido": "인천", "sigungu": "연수구"}, {"sido": "인천", "sigungu": "남동구"}]}, {"n": "(주)휴먼잡트러스트 계양지점", "a": "인천 부평구, 인천 계양구", "t": "032-543-5717", "q": 627, "r": [{"sido": "인천", "sigungu": "부평구"}, {"sido": "인천", "sigungu": "계양구"}]}, {"n": "㈜베스트인광주지사", "a": "광주 동구, 광주 서구, 광주 남구, 광주 북구, 광주 광산구, 전남 나주시, 전남 담양군, 전남 곡성군, 전남 구례군, 전남 화순군, 전남 함평군, 전남 영광군, 전남 장성군, 제주 제주시, 제주 서귀포시", "t": "062-714-3658", "q": 678, "r": [{"sido": "광주", "sigungu": "동구"}, {"sido": "광주", "sigungu": "서구"}, {"sido": "광주", "sigungu": "남구"}, {"sido": "광주", "sigungu": "북구"}, {"sido": "광주", "sigungu": "광산구"}, {"sido": "전남", "sigungu": "나주시"}, {"sido": "전남", "sigungu": "담양군"}, {"sido": "전남", "sigungu": "곡성군"}, {"sido": "전남", "sigungu": "구례군"}, {"sido": "전남", "sigungu": "화순군"}, {"sido": "전남", "sigungu": "함평군"}, {"sido": "전남", "sigungu": "영광군"}, {"sido": "전남", "sigungu": "장성군"}, {"sido": "제주", "sigungu": "제주시"}, {"sido": "제주", "sigungu": "서귀포시"}]}, {"n": "㈜위더스", "a": "울산 중구, 울산 남구, 울산 동구, 울산 북구, 울산 울주군", "t": "052-222-1272", "q": 1, "r": [{"sido": "울산", "sigungu": "중구"}, {"sido": "울산", "sigungu": "남구"}, {"sido": "울산", "sigungu": "동구"}, {"sido": "울산", "sigungu": "북구"}, {"sido": "울산", "sigungu": "울주군"}]}, {"n": "㈜제니엘 평택지점", "a": "경기 평택시, 경기 오산시, 경기 안성시", "t": "031-647-6969", "q": 422, "r": [{"sido": "경기", "sigungu": "평택시"}, {"sido": "경기", "sigungu": "오산시"}, {"sido": "경기", "sigungu": "안성시"}]}, {"n": "㈜휴먼제이앤씨 군산지사", "a": "전북 군산시, 전북 고창군, 전북 부안군", "t": "063-451-7521", "q": 761, "r": [{"sido": "전북", "sigungu": "군산시"}, {"sido": "전북", "sigungu": "고창군"}, {"sido": "전북", "sigungu": "부안군"}]}];
+const SGMAP={"서울": ["강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"], "부산": ["강서구", "금정구", "기장군", "남구", "동구", "동래구", "부산진구", "북구", "사상구", "사하구", "서구", "수영구", "연제구", "영도구", "중구", "해운대구"], "대구": ["군위군", "남구", "달서구", "달성군", "동구", "북구", "서구", "수성구", "중구"], "인천": ["강화군", "계양구", "남동구", "동구", "미추홀구", "부평구", "서구", "연수구", "옹진군", "중구"], "광주": ["", "광산구", "남구", "동구", "북구", "서구"], "대전": ["대덕구", "동구", "서구", "유성구", "중구"], "울산": ["남구", "동구", "북구", "울주군", "중구"], "세종": [""], "경기": ["가평군", "고양시", "과천시", "광명시", "광주시", "구리시", "군포시", "김포시", "남양주시", "동두천시", "부천시", "성남시", "수원시", "시흥시", "안산시", "안성시", "안양시", "양주시", "양평군", "여주시", "연천군", "오산시", "용인시", "의왕시", "의정부시", "이천시", "파주시", "평택시", "포천시", "하남시", "화성시"], "강원": ["강릉시", "고성군", "동해시", "삼척시", "속초시", "양구군", "양양군", "영월군", "원주시", "인제군", "정선군", "철원군", "춘천시", "태백시", "평창군", "홍천군", "화천군", "횡성군"], "충북": ["괴산군", "단양군", "보은군", "영동군", "옥천군", "음성군", "제천시", "증평군", "진천군", "청주시", "충주시"], "충남": ["계룡시", "공주시", "금산군", "논산시", "당진시", "보령시", "부여군", "서산시", "서천군", "아산시", "예산군", "천안시", "청양군", "태안군", "홍성군"], "전북": ["고창군", "군산시", "김제시", "남원시", "무주군", "부안군", "순창군", "완주군", "익산시", "임실군", "장수군", "전주시", "정읍시", "진안군"], "전남": ["강진군", "고흥군", "곡성군", "광양시", "구례군", "나주시", "담양군", "목포시", "무안군", "보성군", "순천시", "신안군", "여수시", "영광군", "영암군", "완도군", "장성군", "장흥군", "진도군", "함평군", "해남군", "화순군"], "경북": ["경산시", "경주시", "고령군", "구미시", "김천시", "문경시", "봉화군", "상주시", "성주군", "안동시", "영덕군", "영양군", "영주시", "영천시", "예천군", "울릉군", "울진군", "의성군", "청도군", "청송군", "칠곡군", "포항시"], "경남": ["거제시", "거창군", "고성군", "김해시", "남해군", "밀양시", "사천시", "산청군", "양산시", "의령군", "진주시", "창녕군", "창원시", "통영시", "하동군", "함안군", "함양군", "합천군"], "제주": ["서귀포시", "제주시"]};
+const META_SIDO=['서울','인천','경기']; // 수도권 판별
+const EXAMPLE=`1	590309-2******	이원자	-	2018.09.01	-	-
+2	700430-1******	송영윤	2018.09.01	2018.09.01	2018.09.01	2018.09.01
+3	730218-1******	김성호	2025.05.08	2025.05.08	2025.05.08	2025.05.08
+4	740702-2******	손미라	2025.03.01	2025.03.01	2025.03.01	2025.03.01
+5	790729-1******	김상목	2025.05.12	2025.05.12	2025.05.12	2025.05.12
+6	810822-1******	김영환	2018.09.01	2018.09.01	-	-
+7	891129-2******	김수진	2018.09.01	2018.09.01	2018.09.01	2018.09.01
+8	990116-2******	김정미	2025.12.11	2025.12.11	2025.12.11	2025.12.11`;
+
+document.getElementById('loadEx').onclick=()=>{document.getElementById('input').value=EXAMPLE};
+
+// ---- 시도/시군구 드롭다운 ----
+const sidoSel=document.getElementById('sido');
+const sgSel=document.getElementById('sigungu');
+const regionHint=document.getElementById('regionHint');
+Object.keys(SGMAP).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sidoSel.appendChild(o);});
+sidoSel.onchange=()=>{
+  sgSel.innerHTML='<option value="">선택</option>';
+  if(!sidoSel.value){sgSel.disabled=true;sgSel.innerHTML='<option value="">먼저 시/도 선택</option>';updateHint();return;}
+  sgSel.disabled=false;
+  SGMAP[sidoSel.value].forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sgSel.appendChild(o);});
+  updateHint();
+};
+sgSel.onchange=updateHint;
+function updateHint(){
+  if(sidoSel.value && sgSel.value){
+    const region=META_SIDO.includes(sidoSel.value)?'수도권':'비수도권';
+    const orgs=findOrgs(sidoSel.value,sgSel.value);
+    regionHint.innerHTML=`📍 ${sidoSel.value} ${sgSel.value} · <b>${region}</b> · 담당 운영기관 ${orgs.length}곳 연결됨`;
+    regionHint.style.color='var(--green)';
+  }else{
+    regionHint.innerHTML='시/군/구까지 선택하면 청년 제도에 담당 운영기관이 자동으로 연결됩니다.';
+    regionHint.style.color='var(--blue)';
+  }
+}
+function findOrgs(sido,sigungu){
+  if(!sido||!sigungu) return [];
+  return ORGS.filter(o=>o.r.some(r=>r.sido===sido&&(r.sigungu===sigungu||r.sigungu.includes(sigungu)||sigungu.includes(r.sigungu)))).sort((a,b)=>b.q-a.q);
+}
+function getRegion(){return (sidoSel.value && META_SIDO.includes(sidoSel.value))?'수도권':(sidoSel.value?'비수도권':'수도권');}
+
+// ---- 파싱 ----
+function parseRoster(raw){
+  const lines=raw.trim().split(/\n/).filter(l=>l.trim());
+  const out=[];
+  for(const line of lines){
+    const cols=line.split(/\t|\s{2,}|,|\|/).map(c=>c.trim()).filter(c=>c && c!=='-');
+    if(cols.length<2) continue;
+    let name='',birthY=null,sex='',hireY=null,hireM=null,tenureM=null,foreign=false,rrnSex=null;
+    let dates=[],rrnFound=false;
+    for(const c of cols){
+      // 주민번호: 마스킹(*) 제거 후 앞6자리 + (선택)성별1자리 또는 전체7자리
+      const rrn=c.replace(/[-\s]/g,'').replace(/[*xX]+$/,'');
+      let rm=rrn.match(/^(\d{6})([1-8])?(\d{6})?$/);
+      if(rm && !rrnFound){
+        rrnFound=true;
+        const yy=parseInt(rm[1].substr(0,2));
+        const g=rm[2]||'';
+        if(g==='3'||g==='4'||g==='7'||g==='8') birthY=2000+yy;
+        else if(g==='1'||g==='2'||g==='5'||g==='6') birthY=1900+yy;
+        else birthY=(yy<=(THIS_YEAR-2000)?2000:1900)+yy;
+        if(g==='5'||g==='6'||g==='7'||g==='8') foreign=true;
+        if(g==='1'||g==='3'||g==='5'||g==='7') rrnSex='남';
+        if(g==='2'||g==='4'||g==='6'||g==='8') rrnSex='여';
+        continue;
+      }
+      // 생년 4자리
+      if(/^(19|20)\d{2}$/.test(c) && !birthY){birthY=parseInt(c);continue;}
+      // 성별
+      if(/^(남|여|남자|여자|M|F)$/i.test(c)){sex=/남|M/i.test(c)?'남':'여';continue;}
+      // 날짜 수집 (YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD / YYYY.MM)
+      let d=c.match(/^(20\d{2})[-.\/](\d{1,2})(?:[-.\/](\d{1,2}))?$/);
+      if(d){dates.push({y:parseInt(d[1]),m:parseInt(d[2])});continue;}
+      // 외국인 표시
+      if(/외국|foreign|E-?9|F-?2|F-?5|F-?6/i.test(c)){foreign=true;continue;}
+      // 이름: 한글 2자↑ 또는 영문, 연번(순수숫자) 아님
+      if(!name && (/[가-힣]{2,}/.test(c) || /^[A-Za-z][A-Za-z\s]{1,}$/.test(c)) && !/^\d+$/.test(c)) name=c;
+    }
+    // 여러 자격취득일 중 가장 빠른 날짜 = 실제 입사(자격취득)일
+    if(dates.length){
+      dates.sort((a,b)=>a.y-b.y||a.m-b.m);
+      hireY=dates[0].y;hireM=dates[0].m;
+    }
+    if(!name) name='(이름미상)';
+    if(sex==='') sex=rrnSex||'';
+    // 근속 계산 (현재 2026.6 기준)
+    if(hireY){
+      tenureM=(THIS_YEAR-hireY)*12 + (6-(hireM||1));
+      if(tenureM<0) tenureM=0;
+    }
+    if(birthY) out.push({name,birthY,sex,hireY,hireM,tenureM,foreign});
+  }
+  return out;
+}
+
+// ---- 진단 엔진 ----
+function diagnose(p, region, size){
+  const age=THIS_YEAR-p.birthY;
+  const isNew = p.tenureM!=null && p.tenureM<=12;
+  const flags=[];
+
+  // 청년일자리도약장려금 (기업 수령)
+  if(age>=15 && age<=34 && isNew && !p.foreign){
+    const ypitch=region==='비수도권'?'최대 월 80만원·2년간':'최대 월 60만원·2년간';
+    flags.push({lv:'high',recipient:'company',prog:'청년일자리도약장려금',org:'운영기관(상공회의소 등)',youthOrg:true,
+      desc:`만 ${age}세 신규채용. 정규직·주 28시간↑·월급여 450만원↓이면 1년차 월 최대 60만원(수도권), 비수도권 가산.`,
+      pitch:`대표님, ${p.name}님은 청년을 정규직으로 채용하면 정부가 인건비를 보조해주는 <b>청년일자리도약장려금</b> 대상이세요. 청년 고용을 장려하려는 제도라, 이 직원 한 명으로 <b>${ypitch} 최대 1,440만원</b>까지 회사가 지원받으실 수 있습니다. 저희가 운영기관 신청부터 챙겨드리겠습니다.`,
+      script:`청년 신규직원을 정규직으로 채용했는데, 청년일자리도약장려금 참여 신청이 가능한지, 우리 지역 배정인원이 남았는지 확인하고 싶습니다.`,
+      check:'정규직 여부, 주 소정근로 28시간 이상, 채용일 기준 사업참여 신청 시점'});
+
+    // 청년 장기근속인센티브 (유형Ⅱ) — 청년 본인 수령
+    flags.push({lv:'check',recipient:'worker',prog:'청년 장기근속인센티브 (유형Ⅱ)',org:'(사)한국취업능력개발원 / 고용24 개인',
+      desc:`만 ${age}세 청년 <b>본인</b>이 받는 별도 인센티브. 정규직 전환일 후 6개월↑ 재직 시 <b>2년간 최대 480만원</b>(6·12·18·24개월 각 120만원, 4회차).`,
+      pitch:`대표님, 회사가 받는 지원금과 <b>별개로 ${p.name}님 본인</b>도 장기근속하면 <b>2년간 최대 480만원</b>을 직접 받으실 수 있어요. 청년의 장기근속을 유도하려는 제도인데, 신청기한이 까다로워 놓치기 쉽습니다. 저희가 회차별 신청 시기를 직원분께 안내해드려 한 푼도 놓치지 않게 챙기겠습니다.`,
+      script:`우리 회사가 청년일자리도약장려금 대상 청년을 정규직으로 채용했습니다. 이 청년 본인이 받는 장기근속인센티브(유형Ⅱ) 신청을 안내하려 하는데, 1회차 신청 시기와 필요서류를 확인하고 싶습니다.`,
+      check:'⚠️ 신청기한 엄수 — 기업이 각 회차 지원금 받은 다음날부터 2개월 이내 신청(도과 시 제외). 청년이 고용24 개인 로그인으로 직접 신청. 외국인·재학생·대표 친족은 제외'});
+  }
+  // 고령자 계속고용장려금
+  if(age>=60 && p.tenureM!=null && p.tenureM>=24 && !p.foreign){
+    const amt=region==='비수도권'?'분기 120만원':'분기 90만원';
+    const total=region==='비수도권'?'최대 1,440만원':'최대 1,080만원';
+    flags.push({lv:'check',recipient:'company',prog:'고령자 계속고용장려금',org:'관할 고용센터 기업지원부',
+      desc:`만 ${age}세, 근속 ${Math.floor(p.tenureM/12)}년. 정년(통상 60세) 이후 계속고용 중이면 ${amt}, 최대 3년.`,
+      pitch:`대표님, ${p.name}님처럼 숙련된 직원을 정년 후에도 계속 쓰시는 게 회사엔 큰 자산인데, 정부가 그걸 응원합니다. 정년 도달 인력을 계속 고용하면 <b>${amt}씩 3년간 ${total}</b> 지원받으실 수 있어요. 취업규칙에 계속고용제도만 명시하면 되는데, 저희가 그 작업까지 도와드리겠습니다.`,
+      script:`정년이 지난 직원을 계속 고용하고 있습니다. 취업규칙에 계속고용제도(정년연장·폐지·재고용)를 명시하면 고령자 계속고용장려금을 받을 수 있는지 확인하고 싶습니다.`,
+      check:'정년제도 1년 이상 운영, 취업규칙에 계속고용제도 명시, 정년 전 피보험 2년 이상'});
+  }
+  // 고령자 고용지원금
+  if(age>=60 && !p.foreign){
+    flags.push({lv:'check',recipient:'company',prog:'고령자 고용지원금 (60세↑ 증가분)',org:'관할 고용센터',
+      desc:`만 ${age}세. 회사 전체 60세 이상 근로자 수가 직전 3년 평균보다 늘었으면 증가 1인당 분기 30만원.`,
+      pitch:`대표님, 회사에 60세 이상 베테랑 직원이 늘고 계신데, 이게 <b>고령자 고용지원금</b> 대상이 됩니다. 고령 인력 고용을 늘린 기업을 지원하는 제도라, 증가 인원 1명당 <b>분기 30만원씩 2년간</b> 받으실 수 있어요. 회사 통계로 판정되니 저희가 3년 평균 대비 증가분을 계산해 신청해드리겠습니다.`,
+      script:`최근 60세 이상 고령 근로자가 늘었는데, 고령자 고용지원금 대상이 되는지 직전 3년 평균 대비 증가분을 확인하고 싶습니다.`,
+      check:'회사 단위 60세↑ 인원의 3년 평균 대비 증가 여부 (개인 아닌 회사 통계)'});
+  }
+  // 고용촉진장려금
+  if(isNew){
+    if(p.foreign){
+      flags.push({lv:'verify',recipient:'company',prog:'고용촉진장려금 (외국인·체류자격 확인)',org:'관할 고용센터',
+        desc:`외국인은 거주(F-2)·영주(F-5)·결혼이민(F-6)만 고용촉진장려금 대상. 그 외 비자(E-9 등)는 제외.`,
+        pitch:`대표님, ${p.name}님이 거주·영주·결혼이민 비자(F-2/5/6)라면 내국인과 동일하게 <b>고용촉진장려금 최대 720만원</b> 대상이 될 수 있어요. 다만 비자 종류에 따라 갈리니, 저희가 체류자격을 먼저 확인해 가능한 제도를 찾아드리겠습니다.`,
+        script:`외국인 근로자를 신규 채용했는데 체류자격이 F-2/F-5/F-6입니다. 고용촉진장려금 또는 적용 가능한 외국인 고용지원 제도가 있는지 확인하고 싶습니다.`,
+        check:'⚠️ 체류자격(비자) 종류 — F-2·F-5·F-6 외에는 이 제도 대상 아님'});
+    }else{
+      const amt=size==='대규모'?'최대 360만원':'최대 720만원';
+      flags.push({lv:'verify',recipient:'company',prog:'고용촉진장려금',org:'관할 고용센터',
+        desc:`만 ${age}세 신규채용. 취업애로계층이면 연 ${amt}(1년). 연령 무관 — 중장년도 해당될 수 있음.`,
+        pitch:`대표님, ${p.name}님이 채용 전 국민취업지원제도를 거쳤거나 실업이 길었던 분이라면, 취업이 어려운 분을 채용한 기업을 지원하는 <b>고용촉진장려금 ${amt}</b> 대상이세요. 청년이 아니어도 받을 수 있는 게 핵심입니다. 저희가 자격 요건을 확인해 신청까지 진행하겠습니다.`,
+        script:`신규 채용한 직원이 국민취업지원제도나 취업성공패키지를 이수했거나, 채용 전 실업 상태가 4개월 이상이었습니다. 고용촉진장려금 대상이 되는지 확인하고 싶습니다.`,
+        check:'⚠️ 취업애로계층 여부 — 국취·취성패 이수 / 실업 4개월↑ / 중증장애 / 여성가장 등 (채용 전 고용센터 구직등록 필수)'});
+    }
+  }
+  return {age,flags};
+}
+
+document.getElementById('run').onclick=()=>{
+  const err=document.getElementById('err');err.innerHTML='';
+  const raw=document.getElementById('input').value;
+  if(!raw.trim()){err.innerHTML='<div class="err">명부를 붙여넣어 주세요.</div>';return;}
+  const region=getRegion();
+  const size=document.getElementById('size').value;
+  const matchedOrgs=findOrgs(sidoSel.value,sgSel.value);
+  const roster=parseRoster(raw);
+  if(roster.length===0){err.innerHTML='<div class="err">명부를 읽지 못했어요. 이름·생년(주민번호 앞자리)·입사일이 포함됐는지 확인해 주세요.</div>';return;}
+  render(roster,region,size,matchedOrgs);
+};
+
+function render(roster,region,size,matchedOrgs){
+  matchedOrgs=matchedOrgs||[];
+  const res=roster.map(p=>({p,...diagnose(p,region,size)}));
+  const youth=res.filter(r=>r.age>=15&&r.age<=34).length;
+  const old60=res.filter(r=>r.age>=60).length;
+  const foreign=res.filter(r=>r.p.foreign).length;
+  const withFlags=res.filter(r=>r.flags.length>0).length;
+
+  let h='';
+  h+='<div class="stats">'
+    +`<div class="stat"><div class="n">${roster.length}</div><div class="l">전체 인원</div></div>`
+    +`<div class="stat"><div class="n">${youth}</div><div class="l">청년 15~34세</div></div>`
+    +`<div class="stat"><div class="n">${old60}</div><div class="l">60세 이상</div></div>`
+    +`<div class="stat"><div class="n">${foreign}</div><div class="l">외국인 추정</div></div>`
+    +`<div class="stat"><div class="n" style="color:var(--green)">${withFlags}</div><div class="l">검토대상</div></div>`
+    +'</div>';
+
+  // 운영기관 배너 (청년 제도 대상자가 있을 때만)
+  const hasYouth=res.some(r=>r.flags.some(f=>f.youthOrg));
+  if(hasYouth){
+    if(matchedOrgs.length){
+      h+=`<div class="orgbanner"><div class="obt">📞 우리 지역 청년일자리도약장려금 운영기관</div>`
+        +`<div class="obloc">${sidoSel.value} ${sgSel.value} · 청년 제도는 아래 운영기관에 신청합니다 (배정인원 많은 순)</div>`;
+      matchedOrgs.slice(0,5).forEach(o=>{
+        const low=o.q<100;
+        h+=`<div class="orgitem"><span class="on">${o.n}</span>`
+          +`<span class="oq${low?' low':''}">배정 ${o.q}명</span>`
+          +`<a class="ot" href="tel:${o.t.replace(/[^0-9]/g,'')}">📞 ${o.t}</a></div>`;
+      });
+      if(matchedOrgs.length>5) h+=`<div class="obnone" style="margin-top:8px">외 ${matchedOrgs.length-5}곳 더 있음</div>`;
+      h+='</div>';
+    }else{
+      h+=`<div class="orgbanner"><div class="obt">📞 우리 지역 청년 운영기관</div>`
+        +`<div class="obnone">${sidoSel.value&&sgSel.value?`${sidoSel.value} ${sgSel.value} 담당 운영기관을 찾지 못했어요. 고용24에서 직접 확인하세요.`:'위에서 회사 소재지(시/도·시/군/구)를 선택하면 청년 제도 담당 운영기관이 여기 표시됩니다.'}</div></div>`;
+    }
+  }
+
+  // 회사 단위 제도
+  h+='<div class="company-box"><div class="ct">🏢 회사 단위로 확인할 제도</div>';
+  if(old60>=1) h+=`<div class="company-prog">▸ <b>고령자 고용지원금</b> — 60세 이상 ${old60}명. 3년 평균보다 늘었으면 증가분만큼 분기 30만원/인 (회사 통계로 판정)</div>`;
+  h+=`<div class="company-prog">▸ <b>출산육아기 고용안정장려금</b> — 육아휴직·육아기 단축 사용자의 대체인력 채용 시 (명부로는 판별 불가, 해당 시 확인)</div>`;
+  h+=`<div class="company-prog">▸ <b>정규직 전환지원</b> — 계약직을 정규직으로 전환한 이력이 있으면 대상 (명부로는 계약형태 미상, 별도 확인)</div>`;
+  h+='</div>';
+
+  h+='<div class="rtitle">직원별 진단 결과</div>';
+  h+='<div class="rdesc">행을 누르면 제도별 상세와 전화 스크립트가 열립니다. 각 제도에 <b style="color:var(--blue)">🏢 회사 수령</b> / <b style="color:var(--red)">👤 직원 본인 수령</b>을 표시합니다.</div>';
+  h+='<div class="legend">'
+    +'<span><span class="ldot" style="background:var(--blue-d)"></span>확정후보 — 명부로 핵심요건 충족</span>'
+    +'<span><span class="ldot" style="background:var(--blue)"></span>확인필요 — 회사·제도 요건 확인</span>'
+    +'<span><span class="ldot" style="background:#9db4cf"></span>검증필요 — 개인 자격(비자·취약계층) 확인</span>'
+    +'</div>';
+
+  // 정렬: 플래그 많은 순
+  res.sort((a,b)=>b.flags.length-a.flags.length);
+  res.forEach((r,i)=>{
+    const p=r.p;
+    const ten=p.tenureM!=null?`근속 ${Math.floor(p.tenureM/12)}년 ${p.tenureM%12}개월`:'입사일 미상';
+    h+=`<div class="person${r.flags.length>0&&i<2?' open':''}"><div class="phead" onclick="this.parentNode.classList.toggle('open')">`
+      +`<span class="pname">${p.name}</span>`
+      +`<span class="pmeta">만 ${r.age}세 · ${p.sex||'-'} · ${ten}</span>`
+      +(p.foreign?'<span class="ptag f">외국인 추정</span>':'')
+      +`<span class="pcount${r.flags.length===0?' zero':''}">${r.flags.length>0?r.flags.length+'개 검토':'해당없음'}</span>`
+      +`</div><div class="pbody">`;
+    if(r.flags.length===0){
+      h+='<div class="pnone">명부 정보 기준 현재 자동 포착되는 제도가 없습니다. 계약형태·취약계층 여부에 따라 추가 가능성은 있어 상담 시 확인하세요.</div>';
+    }else{
+      r.flags.forEach((f,j)=>{
+        const lvName={high:'확정후보',check:'확인필요',verify:'검증필요'}[f.lv];
+        const recipBadge=f.recipient==='worker'
+          ? '<span class="rbadge worker">👤 직원 본인 수령</span>'
+          : '<span class="rbadge company">🏢 회사 수령</span>';
+        h+=`<div class="flag ${f.lv}"><div class="ftop">`
+          +`<span class="flv ${f.lv}">${lvName}</span>`
+          +recipBadge
+          +`<span class="fprog">${f.prog}</span>`
+          +`<span class="forg">📞 ${f.org}</span></div>`
+          +`<div class="fdesc">${f.desc}</div>`;
+        // 청년 도약장려금이면 우리 지역 운영기관 인라인 표시
+        if(f.youthOrg && matchedOrgs.length){
+          h+='<div class="org-inline"><div class="oil">📍 우리 지역 신청 운영기관 (전화하면 됨)</div>';
+          matchedOrgs.slice(0,3).forEach(o=>{
+            h+=`<div class="oirow"><span class="oin">${o.n} <span style="color:var(--blue-d);font-size:11px">배정 ${o.q}명</span></span>`
+              +`<a class="oit" href="tel:${o.t.replace(/[^0-9]/g,'')}">📞 ${o.t}</a></div>`;
+          });
+          if(matchedOrgs.length>3) h+=`<div class="oimore">외 ${matchedOrgs.length-3}곳 (위 배너에서 전체 보기)</div>`;
+          h+='</div>';
+        }else if(f.youthOrg && !matchedOrgs.length){
+          h+='<div class="org-inline"><div class="oimore">회사 소재지를 선택하면 이 자리에 담당 운영기관 전화번호가 표시됩니다.</div></div>';
+        }
+        // 대표님께 할 멘트 (영업용 공치사)
+        if(f.pitch){
+          h+=`<div class="pitch"><div class="pl">🗣️ 대표님께 이렇게 말하세요</div>`
+            +`<div class="ptext">${f.pitch}</div>`
+            +`<span class="scopy" onclick="copyText(this.getAttribute('data-c'),this)" data-c="${f.pitch.replace(/<[^>]+>/g,'').replace(/"/g,'&quot;')}">📋 멘트 복사</span></div>`;
+        }
+        h+=`<div class="script"><div class="sl">☎ 담당 기관에 이렇게 말하세요</div>`
+          +`<div class="stext">"${f.script}"</div>`
+          +`<span class="scopy" onclick="copyText('${f.script.replace(/'/g,"\\'")}',this)">📋 스크립트 복사</span></div>`
+          +`<div class="fcheck">확인할 것: <b>${f.check}</b></div>`
+          +`</div>`;
+      });
+    }
+    h+='</div></div>';
+  });
+
+  h+='<div class="warn"><b>⚠️ 이 진단은 "가능성 스크리닝"입니다.</b> 명부의 생년·입사일만으로 자동 판정한 결과라, 실제 수급은 '
+    +'취업규칙·계약형태·취약계층 증빙·고용조정 이력 등에 따라 달라집니다. <b>공통 결격사유</b>(신청 전후 권고사직·해고, 임금체불 명단공개, 보험료 체납, 대표자 친족, 유흥·도박업)에 해당하면 부지급됩니다. '
+    +'각 제도는 위 담당 기관 전화 확인 후 고용24에서 신청하세요.</div>';
+  h+=`<div class="footer">2026년 고용장려금 지원제도 기준 · NMSC 전 제도 진단 엔진<br>최종 수급요건·금액은 관할 고용센터·근로복지공단·운영기관에서 확인 필요 · © NMSC</div>`;
+
+  const result=document.getElementById('result');
+  result.innerHTML=h;
+  result.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyText(t,el){
+  navigator.clipboard.writeText(t).then(()=>{
+    const o=el.textContent;el.textContent='✅ 복사됨!';
+    setTimeout(()=>el.textContent=o,1500);
+  });
+}
+</script>
+</body>
+</html>
