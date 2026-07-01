@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연구소설립 진단 v2 | NMSC 컨설팅 바이블</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#0A84FF; --blue-d:#0062cc; --blue-l:#e8f2ff;
+  --red:#e8202a; --red-l:#ffeaeb;
+  --ink:#111; --gray:#666; --line:#e5e5e5; --bg:#f5f7fa;
+  --green:#1a9d55; --green-l:#e6f7ee; --amber:#c77700; --amber-l:#fff4e0;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-weight:500}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+
+.hd{background:var(--blue);color:#fff;border-radius:16px;padding:24px 22px;margin-bottom:14px}
+.hd h1{font-size:22px;font-weight:900;letter-spacing:-.5px}
+.hd .sub{font-size:13px;font-weight:700;opacity:.95;margin-top:6px}
+.hd .law{font-size:11px;font-weight:700;background:rgba(255,255,255,.18);display:inline-block;padding:4px 10px;border-radius:20px;margin-top:10px}
+
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{flex:1;background:#fff;border:2px solid var(--line);border-radius:12px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;text-align:center;transition:.12s}
+.tab.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+.prog{display:flex;gap:6px;margin-bottom:16px}
+.prog .p{flex:1;height:6px;border-radius:6px;background:var(--line)}
+.prog .p.on{background:var(--blue)}
+.prog .p.done{background:var(--green)}
+
+.card{background:#fff;border-radius:16px;padding:22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.step-tag{display:inline-block;font-size:11px;font-weight:900;color:var(--blue);background:var(--blue-l);padding:4px 12px;border-radius:20px;margin-bottom:12px}
+.card h2{font-size:18px;font-weight:900;letter-spacing:-.4px;margin-bottom:4px}
+.card .desc{font-size:13px;font-weight:600;color:var(--gray);margin-bottom:18px}
+
+.q{margin-bottom:20px}
+.q .label{font-size:14px;font-weight:900;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.q .hint{font-size:12px;font-weight:600;color:var(--gray);margin-bottom:10px;background:var(--bg);padding:8px 12px;border-radius:8px;border-left:3px solid var(--blue)}
+.req{color:var(--red);font-size:11px;font-weight:900}
+
+.opts{display:grid;gap:8px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14px;font-weight:700;cursor:pointer;transition:.12s;background:#fff;text-align:left;display:flex;flex-direction:column;gap:3px}
+.opt small{font-size:11px;font-weight:600;color:var(--gray)}
+.opt:hover{border-color:var(--blue)}
+.opt.sel{border-color:var(--blue);background:var(--blue-l);color:var(--blue-d)}
+.opt.sel small{color:var(--blue-d)}
+
+.chk{border:2px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;transition:.12s;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.chk:hover{border-color:var(--blue)}
+.chk.sel{border-color:var(--blue);background:var(--blue-l)}
+.chk .box{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:900;margin-top:1px}
+.chk.sel .box{background:var(--blue);border-color:var(--blue)}
+.chk .txt{font-size:13.5px;font-weight:700}
+.chk .txt small{display:block;font-size:11.5px;font-weight:600;color:var(--gray);margin-top:2px}
+
+.researcher{border:2px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;position:relative}
+.researcher .rnum{position:absolute;top:-10px;left:12px;background:var(--blue);color:#fff;font-size:11px;font-weight:900;padding:2px 10px;border-radius:20px}
+.researcher .del{position:absolute;top:10px;right:12px;background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:900;cursor:pointer}
+.researcher input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-weight:600;margin-bottom:8px;font-family:inherit}
+.researcher input:focus{outline:none;border-color:var(--blue)}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rsel{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;font-weight:700;cursor:pointer;background:#fff}
+.rsel.sel{border-color:var(--blue);background:var(--blue-l);color:var(--blue-d)}
+.rverdict{margin-top:10px;font-size:12px;font-weight:800;padding:8px 12px;border-radius:8px}
+.rverdict.ok{background:var(--green-l);color:var(--green)}
+.rverdict.no{background:var(--red-l);color:var(--red)}
+.rverdict.maybe{background:var(--amber-l);color:var(--amber)}
+.rrole{margin-top:6px;font-size:11.5px;font-weight:800;padding:6px 10px;border-radius:8px;background:var(--blue-l);color:var(--blue-d)}
+.add-r{width:100%;border:2px dashed var(--blue);color:var(--blue);background:var(--blue-l);border-radius:12px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:10px}
+
+.nav{display:flex;gap:10px;margin-top:20px}
+.btn{flex:1;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;transition:.12s}
+.btn.next{background:var(--blue);color:#fff}
+.btn.next:hover{background:var(--blue-d)}
+.btn.next:disabled{background:var(--line);color:#999;cursor:not-allowed}
+.btn.prev{background:#fff;color:var(--ink);border:2px solid var(--line);flex:0 0 90px}
+.btn.big{background:var(--red);color:#fff;font-size:16px}
+.btn.big:hover{background:#c41820}
+
+.result-hd{border-radius:16px;padding:26px 22px;text-align:center;margin-bottom:14px;color:#fff}
+.result-hd.ok{background:var(--green)}
+.result-hd.maybe{background:var(--amber)}
+.result-hd.no{background:var(--red)}
+.result-hd .big{font-size:26px;font-weight:900;letter-spacing:-.5px}
+.result-hd .small{font-size:13px;font-weight:700;opacity:.95;margin-top:6px}
+.result-hd .badge{display:inline-block;background:rgba(255,255,255,.22);font-size:12px;font-weight:900;padding:5px 14px;border-radius:20px;margin-top:12px}
+
+.rsec{background:#fff;border-radius:14px;padding:20px;margin-bottom:12px}
+.rsec h3{font-size:15px;font-weight:900;margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+.rsec h3 .ic{width:26px;height:26px;background:var(--blue-l);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:700}
+.check-row:last-child{border-bottom:none}
+.check-row .st{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff}
+.st.ok{background:var(--green)}.st.no{background:var(--red)}.st.warn{background:var(--amber)}
+.check-row .ct small{display:block;font-size:12px;font-weight:600;color:var(--gray);margin-top:2px}
+
+.benefit{background:var(--blue-l);border-radius:12px;padding:14px 16px;margin-bottom:8px}
+.benefit .bt{font-size:14px;font-weight:900;color:var(--blue-d);margin-bottom:3px}
+.benefit .bd{font-size:12.5px;font-weight:600;color:#333}
+
+.guide-step{display:flex;gap:12px;margin-bottom:14px}
+.guide-step .gn{flex-shrink:0;width:30px;height:30px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px}
+.guide-step .gt{font-size:13.5px;font-weight:800}
+.guide-step .gt small{display:block;font-size:12px;font-weight:600;color:var(--gray);margin-top:2px}
+
+.tab-panel{background:var(--bg);border-radius:10px;padding:14px;margin:8px 0}
+.tab-panel .tp-h{font-size:13px;font-weight:900;color:var(--blue-d);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.tab-panel ul{list-style:none;font-size:12.5px;font-weight:600}
+.tab-panel li{padding:5px 0 5px 20px;position:relative}
+.tab-panel li:before{content:"▸";position:absolute;left:4px;color:var(--blue)}
+
+.docs-list{list-style:none}
+.docs-list li{font-size:13px;font-weight:700;padding:8px 0 8px 24px;position:relative;border-bottom:1px solid var(--line)}
+.docs-list li:before{content:"📄";position:absolute;left:0}
+.docs-list li:last-child{border-bottom:none}
+.docs-list li small{color:var(--gray);font-weight:600}
+.docs-list li.online:before{content:"⌨️"}
+
+.pitch{background:#1a1a1a;color:#eee;border-radius:12px;padding:16px;font-size:13px;font-weight:600;line-height:1.7;white-space:pre-wrap}
+.pitch .ptag{color:var(--blue);font-weight:900;font-size:11px;display:block;margin-bottom:8px}
+
+.warn-box{background:var(--red-l);border:1.5px solid var(--red);border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--red)}
+.warn-box .wt{font-weight:900;margin-bottom:4px}
+.tip-box{background:var(--green-l);border:1.5px solid var(--green);border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--green)}
+.tip-box .wt{font-weight:900;margin-bottom:4px}
+
+.summary-num{display:flex;gap:8px;margin-bottom:14px}
+.snum{flex:1;background:var(--bg);border-radius:12px;padding:14px 10px;text-align:center}
+.snum .n{font-size:24px;font-weight:900;color:var(--blue)}
+.snum .n.red{color:var(--red)}
+.snum .n.green{color:var(--green)}
+.snum .l{font-size:11px;font-weight:700;color:var(--gray);margin-top:2px}
+
+.case-hero{background:linear-gradient(135deg,var(--green),#0d7a40);color:#fff;border-radius:14px;padding:22px;margin-bottom:12px}
+.case-hero .ch-tag{font-size:11px;font-weight:900;background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:10px}
+.case-hero h3{font-size:19px;font-weight:900;letter-spacing:-.4px}
+.case-hero .ch-sub{font-size:13px;font-weight:700;opacity:.95;margin-top:4px}
+.ctable{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0}
+.ctable td{padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600}
+.ctable td:first-child{font-weight:900;color:var(--gray);width:34%;background:var(--bg)}
+.timeline{position:relative;padding-left:26px}
+.timeline:before{content:"";position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--line)}
+.tl-item{position:relative;padding-bottom:14px}
+.tl-item:before{content:"";position:absolute;left:-22px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--blue);border:2px solid #fff}
+.tl-item.done:before{background:var(--green)}
+.tl-date{font-size:11px;font-weight:900;color:var(--blue-d)}
+.tl-txt{font-size:13px;font-weight:700}
+.tl-txt small{display:block;font-size:11.5px;font-weight:600;color:var(--gray);margin-top:1px}
+
+.foot{text-align:center;font-size:11px;font-weight:600;color:var(--gray);padding:16px 0 30px}
+@media print{.no-print{display:none!important}body{background:#fff}.card,.rsec{box-shadow:none;border:1px solid #ddd}}
+@media(max-width:520px){.rq-grid{grid-template-columns:1fr}.tab{font-size:11px;padding:9px 4px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd no-print">
+    <h1>🔬 연구소설립 진단 <span style="font-size:13px;opacity:.85">v2</span></h1>
+    <div class="sub">기업부설연구소 · 연구개발전담부서 설립 진단 + KOITA 온라인 신청 가이드</div>
+    <div class="law">2026.2.1 시행 신법 · 외국인 연구원 · 서비스분야 우회 판정 지원</div>
+  </div>
+
+  <div class="tabs no-print">
+    <div class="tab on" id="tab-diag" onclick="switchTab('diag')">📋 진단하기</div>
+    <div class="tab" id="tab-case" onclick="switchTab('case')">🏆 실제 성공사례</div>
+  </div>
+
+  <div class="prog no-print" id="prog"></div>
+  <div id="app"></div>
+
+  <div class="foot">NMSC 나이스경영지원센터 · 컨설팅 바이블 · 신고기관: 한국산업기술진흥협회(KOITA) rnd.or.kr<br>※ 본 진단은 참고용이며 최종 인정은 KOITA 심사에 따릅니다</div>
+</div>
+
+<script>
+const S = {
+  view:'diag', step:0,
+  company:{ size:null, industry:null, special:null, founded:null },
+  researchers:[], space:[], intent:null
+};
+const STEPS = ["기업정보","연구전담요원","연구공간","진단결과"];
+
+function minRequired(){
+  const {size,special,founded} = S.company;
+  if(S.intent==='dept') return {n:1, label:'연구개발전담부서'};
+  if(special==='venture'||special==='prof') return {n:2, label:'벤처/연구원·교원 창업기업 특례'};
+  if(size==='small'){
+    if(founded==='under3') return {n:2, label:'소기업(창업 3년 이내 완화)'};
+    return {n:3, label:'소기업'};
+  }
+  if(size==='mid'){
+    if(founded==='small2mid') return {n:3, label:'소→중기업 전환 1년 이내 완화'};
+    return {n:5, label:'중기업'};
+  }
+  if(size==='midlarge') return {n:7, label:'중견기업'};
+  if(size==='large') return {n:10, label:'대기업'};
+  return {n:3, label:'-'};
+}
+
+function foreignerOK(visa){
+  const okVisa = ['f2','f4','f5','f6'];
+  const noVisa = ['trainee','short'];
+  if(visa==='domestic'||!visa) return {ok:true, note:''};
+  if(okVisa.includes(visa)) return {ok:true, note:'취업 제한 없는 체류자격 → 4대보험 가입 시 인정'};
+  if(visa==='e7') return {ok:true, note:'E-7(특정활동) → 해당 직무 취업허가 범위 내 인정, 4대보험 필수'};
+  if(noVisa.includes(visa)) return {ok:false, note:'산업연수생·단기체류(6개월↓)는 연구전담요원 등록 불가'};
+  return {ok:true, note:''};
+}
+
+function judgeResearcher(r){
+  const isService = S.company.industry==='service';
+  const isSME = (S.company.size==='small'||S.company.size==='mid');
+  const f = foreignerOK(r.visa);
+  if(!f.ok) return {v:'no', role:'불가', msg:'❌ '+f.note};
+  if(r.insured==='no') return {v:'no', role:'불가', msg:'❌ 4대보험 직원 증명 불가 → 등록 불가'};
+  if(r.conflict==='yes') return {v:'no', role:'불가', msg:'❌ 대표·감사·비상임이사 또는 타업무 겸직 → 등록 불가 (창업3년내 소기업 대표는 예외)'};
+  if(r.degree==='natural_bachelor') return {v:'ok', role:'전담요원', msg:'✅ 자연계(자연과학·공학·의학) 학사 이상 → 업종 불문 무조건 인정'+(f.note?' / '+f.note:'')};
+  if(r.cert==='gisa') return {v:'ok', role:'전담요원', msg:'✅ 국가기술자격 기사 이상 → 업종 불문 무조건 인정'};
+  if(isService){
+    if(r.degree==='other_bachelor') return {v:'ok', role:'전담요원', msg:'✅ 서비스·산업디자인 분야 → 자연계 아니어도 학사 인정 (분야 프레이밍 필수)'};
+    if(r.cert==='service2') return {v:'ok', role:'전담요원', msg:'✅ 서비스분야 2급 + 연구경력 2년 → 인정'};
+  }
+  if(isSME){
+    if(r.cert==='sanuptech') return {v:'maybe', role:'전담요원(조건부)', msg:'⚠️ 산업기사 → 연구경력 2년 이상이면 인정(중소기업 특례)'};
+    if(r.degree==='assoc') return {v:'maybe', role:'전담요원(조건부)', msg:'⚠️ 전문학사 → 연구경력 2년 이상이면 인정(3년제는 1년)'};
+    if(r.cert==='gineungsa') return {v:'maybe', role:'전담요원(조건부)', msg:'⚠️ 기능사 → 연구경력 4년 이상이면 인정'};
+    if(r.degree==='highschool') return {v:'maybe', role:'전담요원(조건부)', msg:'⚠️ 마이스터고·특성화고졸 → 연구경력 4년 이상이면 인정'};
+  }
+  return {v:'no', role:'보조원 배치 권장', msg:'❌ 전담요원 자격은 부족하지만, 4대보험 직원이면 <b>연구보조원</b>으로 배치 가능(자격요건 없음, 전담요원 수엔 미포함)'};
+}
+
+function countQualified(){
+  let ok=0, maybe=0, aux=0;
+  S.researchers.forEach(r=>{
+    const j = judgeResearcher(r);
+    if(j.v==='ok') ok++;
+    else if(j.v==='maybe') maybe++;
+    else if(j.role==='보조원 배치 권장') aux++;
+  });
+  return {ok, maybe, aux, total:ok+maybe};
+}
+
+function renderProg(){
+  const p = document.getElementById('prog');
+  if(S.view!=='diag'){ p.style.display='none'; return; }
+  p.style.display='flex';
+  p.innerHTML = STEPS.map((_,i)=>{
+    let c='p';
+    if(i<S.step) c+=' done'; else if(i===S.step) c+=' on';
+    return `<div class="${c}"></div>`;
+  }).join('');
+}
+function switchTab(v){
+  S.view=v;
+  document.getElementById('tab-diag').className='tab'+(v==='diag'?' on':'');
+  document.getElementById('tab-case').className='tab'+(v==='case'?' on':'');
+  render();
+}
+function render(){
+  renderProg();
+  const app = document.getElementById('app');
+  if(S.view==='case'){ app.innerHTML = caseStudy(); window.scrollTo(0,0); return; }
+  if(S.step===0) app.innerHTML = stepCompany();
+  else if(S.step===1) app.innerHTML = stepResearchers();
+  else if(S.step===2) app.innerHTML = stepSpace();
+  else if(S.step===3) app.innerHTML = stepResult();
+  window.scrollTo(0,0);
+}
+
+function stepCompany(){
+  return `
+  <div class="card">
+    <span class="step-tag">STEP 1 / 4</span>
+    <h2>기업 기본정보</h2>
+    <p class="desc">기업 규모·업종에 따라 필요한 연구전담요원 최소 인원이 달라집니다</p>
+    <div class="q">
+      <div class="label">① 설립 유형 <span class="req">필수</span></div>
+      <div class="hint">전담부서는 1명으로 설립 가능(초기 진입점). 연구소는 부동산 지방세 감면·국가R&D 직접참여·병역특례 등 혜택이 더 큼</div>
+      <div class="opts two">
+        <div class="opt ${S.intent==='lab'?'sel':''}" onclick="setIntent('lab')">🏢 기업부설연구소<small>혜택 최대 · 인원요건 높음</small></div>
+        <div class="opt ${S.intent==='dept'?'sel':''}" onclick="setIntent('dept')">📋 연구개발전담부서<small>1명 설립 가능 · 세액공제O</small></div>
+      </div>
+    </div>
+    <div class="q">
+      <div class="label">② 기업 규모 <span class="req">필수</span></div>
+      <div class="hint">중소기업확인서·중소기업기준검토표로 확정. 잘 모르면 매출·자산 기준으로 판단</div>
+      <div class="opts two">
+        <div class="opt ${S.company.size==='small'?'sel':''}" onclick="setSize('small')">소기업<small>연구소 3명(창업3년내 2명)</small></div>
+        <div class="opt ${S.company.size==='mid'?'sel':''}" onclick="setSize('mid')">중기업<small>연구소 5명</small></div>
+        <div class="opt ${S.company.size==='midlarge'?'sel':''}" onclick="setSize('midlarge')">중견기업<small>연구소 7명</small></div>
+        <div class="opt ${S.company.size==='large'?'sel':''}" onclick="setSize('large')">대기업<small>연구소 10명</small></div>
+      </div>
+    </div>
+    <div class="q">
+      <div class="label">③ 신청 분야 <span class="req">필수</span></div>
+      <div class="hint">💡 <b>도매·소매·유통업이라면 '서비스'를 검토하세요.</b> 서비스·산업디자인 분야는 연구전담요원이 자연계 전공이 아니어도 인정되고, "품질관리·저장성 연구"로 R&D를 설계할 수 있습니다(펌킨푸드 실제 전략)</div>
+      <div class="opts two">
+        <div class="opt ${S.company.industry==='natural'?'sel':''}" onclick="setIndustry('natural')">🔬 과학기술(제조·자연계)<small>자연계 학위/기사 기준</small></div>
+        <div class="opt ${S.company.industry==='service'?'sel':''}" onclick="setIndustry('service')">🎨 서비스·산업디자인<small>자연계 아니어도 가능 · 도매업 우회</small></div>
+      </div>
+    </div>
+    <div class="q">
+      <div class="label">④ 창업·전환 시점 (해당시 인원 완화)</div>
+      <div class="hint">완화 특례를 활용하면 최소 인원이 줄어 설립이 쉬워집니다</div>
+      <div class="opts">
+        <div class="opt ${S.company.founded==='none'?'sel':''}" onclick="setFounded('none')">해당 없음 (창업 3년 초과)</div>
+        <div class="opt ${S.company.founded==='under3'?'sel':''}" onclick="setFounded('under3')">창업 3년 이내 소기업 <small>소기업 3명→2명 완화</small></div>
+        <div class="opt ${S.company.founded==='small2mid'?'sel':''}" onclick="setFounded('small2mid')">소→중기업 전환 1년 이내 <small>중기업 5명→3명 완화</small></div>
+      </div>
+    </div>
+    <div class="q">
+      <div class="label">⑤ 특례 대상 (해당시 2명으로 설립 가능)</div>
+      <div class="hint">벤처기업 인증 보유, 또는 대학교원·정부출연연 연구원이 창업한 R&D형 중소기업</div>
+      <div class="opts">
+        <div class="opt ${S.company.special==='none'?'sel':''}" onclick="setSpecial('none')">해당 없음</div>
+        <div class="opt ${S.company.special==='venture'?'sel':''}" onclick="setSpecial('venture')">벤처기업 인증 보유 <small>연구소 2명</small></div>
+        <div class="opt ${S.company.special==='prof'?'sel':''}" onclick="setSpecial('prof')">연구원·교원 창업기업 <small>연구소 2명</small></div>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="btn next" ${canNext0()?'':'disabled'} onclick="go(1)">다음: 연구전담요원 진단 →</button>
+    </div>
+  </div>`;
+}
+function canNext0(){ return S.intent && S.company.size && S.company.industry; }
+function setIntent(v){S.intent=v;render()}
+function setSize(v){S.company.size=v;render()}
+function setIndustry(v){S.company.industry=v;render()}
+function setFounded(v){S.company.founded=v;render()}
+function setSpecial(v){S.company.special=v;render()}
+
+function stepResearchers(){
+  const req = minRequired();
+  const cnt = countQualified();
+  if(S.researchers.length===0) addResearcher(true);
+  return `
+  <div class="card">
+    <span class="step-tag">STEP 2 / 4</span>
+    <h2>연구전담요원 후보 진단</h2>
+    <p class="desc">후보자별 정보를 입력하면 전담요원/보조원 배치를 자동 판정합니다</p>
+    <div class="tip-box">
+      <div class="wt">💡 전담요원 vs 보조원 배치 전략</div>
+      자연계 학사·기사는 <b>전담요원</b>, 비자연계(어학·인문 등)는 <b>보조원</b>으로 배치하는 것이 정석입니다. 보조원은 자격요건이 없지만 전담요원 최소 인원에는 포함되지 않습니다.
+    </div>
+    <div class="benefit" style="margin-bottom:16px">
+      <div class="bt">필요 최소 인원: ${req.n}명 <span style="font-size:12px;font-weight:700;color:var(--gray)">(${req.label})</span></div>
+      <div class="bd">입력 ${S.researchers.length}명 · 전담요원 확정 ${cnt.ok}명 / 조건부 ${cnt.maybe}명 / 보조원 권장 ${cnt.aux}명</div>
+    </div>
+    ${S.researchers.map((r,i)=>researcherCard(r,i)).join('')}
+    <button class="add-r" onclick="addResearcher()">+ 후보자 추가</button>
+    <div class="nav">
+      <button class="btn prev" onclick="go(0)">← 이전</button>
+      <button class="btn next" onclick="go(2)">다음: 연구공간 진단 →</button>
+    </div>
+  </div>`;
+}
+function researcherCard(r,i){
+  const j = judgeResearcher(r);
+  const isService = S.company.industry==='service';
+  const answered = (r.degree||r.cert) && r.insured;
+  return `
+  <div class="researcher">
+    <span class="rnum">후보 ${i+1}</span>
+    ${S.researchers.length>1?`<button class="del" onclick="delResearcher(${i})">삭제</button>`:''}
+    <input type="text" placeholder="이름(선택)" value="${r.name||''}" oninput="setRName(${i},this.value)">
+    <div style="font-size:12px;font-weight:900;margin:4px 0 6px">학위</div>
+    <div class="rq-grid">
+      <div class="rsel ${r.degree==='natural_bachelor'?'sel':''}" onclick="setR(${i},'degree','natural_bachelor')">자연계 학사↑</div>
+      <div class="rsel ${r.degree==='other_bachelor'?'sel':''}" onclick="setR(${i},'degree','other_bachelor')">비자연계 학사↑</div>
+      <div class="rsel ${r.degree==='assoc'?'sel':''}" onclick="setR(${i},'degree','assoc')">전문학사</div>
+      <div class="rsel ${r.degree==='highschool'?'sel':''}" onclick="setR(${i},'degree','highschool')">마이스터/특성화고</div>
+      <div class="rsel ${r.degree==='none'?'sel':''}" onclick="setR(${i},'degree','none')">해당없음</div>
+    </div>
+    <div style="font-size:12px;font-weight:900;margin:10px 0 6px">국가기술자격</div>
+    <div class="rq-grid">
+      <div class="rsel ${r.cert==='gisa'?'sel':''}" onclick="setR(${i},'cert','gisa')">기사↑</div>
+      <div class="rsel ${r.cert==='sanuptech'?'sel':''}" onclick="setR(${i},'cert','sanuptech')">산업기사</div>
+      <div class="rsel ${r.cert==='gineungsa'?'sel':''}" onclick="setR(${i},'cert','gineungsa')">기능사</div>
+      ${isService?`<div class="rsel ${r.cert==='service2'?'sel':''}" onclick="setR(${i},'cert','service2')">서비스분야 2급</div>`:''}
+      <div class="rsel ${r.cert==='none'?'sel':''}" onclick="setR(${i},'cert','none')">없음</div>
+    </div>
+    <div style="font-size:12px;font-weight:900;margin:10px 0 6px">국적 / 체류자격</div>
+    <div class="rq-grid">
+      <div class="rsel ${r.visa==='domestic'?'sel':''}" onclick="setR(${i},'visa','domestic')">내국인</div>
+      <div class="rsel ${r.visa==='f5'?'sel':''}" onclick="setR(${i},'visa','f5')">영주 F-5</div>
+      <div class="rsel ${r.visa==='f4'?'sel':''}" onclick="setR(${i},'visa','f4')">재외동포 F-4</div>
+      <div class="rsel ${r.visa==='f2'?'sel':''}" onclick="setR(${i},'visa','f2')">거주 F-2</div>
+      <div class="rsel ${r.visa==='f6'?'sel':''}" onclick="setR(${i},'visa','f6')">결혼이민 F-6</div>
+      <div class="rsel ${r.visa==='e7'?'sel':''}" onclick="setR(${i},'visa','e7')">특정활동 E-7</div>
+      <div class="rsel ${r.visa==='trainee'?'sel':''}" onclick="setR(${i},'visa','trainee')">산업연수생</div>
+      <div class="rsel ${r.visa==='short'?'sel':''}" onclick="setR(${i},'visa','short')">단기·기타</div>
+    </div>
+    <div style="font-size:12px;font-weight:900;margin:10px 0 6px">재직 증명(4대보험)</div>
+    <div class="rq-grid">
+      <div class="rsel ${r.insured==='yes'?'sel':''}" onclick="setR(${i},'insured','yes')">✅ 4대보험 가입 직원</div>
+      <div class="rsel ${r.insured==='no'?'sel':''}" onclick="setR(${i},'insured','no')">❌ 증명 불가</div>
+    </div>
+    <div style="font-size:12px;font-weight:900;margin:10px 0 6px">겸직 여부</div>
+    <div class="rq-grid">
+      <div class="rsel ${r.conflict==='no'?'sel':''}" onclick="setR(${i},'conflict','no')">✅ 연구만 전담</div>
+      <div class="rsel ${r.conflict==='yes'?'sel':''}" onclick="setR(${i},'conflict','yes')">❌ 대표/감사/겸직</div>
+    </div>
+    ${answered?`<div class="rverdict ${j.v==='ok'?'ok':j.v==='maybe'?'maybe':'no'}">${j.msg}</div><div class="rrole">→ 배치 권장: <b>${j.role}</b></div>`:''}
+  </div>`;
+}
+function addResearcher(silent){
+  S.researchers.push({name:'',degree:null,cert:null,visa:null,insured:null,conflict:null});
+  if(!silent) render();
+}
+function delResearcher(i){S.researchers.splice(i,1);render()}
+function setRName(i,v){S.researchers[i].name=v}
+function setR(i,k,v){S.researchers[i][k]=v;render()}
+
+const SPACE_ITEMS = [
+  {id:'wall', t:'고정벽체 또는 이동벽체로 사방 구분', s:'다른 부서와 명확히 구분되는 독립공간 (신법: 이동벽체도 인정)'},
+  {id:'door', t:'별도의 출입문 확보', s:'연구소 전용 출입문이 있어야 함'},
+  {id:'sign', t:'연구소/전담부서 현판(명패) 부착', s:'실무상 사실상 필수 — 독립성 입증의 핵심 (펌킨푸드도 현판 사진 제출)'},
+  {id:'legal', t:'건축법 등 건축 관계 법령에 적합', s:'아파트·주거전용·가건물·무허가 건물은 불가'},
+  {id:'area', t:'연구기자재 설치 후 상시근무 가능한 최소 면적', s:'연구원이 실제 연구할 수 있는 크기'},
+  {id:'equip', t:'연구개발 전용 연구기자재 보유', s:'연구공간 내에 위치한 연구 전용 기계·기구·재료'},
+  {id:'exclusive', t:'연구 전용 공간(생산·영업 겸용 아님)', s:'해당 공간에서 연구활동만 수행'}
+];
+function stepSpace(){
+  return `
+  <div class="card">
+    <span class="step-tag">STEP 3 / 4</span>
+    <h2>연구공간 진단</h2>
+    <p class="desc">독립된 연구공간 요건을 모두 충족해야 인정됩니다. 해당하는 항목을 체크하세요</p>
+    ${SPACE_ITEMS.map(it=>`
+      <div class="chk ${S.space.includes(it.id)?'sel':''}" onclick="toggleSpace('${it.id}')">
+        <div class="box">${S.space.includes(it.id)?'✓':''}</div>
+        <div class="txt">${it.t}<small>${it.s}</small></div>
+      </div>
+    `).join('')}
+    <div class="warn-box" style="margin-top:14px">
+      <div class="wt">⚠️ 자주 탈락하는 사유</div>
+      아파트·주거전용 공간, 파티션만으로 구분(벽체 없음), 출입문 미분리, 생산라인·창고와 겸용 공간은 인정 불가입니다. <b>물류창고 내부에 연구공간을 둘 경우</b> 벽체·출입문·현판으로 적재구역과 명확히 분리했음을 도면·사진으로 입증해야 합니다.
+    </div>
+    <div class="nav">
+      <button class="btn prev" onclick="go(1)">← 이전</button>
+      <button class="btn big" onclick="go(3)">🔍 최종 진단 결과 보기</button>
+    </div>
+  </div>`;
+}
+function toggleSpace(id){
+  const i = S.space.indexOf(id);
+  if(i>=0) S.space.splice(i,1); else S.space.push(id);
+  render();
+}
+
+function stepResult(){
+  const req = minRequired();
+  const cnt = countQualified();
+  const spaceOK = S.space.length===SPACE_ITEMS.length;
+  const spaceMissing = SPACE_ITEMS.filter(it=>!S.space.includes(it.id));
+  const peopleOK = cnt.ok >= req.n;
+  const peopleMaybe = (cnt.ok+cnt.maybe) >= req.n && !peopleOK;
+  const hasForeigner = S.researchers.some(r=>r.visa && r.visa!=='domestic');
+
+  let verdict, vClass, vMsg;
+  if(peopleOK && spaceOK){
+    verdict='설립 가능'; vClass='ok';
+    vMsg='인력·공간 요건을 모두 충족합니다. KOITA 온라인 신청을 진행하세요.';
+  } else if((peopleOK||peopleMaybe) && S.space.length>=5){
+    verdict='조건부 가능'; vClass='maybe';
+    vMsg='일부 요건 보완 시 설립 가능합니다. 아래 보완사항을 확인하세요.';
+  } else {
+    verdict='요건 미충족'; vClass='no';
+    vMsg='현재 요건이 부족합니다. 아래 진단을 바탕으로 인력·공간을 보완하세요.';
+  }
+  const labelType = S.intent==='dept'?'연구개발전담부서':'기업부설연구소';
+
+  return `
+  <div class="result-hd ${vClass}">
+    <div class="big">${verdict}</div>
+    <div class="small">${labelType} · ${req.label}</div>
+    <div class="badge">${vMsg}</div>
+  </div>
+  <div class="rsec">
+    <div class="summary-num">
+      <div class="snum"><div class="n ${peopleOK?'green':'red'}">${cnt.ok}<span style="font-size:14px">/${req.n}</span></div><div class="l">전담요원 확정</div></div>
+      <div class="snum"><div class="n" style="color:var(--amber)">${cnt.maybe}</div><div class="l">조건부(경력)</div></div>
+      <div class="snum"><div class="n" style="color:var(--blue)">${cnt.aux}</div><div class="l">보조원 배치</div></div>
+      <div class="snum"><div class="n ${spaceOK?'green':'red'}">${S.space.length}<span style="font-size:14px">/${SPACE_ITEMS.length}</span></div><div class="l">공간 요건</div></div>
+    </div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">👥</span> 인력 요건 진단</h3>
+    <div class="check-row">
+      <div class="st ${peopleOK?'ok':peopleMaybe?'warn':'no'}">${peopleOK?'✓':peopleMaybe?'!':'✕'}</div>
+      <div class="ct">필요 전담요원 ${req.n}명 중 확정 ${cnt.ok}명${cnt.maybe>0?` + 조건부 ${cnt.maybe}명`:''}
+      <small>${peopleOK?'전담요원 인원 충족'+(cnt.aux>0?` (보조원 ${cnt.aux}명 별도)`:''):peopleMaybe?'조건부 인원 포함 시 충족 가능(연구경력 증빙 필요)':`전담요원 ${req.n-cnt.ok-cnt.maybe}명 이상 추가 확보 필요`}</small></div>
+    </div>
+    ${S.researchers.map((r,i)=>{
+      const j=judgeResearcher(r);
+      return `<div class="check-row">
+        <div class="st ${j.v==='ok'?'ok':j.v==='maybe'?'warn':'no'}">${j.v==='ok'?'✓':j.v==='maybe'?'!':'✕'}</div>
+        <div class="ct">후보 ${i+1}${r.name?` (${r.name})`:''} → <b>${j.role}</b><small>${j.msg}</small></div>
+      </div>`;
+    }).join('')}
+    ${hasForeigner?`<div class="tip-box" style="margin-top:12px"><div class="wt">🌏 외국인 연구원 확인사항</div>영주(F-5)·재외동포(F-4)·거주(F-2)·결혼이민(F-6)은 취업 제한이 없어 4대보험 가입 시 정상 인정됩니다. 신청서 주민등록번호란에 <b>외국인등록번호</b>를 기재하고, 졸업증명서가 외국 대학이면 아포스티유/영사확인이 필요할 수 있습니다.</div>`:''}
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">🏢</span> 연구공간 요건 진단</h3>
+    ${SPACE_ITEMS.map(it=>{
+      const has=S.space.includes(it.id);
+      return `<div class="check-row">
+        <div class="st ${has?'ok':'no'}">${has?'✓':'✕'}</div>
+        <div class="ct">${it.t}<small>${has?'충족':'미충족 — '+it.s}</small></div>
+      </div>`;
+    }).join('')}
+  </div>
+  ${(!peopleOK||!spaceOK)?`
+  <div class="rsec">
+    <h3><span class="ic">🔧</span> 보완 액션 플랜</h3>
+    ${!peopleOK?`<div class="warn-box"><div class="wt">인력 보완</div>
+      ${peopleMaybe?`조건부 후보의 연구경력(2~4년) 증빙을 준비하거나, 자연계 학사/기사 자격자 ${Math.max(0,req.n-cnt.ok)}명을 추가 확보하세요.`:`전담요원 자격자를 ${Math.max(0,req.n-cnt.ok-cnt.maybe)}명 이상 추가 확보해야 합니다. 자연계 학사 또는 기사 이상이 가장 확실합니다.`}
+      ${S.company.industry!=='service'?'<br>※ <b>도매·유통업이면 신청분야를 「서비스」로 전환</b>하는 것을 검토하세요. 비자연계 학사도 전담요원으로 인정됩니다.':''}
+      ${(S.company.size==='small'&&S.company.founded==='under3')?'<br>※ 창업 3년 이내 소기업 대표가 자격을 갖추면 연구전담요원으로 인정 가능합니다.':''}
+    </div>`:''}
+    ${!spaceOK?`<div class="warn-box"><div class="wt">공간 보완</div>
+      미충족: ${spaceMissing.map(m=>m.t).join(', ')}. 특히 고정(이동)벽체·별도출입문·현판·건축법 적합은 필수입니다.
+    </div>`:''}
+  </div>`:''}
+  <div class="rsec">
+    <h3><span class="ic">💰</span> 설립 시 받는 혜택 (${labelType})</h3>
+    <div class="benefit"><div class="bt">R&D 세액공제</div><div class="bd">연구·인력개발비 세액공제(중소기업 최대 25%). 인정 이전 지출은 제외되므로 R&D 인건비 발생 전 설립 필수</div></div>
+    <div class="benefit"><div class="bt">연구활동비 소득세 비과세</div><div class="bd">연구전담요원 연구활동비·연구보조비 월 20만원 한도 소득세 비과세</div></div>
+    ${S.intent==='lab'?`
+    <div class="benefit"><div class="bt">부동산 지방세 감면 (연구소 전용)</div><div class="bd">연구소 용도 취득 부동산: 비수도권 취득세 60%·재산세 50%, 수도권 45% 감면. 신성장·국가전략기술 심의 통과 시 각 15% 추가</div></div>
+    <div class="benefit"><div class="bt">국가R&D 직접참여·병역특례 (연구소 전용)</div><div class="bd">중앙부처·공공기관 R&D 과제 다수가 연구소 보유를 신청요건으로 명시</div></div>
+    `:`
+    <div class="benefit"><div class="bt">정부지원사업 참여자격</div><div class="bd">다수 R&D·기술개발자금 지원사업이 전담부서 보유를 신청요건으로 인정. 단, 부동산 지방세 감면·국가R&D 직접참여·병역특례는 연구소 전용</div></div>
+    `}
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">📝</span> KOITA 신청 절차 (先설립·後신고)</h3>
+    <div class="warn-box" style="background:var(--amber-l);border-color:var(--amber);color:var(--amber)">
+      <div class="wt">⌨️ 핵심: KOITA는 "서류 스캔 첨부"가 아니라 "온라인 직접 입력"</div>
+      rnd.or.kr 신고관리시스템에서 아래 <b>4개 탭을 시스템에 직접 타이핑</b>합니다. 첨부파일은 졸업증명서·4대보험명부 등 최소 증빙만 업로드합니다.
+    </div>
+    <div class="guide-step"><div class="gn">1</div><div class="gt">요건 실물 구비 (오프라인)<small>독립공간+현판+기자재 세팅, 연구원 4대보험 가입 완료</small></div></div>
+    <div class="guide-step"><div class="gn">2</div><div class="gt">도면·조직도·개요서 자체 제작<small>기업 전체 도면 + 연구소 도면 + 조직도 + 연구주제 설계(취급품목 밀착)</small></div></div>
+    <div class="guide-step"><div class="gn">3</div><div class="gt">rnd.or.kr 온라인 4개 탭 직접 입력<small>① 종합정보 ② 연구개발활동 개요서 ③ 연구개발인력현황 ④ 연구시설현황</small></div></div>
+    <div class="guide-step"><div class="gn">4</div><div class="gt">증빙 최소 첨부 → 신청<small>졸업증명서, 4대보험 가입자명부 등. 처리기간 약 10일 이내 인정</small></div></div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">⌨️</span> KOITA 온라인 4개 탭 입력 항목</h3>
+    <div class="tab-panel">
+      <div class="tp-h">① 종합정보 (기업 + ${S.intent==='dept'?'전담부서':'연구소'} 정보)</div>
+      <ul>
+        <li>기업명·사업자번호·종업원수·기업유형·총자산·자본금·매출액·KSIC</li>
+        <li>대표자(생년월일·성별·내외국인·연락처·이메일)</li>
+        <li>${S.intent==='dept'?'전담부서':'연구소'}명·설립연월일·<b>신청분야</b>(서비스/과학기술)·소재지</li>
+      </ul>
+    </div>
+    <div class="tab-panel">
+      <div class="tp-h">② 연구개발활동 개요서 (본문 직접 입력)</div>
+      <ul>
+        <li>주요업무 · 전문연구분야 (서술형)</li>
+        <li>신고일로부터 1년간 수행할 대표 연구과제 3개 (과제명·내용·연구개발비)</li>
+        <li>연구기간(년월)</li>
+      </ul>
+    </div>
+    <div class="tab-panel">
+      <div class="tp-h">③ 연구개발인력현황 (표 직접 입력)</div>
+      <ul>
+        <li>구분(전담요원/보조원/관리직원)·직위·성명·주민(외국인)등록번호</li>
+        <li>최종학교·전공·학위·학위번호·병적사항·발령일·전임/겸임·재택여부</li>
+      </ul>
+    </div>
+    <div class="tab-panel">
+      <div class="tp-h">④ 연구시설현황 (표 직접 입력)</div>
+      <ul>
+        <li>연구기자재 품명·수량·설치위치(전담부서/연구소)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">📄</span> 구비서류 체크리스트</h3>
+    <ul class="docs-list">
+      <li class="online">종합정보 온라인 입력 <small>기업+부서 정보 직접 타이핑</small></li>
+      <li class="online">연구개발활동 개요서 온라인 입력 <small>연구주제·과제 서술</small></li>
+      <li class="online">연구개발인력현황 온라인 입력 <small>연구원 표 작성</small></li>
+      <li class="online">연구시설현황 온라인 입력 <small>기자재 표 작성</small></li>
+      <li>연구전담요원 학위 증빙 첨부 <small>졸업증명서·학위증(외국대학은 번역·확인)</small></li>
+      <li>4대보험 사업장 가입자명부 첨부 <small>연구원 재직 증명</small></li>
+      <li>연구소 도면·현판·내부 사진 <small>독립공간 입증</small></li>
+      <li>연구공간 임대차계약서 <small>공간 사용권 증빙</small></li>
+      ${S.company.industry==='service'?'<li>서비스분야 증빙 <small>부가세신고서·사업자등록증 등 주업종 확인</small></li>':''}
+      ${S.company.size==='midlarge'?'<li>중견기업 확인서</li>':''}
+      ${S.company.special==='prof'?'<li>연구원·교원 창업 증명서류</li>':''}
+    </ul>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">💬</span> 컨설턴트 상담 스크립트</h3>
+    <div class="pitch"><span class="ptag">▶ 대표님께 전달용</span>대표님, 진단 결과 ${verdict} 상태입니다.
+
+${labelType} 기준 연구전담요원 ${req.n}명이 필요한데 현재 확정 ${cnt.ok}명${cnt.maybe>0?`, 조건부 ${cnt.maybe}명`:''}${cnt.aux>0?`, 보조원 배치 가능 ${cnt.aux}명`:''}이고, 공간 요건은 ${S.space.length}/${SPACE_ITEMS.length}개 충족입니다.
+${S.company.industry==='service'?'\n도매·유통업이시지만 신청분야를 서비스로 잡으면 "수입식품 품질관리·저장성 연구"처럼 취급 품목에 맞춘 R&D로 인정받을 수 있습니다. 전공이 자연계가 아닌 직원도 전담요원으로 활용 가능합니다.\n':''}
+연구소를 미리 설립해두면 R&D 세액공제(중소기업 최대 25%)와 연구활동비 소득세 비과세를 바로 받고, 대부분의 정부 R&D 사업이 '연구소·전담부서 보유'를 신청요건으로 걸어둡니다. 공고 뜬 뒤 준비하면 늦습니다.
+
+인정 전 지출한 R&D 인건비는 세액공제가 안 되니 지금 선제적으로 설립하는 게 맞습니다. KOITA는 서류 스캔이 아니라 온라인 직접 입력이라 실무가 까다로운데, NMSC가 도면 제작부터 온라인 4개 탭 입력, 신고 대행까지 처리해 드리겠습니다.</div>
+  </div>
+  <div class="nav no-print">
+    <button class="btn prev" onclick="go(2)">← 수정</button>
+    <button class="btn next" onclick="window.print()">🖨️ 진단서 인쇄/PDF</button>
+  </div>
+  <div class="nav no-print">
+    <button class="btn" style="background:#fff;border:2px solid var(--line);color:var(--ink);flex:1" onclick="resetAll()">↻ 새 진단</button>
+    <button class="btn" style="background:var(--green);color:#fff;flex:1" onclick="switchTab('case')">🏆 실제 성공사례 보기</button>
+  </div>`;
+}
+
+function caseStudy(){
+  return `
+  <div class="case-hero">
+    <span class="ch-tag">실제 인정 완료 · 인정번호 2026153945</span>
+    <h3>㈜펌킨푸드 연구개발전담부서 설립</h3>
+    <div class="ch-sub">도매업 + 외국인 대표 + 서비스분야 우회로 성공한 케이스 (2026.6.10 인정)</div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">🏢</span> 기업 개요</h3>
+    <table class="ctable">
+      <tr><td>기업명</td><td>㈜펌킨푸드 (대표 HU BO, 중국 국적 외국인)</td></tr>
+      <tr><td>업종</td><td>도매 및 소매업 / 기타 가공식품 도매·수입식품 판매 (KSIC 46329)</td></tr>
+      <tr><td>규모</td><td>소기업 (매출 57.4억 · 자산 27.6억, 창업 2022.1.1 → 3년 초과)</td></tr>
+      <tr><td>설립 유형</td><td><b>연구개발전담부서</b> (전담요원 1명 요건 → 진입장벽 최소화)</td></tr>
+      <tr><td>신청분야</td><td><b>서비스</b> ← 도매업의 약점을 우회한 핵심 전략</td></tr>
+    </table>
+    <div class="tip-box"><div class="wt">💡 왜 전담부서 + 서비스분야였나</div>도매업 소기업이 기업부설연구소(3명)를 가는 건 부담이 큽니다. 전담부서(1명)로 시작해 세액공제·R&D 참여자격을 조기 확보하고, 신청분야를 '서비스'로 잡아 "제조가 아닌데 무슨 연구냐"는 심사 리스크를 정면 돌파했습니다.</div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">👥</span> 인력 구성 — 전담요원/보조원 배치의 정석</h3>
+    <table class="ctable">
+      <tr><td>연구소장·전담요원<br>김위 (JIN WEI)</td><td>하얼빈이공대 <b>컴퓨터과학과 학사</b>(2010) → 자연계 학사로 업종 불문 무조건 인정 / 영주(F-5), 4대보험 완비(2023.6~)</td></tr>
+      <tr><td>연구보조원<br>하철학 (HE ZHEXUE)</td><td>연변대 <b>일본어학 학사</b>(2008) → 비자연계라 전담요원 불가 → <b>보조원으로 배치</b>(자격요건 없음) / 재외동포(F-4)</td></tr>
+    </table>
+    <div class="warn-box"><div class="wt">핵심 교훈</div>자연계(김위)를 전담요원으로, 일본어 전공(하철학)을 보조원으로 나눈 것이 결정적. 둘 다 전담요원으로 올렸다면 하철학은 탈락했을 것입니다. 여기에 서비스분야 프레이밍까지 더해 이중 안전장치를 걸었습니다.</div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">🏢</span> 연구공간 — 물류창고 안 독립구획</h3>
+    <table class="ctable">
+      <tr><td>위치</td><td>물류창고(25.5m×12.2m) 내부 좌측 하단 독립 구획</td></tr>
+      <tr><td>면적</td><td>4.5m × 2.5m = 11.25㎡ (PC 2대·연구소장·보조원 자리·수납장)</td></tr>
+      <tr><td>독립성</td><td>고정벽체 + 별도 출입문 + <b>현판 부착</b>(사진 제출)</td></tr>
+      <tr><td>연구기자재</td><td>디지털 저울 · pH 측정기 · 온습도계 · 연구용 PC 2대 (4종)</td></tr>
+    </table>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">🧪</span> 연구주제 — 취급 품목에 밀착</h3>
+    <div class="tab-panel">
+      <div class="tp-h">주제: 수입 분모자 제품의 보관환경별 품질 안정성 변화 연구</div>
+      <ul>
+        <li>유통환경 변화에 따른 품질유지성 연구 (30백만원)</li>
+        <li>저장기간별 물성 변화 연구 (30백만원)</li>
+        <li>상온·냉장·냉동 보관조건별 안정성 연구 (40백만원)</li>
+      </ul>
+    </div>
+    <div class="tip-box"><div class="wt">💡 도매업 R&D 설계법</div>취급 제품(분모자)의 품질·저장·유통을 연구주제로 잡고, 보유 기자재(저울·pH·온습도계)와 정확히 일치시켰습니다. "기자재로 실제 측정 가능한 연구"여야 심사를 통과합니다.</div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">⏱️</span> 진행 타임라인</h3>
+    <div class="timeline">
+      <div class="tl-item done"><div class="tl-date">2026.05.28</div><div class="tl-txt">전담부서 설립 · 연구원 발령<small>4대보험명부·사업자등록증 발급</small></div></div>
+      <div class="tl-item done"><div class="tl-date">2026.05.29</div><div class="tl-txt">KOITA 온라인 신규인정 신청<small>rnd.or.kr 4개 탭 직접 입력</small></div></div>
+      <div class="tl-item done"><div class="tl-date">2026.06.10</div><div class="tl-txt">✅ 신규인정 완료 (인정번호 2026153945)<small>처리기간 약 6일</small></div></div>
+      <div class="tl-item done"><div class="tl-date">2026.06.15~20</div><div class="tl-txt">변경신고 제출 → 수리 완료<small>담당자 김영석 / 결재완료</small></div></div>
+    </div>
+  </div>
+  <div class="rsec">
+    <h3><span class="ic">📁</span> NMSC 표준 작업폴더 (그대로 체크리스트)</h3>
+    <ul class="docs-list">
+      <li>기업조면 및 조직도 <small>도면·조직도 자체 제작</small></li>
+      <li>연구소 설립서류 <small>신규인정 신청용 서식</small></li>
+      <li>비치서류 <small>인정 후 연구소 내 상시 비치(16p)</small></li>
+      <li>사진 <small>현판·내부 실사 이미지</small></li>
+    </ul>
+  </div>
+  <div class="nav no-print">
+    <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="switchTab('diag')">📋 진단하러 가기</button>
+    <button class="btn next" onclick="window.print()">🖨️ 사례 인쇄/PDF</button>
+  </div>`;
+}
+
+function go(step){
+  if(step===1 && !canNext0()){ alert('설립 유형·기업 규모·신청 분야를 선택해 주세요'); return; }
+  S.step=step; render();
+}
+function resetAll(){
+  S.step=0; S.company={size:null,industry:null,special:null,founded:null};
+  S.researchers=[]; S.space=[]; S.intent=null;
+  render();
+}
+render();
+</script>
+</body>
+</html>
