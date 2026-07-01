@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NMSC 컨설팅 바이블</title>
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NMSC바이블">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0A84FF">
+<style>
+  :root{
+    --blue:#0A84FF;--blue-d:#0060df;--blue-l:#e8f2ff;--blue-ll:#f4f9ff;
+    --ink:#0b2545;--gray:#5b6b80;--line:#dce6f2;--bg:#f4f8ff;--white:#fff;--red:#e8202a;--green:#10874a;--green-l:#e6f8ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+  /* ===== 로그인 게이트 ===== */
+  #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0A84FF,#0047b3);
+    display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+  .gate-box{background:#fff;border-radius:20px;padding:38px 30px;max-width:380px;width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+  .gate-logo{font-size:13px;font-weight:900;letter-spacing:2px;color:var(--blue);margin-bottom:8px}
+  .gate-title{font-size:24px;font-weight:900;letter-spacing:-.5px;margin-bottom:6px}
+  .gate-sub{font-size:13px;color:var(--gray);font-weight:500;margin-bottom:26px;line-height:1.5}
+  .gate-box input{width:100%;padding:15px;font-size:16px;border:2px solid var(--line);border-radius:12px;
+    text-align:center;font-weight:700;font-family:inherit;margin-bottom:12px}
+  .gate-box input:focus{outline:none;border-color:var(--blue)}
+  .gate-btn{width:100%;padding:15px;font-size:16px;font-weight:900;color:#fff;background:var(--blue);
+    border:none;border-radius:12px;cursor:pointer}
+  .gate-btn:hover{background:var(--blue-d)}
+  .gate-err{font-size:13px;color:var(--red);font-weight:700;margin-top:10px;min-height:18px}
+  .gate-note{font-size:11px;color:var(--gray);margin-top:20px;line-height:1.5;font-weight:500}
+
+  /* ===== 앱 ===== */
+  #app{display:none;min-height:100vh;flex-direction:column}
+  #app.on{display:flex}
+  header{background:var(--blue);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .h-left{display:flex;align-items:center;gap:12px}
+  .h-back{font-size:13px;font-weight:800;color:#fff;background:rgba(255,255,255,.2);border:none;
+    padding:8px 14px;border-radius:8px;cursor:pointer;display:none}
+  .h-back.show{display:block}
+  .h-back:hover{background:rgba(255,255,255,.3)}
+  .h-brand{font-size:18px;font-weight:900;letter-spacing:-.3px}
+  .h-brand .sub{font-size:11px;font-weight:600;opacity:.85;margin-left:8px}
+  .h-logout{font-size:12px;font-weight:800;color:#fff;background:rgba(255,255,255,.2);
+    border:none;padding:7px 14px;border-radius:8px;cursor:pointer}
+  .h-logout:hover{background:rgba(255,255,255,.3)}
+
+  /* ===== 메뉴(홈) ===== */
+  #menu{max-width:720px;margin:0 auto;padding:34px 20px 60px;width:100%}
+  .menu-intro{text-align:center;margin-bottom:30px}
+  .menu-intro h1{font-size:26px;font-weight:900;letter-spacing:-.5px}
+  .menu-intro p{font-size:14px;color:var(--gray);font-weight:500;margin-top:8px;line-height:1.5}
+  .cat{display:flex;align-items:center;gap:18px;background:#fff;border:1px solid var(--line);
+    border-radius:16px;padding:22px 24px;margin-bottom:14px;cursor:pointer;transition:.15s;
+    box-shadow:0 2px 10px rgba(10,132,255,.05)}
+  .cat:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:0 6px 20px rgba(10,132,255,.15)}
+  .cat.soon{cursor:default;opacity:.72}
+  .cat.soon:hover{transform:none;border-color:var(--line);box-shadow:0 2px 10px rgba(10,132,255,.05)}
+  .cat-ic{width:58px;height:58px;border-radius:14px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0}
+  .cat.ready .cat-ic{background:var(--blue);}
+  .cat-body{flex:1;min-width:0}
+  .cat-title{font-size:18px;font-weight:900;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .cat-badge{font-size:10px;font-weight:900;padding:2px 9px;border-radius:20px;background:var(--line);color:var(--gray)}
+  .cat-badge.ready{background:var(--green-l);color:var(--green)}
+  .cat-desc{font-size:13px;color:var(--gray);font-weight:500;margin-top:5px;line-height:1.5}
+  .cat-arrow{font-size:22px;color:var(--blue);font-weight:900;flex-shrink:0}
+  .cat.soon .cat-arrow{color:var(--line)}
+
+  /* ===== 도구 화면 ===== */
+  #tool{display:none;flex:1;flex-direction:column}
+  #tool.on{display:flex}
+  #menu.off{display:none}
+  #tool iframe{width:100%;border:none;flex:1;min-height:calc(100vh - 60px)}
+  .tool-soon{max-width:600px;margin:0 auto;padding:60px 24px;text-align:center}
+  .tool-soon .ic{font-size:52px;opacity:.3}
+  .tool-soon h2{font-size:22px;font-weight:900;margin:18px 0 8px}
+  .tool-soon p{font-size:14px;color:var(--gray);font-weight:500;line-height:1.6}
+  .tool-soon .plan{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:24px;text-align:left}
+  .tool-soon .plan-t{font-size:13px;font-weight:900;color:var(--blue);margin-bottom:12px}
+  .tool-soon .plan-i{font-size:13px;color:var(--ink);font-weight:600;padding:7px 0;border-top:1px solid var(--line);line-height:1.5}
+  .tool-soon .plan-i:first-of-type{border-top:none}
+  .tool-soon .plan-i b{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- 로그인 게이트 -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">NMSC · NICE MANAGEMENT SUPPORT CENTER</div>
+    <div class="gate-title">컨설팅 바이블</div>
+    <div class="gate-sub">고용지원금 · 벤처인증 · 연구소설립 · 특허 · 세무<br>NMSC 컨설턴트 전용 통합 진단 도구</div>
+    <input type="password" id="pw" placeholder="비밀번호 입력" autocomplete="off">
+    <button class="gate-btn" id="loginBtn">로그인</button>
+    <div class="gate-err" id="gateErr"></div>
+    <div class="gate-note">NMSC 내부 컨설턴트 전용입니다.<br>비밀번호는 팀 관리자에게 문의하세요.</div>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div id="app">
+  <header>
+    <div class="h-left">
+      <button class="h-back" id="backBtn">‹ 메뉴</button>
+      <div class="h-brand">NMSC 컨설팅 바이블<span class="sub" id="hSub">외부 CFO의 통합 진단 도구</span></div>
+    </div>
+    <button class="h-logout" id="logoutBtn">로그아웃</button>
+  </header>
+
+  <!-- 메뉴(홈) -->
+  <div id="menu">
+    <div class="menu-intro">
+      <h1>무엇을 진단할까요?</h1>
+      <p>카테고리를 선택하면 해당 진단 도구로 들어갑니다.</p>
+    </div>
+
+    <div class="cat ready" data-cat="employment" data-src="employment-subsidy-full.html" data-name="고용지원금 진단">
+      <div class="cat-ic">💼</div>
+      <div class="cat-body">
+        <div class="cat-title">고용지원금 <span class="cat-badge ready">완성</span></div>
+        <div class="cat-desc">4대보험 명부로 청년·중장년·고령자·외국인 전 제도 진단 + 회사 상황 체크</div>
+      </div>
+      <div class="cat-arrow">›</div>
+    </div>
+
+    <div class="cat soon" data-cat="venture">
+      <div class="cat-ic">🚀</div>
+      <div class="cat-body">
+        <div class="cat-title">벤처인증 <span class="cat-badge">준비중</span></div>
+        <div class="cat-desc">벤처기업 인증 요건 충족 여부와 유리한 인증 유형 진단</div>
+      </div>
+      <div class="cat-arrow">›</div>
+    </div>
+
+    <div class="cat ready" data-cat="lab" data-src="lab.html" data-name="연구소설립 진단">
+      <div class="cat-ic">🔬</div>
+      <div class="cat-body">
+        <div class="cat-title">연구소설립 <span class="cat-badge ready">완성</span></div>
+        <div class="cat-desc">기업부설연구소·전담부서 설립 요건과 R&D 세액공제 진단 + KOITA 온라인 신청 가이드 + 실제 성공사례</div>
+      </div>
+      <div class="cat-arrow">›</div>
+    </div>
+
+    <div class="cat soon" data-cat="patent">
+      <div class="cat-ic">📜</div>
+      <div class="cat-body">
+        <div class="cat-title">특허 <span class="cat-badge">준비중</span></div>
+        <div class="cat-desc">특허·실용신안·상표 출원 전략과 정부 지원사업 연계</div>
+      </div>
+      <div class="cat-arrow">›</div>
+    </div>
+
+    <div class="cat soon" data-cat="tax">
+      <div class="cat-ic">💰</div>
+      <div class="cat-body">
+        <div class="cat-title">세무 <span class="cat-badge">준비중</span></div>
+        <div class="cat-desc">중소기업 세액공제·감면과 절세 전략 진단</div>
+      </div>
+      <div class="cat-arrow">›</div>
+    </div>
+  </div>
+
+  <!-- 도구 화면 -->
+  <div id="tool">
+    <iframe id="toolFrame" title="진단 도구"></iframe>
+    <div id="toolSoon" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const PW_HASH="81bc4dc959ff11a528a13e47e28ff977698a2c4c64aa214c9a548aafeabae7f0"; // 비밀번호: nmsc2026
+const SESSION_KEY="nmsc_bible_auth";
+
+const SOON={
+  venture:{ic:'🚀',t:'벤처기업 인증 진단',p:'회사 정보를 입력하면 벤처기업 인증 요건 충족 여부와<br>가장 유리한 인증 유형을 진단하는 도구입니다.',
+    items:['<b>벤처 유형 판정</b> — 벤처투자·연구개발·혁신성장 유형','<b>요건 체크리스트</b> — 자본·연구개발비·기술평가','<b>혜택 안내</b> — 세제감면·정책자금·판로 우대','<b>신청 절차·필요서류</b> — 벤처확인기관 신청 가이드']},
+  lab:{ic:'🔬',t:'기업부설연구소 설립 진단',p:'연구소·연구개발전담부서 설립 요건과<br>세액공제 혜택을 진단하는 도구입니다.',
+    items:['<b>설립 요건</b> — 연구전담요원 수·연구공간·기자재','<b>연구소 vs 전담부서</b> — 규모별 적합 유형','<b>세제 혜택</b> — R&D 세액공제·연구인력개발비 공제','<b>신청 절차</b> — 한국산업기술진흥협회 신고']},
+  patent:{ic:'📜',t:'특허·지식재산 진단',p:'특허·실용신안·상표 출원 전략과<br>정부 지원사업 연계를 진단하는 도구입니다.',
+    items:['<b>출원 유형 판정</b> — 특허·실용신안·상표·디자인','<b>지원사업 연계</b> — IP나래·지식재산 바우처','<b>가점 활용</b> — 벤처·이노비즈 인증 시 특허 가점','<b>출원 절차·비용</b> — 변리사 연계 가이드']},
+  tax:{ic:'💰',t:'세무·절세 진단',p:'중소기업 세액공제·감면과<br>절세 전략을 진단하는 도구입니다.',
+    items:['<b>세액공제 진단</b> — 통합투자·고용증대·연구개발','<b>중소기업 특별세액감면</b> — 업종·지역별 감면율','<b>가업승계·상속</b> — 가업상속공제 요건','<b>세무사 연계</b> — 신고 일정·필요서류 가이드']}
+};
+
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function tryLogin(){
+  const pw=document.getElementById('pw').value;
+  const err=document.getElementById('gateErr');
+  if(await sha256(pw)===PW_HASH){sessionStorage.setItem(SESSION_KEY,'1');enterApp();}
+  else{err.textContent='비밀번호가 올바르지 않습니다.';document.getElementById('pw').value='';}
+}
+function enterApp(){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').classList.add('on');
+  showMenu();
+}
+function logout(){sessionStorage.removeItem(SESSION_KEY);location.reload();}
+document.getElementById('loginBtn').onclick=tryLogin;
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
+document.getElementById('logoutBtn').onclick=logout;
+if(sessionStorage.getItem(SESSION_KEY)==='1') enterApp();
+
+// ===== 메뉴 <-> 도구 전환 =====
+const menu=document.getElementById('menu'), tool=document.getElementById('tool');
+const frame=document.getElementById('toolFrame'), soon=document.getElementById('toolSoon');
+const backBtn=document.getElementById('backBtn'), hSub=document.getElementById('hSub');
+
+function showMenu(){
+  menu.classList.remove('off'); tool.classList.remove('on');
+  backBtn.classList.remove('show'); hSub.textContent='외부 CFO의 통합 진단 도구';
+  frame.src='about:blank';
+}
+function openCat(cat,src,name){
+  menu.classList.add('off'); tool.classList.add('on');
+  backBtn.classList.add('show'); hSub.textContent=name;
+  if(src){ frame.style.display='block'; soon.style.display='none'; frame.src=src; }
+  else{
+    frame.style.display='none'; soon.style.display='block';
+    const s=SOON[cat];
+    soon.innerHTML=`<div class="tool-soon"><div class="ic">${s.ic}</div><h2>${s.t}</h2><p>${s.p}</p>
+      <div class="plan"><div class="plan-t">📋 들어갈 내용 (예정)</div>
+      ${s.items.map(i=>`<div class="plan-i">▸ ${i}</div>`).join('')}</div></div>`;
+  }
+}
+document.querySelectorAll('.cat').forEach(c=>{
+  c.onclick=()=>{
+    const cat=c.dataset.cat;
+    if(c.classList.contains('soon')) openCat(cat,null,c.querySelector('.cat-title').childNodes[0].textContent.trim());
+    else openCat(cat,c.dataset.src,c.dataset.name);
+    window.scrollTo(0,0);
+  };
+});
+backBtn.onclick=showMenu;
+</script>
+</body>
+</html>
