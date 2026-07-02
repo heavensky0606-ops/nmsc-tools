@@ -133,7 +133,8 @@ const D = {
   // 인력
   people:[],
   // 기자재
-  equip:[]
+  equip:[],
+  _overviewOverride:null
 };
 
 /* ============ 업종별 개요서/과제 템플릿 ============ */
@@ -189,12 +190,22 @@ function renderForm(){
   if(D.people.length===0) D.people.push(newPerson());
   if(D.equip.length===0) D.equip=[{name:'',qty:'1',loc:''}];
   return `
+  <div class="card" style="border:2px solid var(--blue)">
+    <h2>📥 업체 데이터 불러오기 (AI 자동작성 결과 붙여넣기)</h2>
+    <p class="desc">NMSC 담당자(Claude)가 서류를 보고 만들어 준 JSON을 여기 붙여넣으면 아래 폼이 전부 자동으로 채워집니다</p>
+    <textarea id="json_import" style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:8px;padding:11px;font-size:12px;font-family:monospace;resize:vertical" placeholder='여기에 { "bizName": "...", ... } 형태의 JSON을 붙여넣으세요'></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="importJSON()">📥 불러와서 폼 채우기</button>
+      <button class="btn sec" style="flex:0 0 auto" onclick="loadSampleJSON()">펌킨푸드 예시 불러오기</button>
+    </div>
+  </div>
+
   <div class="howto">
-    <b>📌 사용법</b>
+    <b>📌 사용법 (두 가지 중 택1)</b>
     <ol>
-      <li>업체 자료를 보고 아래 폼을 채웁니다 (모르면 NMSC 담당자에게 자료 요청)</li>
-      <li><b>[KOITA 입력값 생성]</b> 버튼을 누릅니다</li>
-      <li>이 도구를 옆에 켜두고 <b>rnd.or.kr</b>에 접속 → 항목별 <b>[복사]</b> 버튼으로 하나씩 붙여넣습니다</li>
+      <li><b>[추천]</b> 서류를 NMSC 담당자에게 전달 → 받은 JSON을 위 칸에 붙여넣기 → 자동 완성 → 확인·수정</li>
+      <li>또는 아래 폼을 직접 채우기 → <b>[KOITA 입력값 생성]</b></li>
+      <li>생성 후 <b>rnd.or.kr</b> 옆에 켜두고 항목별 <b>[복사]</b>로 붙여넣기</li>
     </ol>
   </div>
 
@@ -404,6 +415,63 @@ function generate(){
 }
 function editForm(){S.generated=false;render()}
 
+/* ---------- JSON import / export ---------- */
+function importJSON(){
+  const raw=document.getElementById('json_import').value.trim();
+  if(!raw){alert('JSON을 붙여넣으세요');return;}
+  let obj;
+  try{ obj=JSON.parse(raw); }
+  catch(e){ alert('JSON 형식 오류: '+e.message+'\n\n{ } 중괄호와 따옴표를 확인하세요'); return; }
+  applyData(obj);
+  S.generated=false;
+  render();
+  // scroll to a confirmation
+  setTimeout(()=>alert('✅ 불러오기 완료! 폼을 확인하고 틀린 곳을 수정한 뒤 [KOITA 입력값 생성]을 누르세요.'),100);
+}
+function loadSampleJSON(){
+  document.getElementById('json_import').value = JSON.stringify(SAMPLE,null,2);
+  alert('펌킨푸드 예시 JSON을 칸에 넣었습니다. [불러와서 폼 채우기]를 누르세요.');
+}
+function applyData(obj){
+  // 단순 필드
+  const keys=['bizName','bizType','bizNo','ksicBiz','mainProduct','ceo','ceoBirth','ceoForeign','tel','fax','email','addr','addrDetail','foundDate','scale','validDate','revenue','asset','capital','empCount','labType','labName','field','ksicLab','labAddr','labAddrDetail','foundLabDate','spaceType','ownType','area','industry','researchTopic'];
+  keys.forEach(k=>{ if(obj[k]!==undefined && obj[k]!==null) D[k]=String(obj[k]); });
+  // 배열
+  if(Array.isArray(obj.people)&&obj.people.length){
+    D.people=obj.people.map(p=>({
+      role:p.role||'dept_res', pos:p.pos||'', name:p.name||'', rrn:p.rrn||'',
+      school:p.school||'', major:p.major||'', degree:p.degree||'학사',
+      degreeNo:p.degreeNo||'', military:p.military||'해당사항없음',
+      assignDate:p.assignDate||'', remote:p.remote||'X'
+    }));
+  }
+  if(Array.isArray(obj.equip)&&obj.equip.length){
+    D.equip=obj.equip.map(e=>({name:e.name||'',qty:String(e.qty||'1'),loc:e.loc||''}));
+  }
+  // 개요서를 직접 넣은 경우(overview override) — AI가 맞춤작성한 문장
+  if(obj.overview){
+    D._overviewOverride = {
+      main: obj.overview.main||'',
+      field: obj.overview.field||'',
+      tasks: Array.isArray(obj.overview.tasks)?obj.overview.tasks.map(t=>({n:t.n||'',c:t.c||'',b:t.b||0})):null
+    };
+  } else {
+    D._overviewOverride = null;
+  }
+}
+function exportJSON(){
+  collectForm();
+  const out={};
+  const keys=['bizName','bizType','bizNo','ksicBiz','mainProduct','ceo','ceoBirth','ceoForeign','tel','fax','email','addr','addrDetail','foundDate','scale','validDate','revenue','asset','capital','empCount','labType','labName','field','ksicLab','labAddr','labAddrDetail','foundLabDate','spaceType','ownType','area','industry','researchTopic'];
+  keys.forEach(k=>out[k]=D[k]);
+  out.people=D.people; out.equip=D.equip;
+  if(D._overviewOverride) out.overview=D._overviewOverride;
+  const txt=JSON.stringify(out,null,2);
+  navigator.clipboard.writeText(txt).then(()=>alert('현재 입력값이 JSON으로 복사되었습니다. 백업하거나 담당자에게 전달하세요.')).catch(()=>{
+    const w=window.open('','_blank');w.document.write('<pre>'+txt.replace(/</g,'&lt;')+'</pre>');
+  });
+}
+
 /* ---------- OUTPUT (copy cards) ---------- */
 function roleLabel(r){return{director:'연구소장',dept_res:'연구전담요원',assist:'연구보조원',manage:'연구관리직원'}[r]||r}
 function scaleLabel(s){return{small:'소기업',mid:'중기업',midlarge:'중견기업',venture:'벤처기업',large:'대기업'}[s]||s}
@@ -427,6 +495,15 @@ function copyRow(label,val,hint){
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 function buildOverview(data){
+  // AI가 맞춤작성한 개요서가 있으면 그것을 우선 사용
+  if(data._overviewOverride && data._overviewOverride.main){
+    const o=data._overviewOverride;
+    return {
+      main:o.main,
+      field:o.field,
+      tasks:(o.tasks&&o.tasks.length)?o.tasks:(TEMPLATES[data.industry]||TEMPLATES.food).tasks
+    };
+  }
   const t = TEMPLATES[data.industry] || TEMPLATES.food;
   const p = data.researchTopic;
   return {
@@ -482,7 +559,7 @@ function renderOutput(data, isSample){
     </ol>
   </div>
 
-  ${!isSample?`<button class="btn sec" onclick="editForm()" style="margin-bottom:14px">← 입력 수정</button>`:''}
+  ${!isSample?`<div style="display:flex;gap:8px;margin-bottom:14px"><button class="btn sec" onclick="editForm()" style="flex:1">← 입력 수정</button><button class="btn sec" onclick="exportJSON()" style="flex:1">💾 이 내용 JSON 백업</button></div>`:''}
 
   <div class="card">
     <div class="out-tab-title"><span class="ktab">KOITA 탭 ①</span> 종합정보</div>
