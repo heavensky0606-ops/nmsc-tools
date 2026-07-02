@@ -86,6 +86,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun 
 .docs-list li small{color:var(--gray);font-weight:600;display:block;margin-top:1px}
 .docs-list li.have:before{content:"✅"}
 
+/* 서류 안내 가이드 */
+details.card > summary{list-style:none}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary::before{content:"▶ ";font-size:12px;color:var(--amber)}
+details.card[open] > summary::before{content:"▼ "}
+.doc-guide{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.dg-item{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fbfbfb}
+.dg-head{font-size:12.5px;font-weight:800;color:#222;display:flex;align-items:center;gap:6px}
+.dg-must{font-size:10px;font-weight:900;color:#fff;background:var(--red);padding:2px 7px;border-radius:20px;flex-shrink:0}
+.dg-rec{font-size:10px;font-weight:900;color:#fff;background:var(--amber);padding:2px 7px;border-radius:20px;flex-shrink:0}
+.dg-where{font-size:11.5px;font-weight:600;color:var(--gray);margin-top:4px;line-height:1.5}
+.dg-where a{color:var(--blue);font-weight:800;text-decoration:none}
+.dg-where a:hover{text-decoration:underline}
+
 .foot{text-align:center;font-size:11px;font-weight:600;color:var(--gray);padding:14px 0 30px}
 .copy-all{background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:900;cursor:pointer;width:100%;margin-bottom:10px}
 .result-head{background:linear-gradient(135deg,var(--green),#0d7a40);color:#fff;border-radius:14px;padding:18px;margin-bottom:14px;text-align:center}
@@ -204,6 +218,7 @@ function renderForm(){
     <div class="fld" style="margin-top:10px"><label>회사 설명(선택) — 어떤 사업이고 무슨 연구를 할지 한두 줄</label><textarea id="companyNote" style="width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;font-family:inherit;resize:vertical" placeholder="예: 차량용 방향제를 제조·판매하는 회사. 향 지속성과 물성 안정성을 연구하려 함"></textarea></div>
     <button class="btn" style="background:var(--green);color:#fff;margin-top:10px" onclick="runAutoParse()" id="parseBtn">🤖 AI로 서류 분석해서 폼 채우기</button>
     <div id="parseStatus" style="margin-top:10px;font-size:12.5px;font-weight:700;display:none"></div>
+    <div id="parseCoverage" style="margin-top:12px;display:none"></div>
     <div id="parseNotes" style="margin-top:10px;display:none"></div>
     <details style="margin-top:10px">
       <summary style="font-size:11.5px;font-weight:700;color:var(--gray);cursor:pointer">⚙️ 서버 주소 설정 (최초 1회)</summary>
@@ -213,22 +228,53 @@ function renderForm(){
     </details>
   </div>
 
-  <div class="card" style="border:2px solid var(--blue)">
-    <h2>📥 또는 JSON 직접 붙여넣기 (수동)</h2>
-    <p class="desc">담당자가 만들어 준 JSON을 붙여넣어 폼을 채웁니다</p>
-    <textarea id="json_import" style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:8px;padding:11px;font-size:12px;font-family:monospace;resize:vertical" placeholder='여기에 { "bizName": "...", ... } 형태의 JSON을 붙여넣으세요'></textarea>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="importJSON()">📥 불러와서 폼 채우기</button>
-      <button class="btn sec" style="flex:0 0 auto" onclick="loadSampleJSON()">펌킨푸드 예시 불러오기</button>
+  <details class="card" style="border:2px solid var(--amber)">
+    <summary style="font-size:15px;font-weight:900;color:var(--amber);cursor:pointer;list-style:none">📋 어떤 서류가 필요한가요? (처음이면 펼쳐보세요)</summary>
+    <p class="desc" style="margin-top:10px">아래 서류를 준비해 위 칸에 한꺼번에 올리면 됩니다. 발급처를 눌러 바로 이동하세요. 다 없어도 우선 있는 것만 올리면 AI가 <b>무엇이 빠졌는지</b> 알려줍니다.</p>
+    <div class="doc-guide">
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-must">필수</span> 사업자등록증</div>
+        <div class="dg-where">홈택스 → 증명·등록·신청 → 사업자등록증 재발급 · <a href="https://www.hometax.go.kr" target="_blank">홈택스</a> / <a href="https://www.gov.kr" target="_blank">정부24</a></div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-must">필수</span> 4대보험 사업장 가입자명부</div>
+        <div class="dg-where">건강보험·국민연금 가입자명부(직원·연구원 재직 증명) · <a href="https://www.4insure.or.kr" target="_blank">4대사회보험 정보연계센터</a></div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-must">필수</span> 연구원 졸업증명서 / 학위증 / 자격증</div>
+        <div class="dg-where">연구전담요원 각자의 전공·학위 증빙(자연계 학사 이상 등) · 학교 또는 <a href="https://www.gov.kr" target="_blank">정부24</a></div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-must">필수</span> 연구공간 증빙 (임대차계약서 또는 등기부등본)</div>
+        <div class="dg-where">임차면 임대차계약서, 자가면 건물 등기부등본 · <a href="http://www.iros.go.kr" target="_blank">인터넷등기소</a></div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-must">필수</span> 도면 (기업 전체도면 + 연구소 내부도면)</div>
+        <div class="dg-where">연구공간 벽체 구분·면적 표기. 도면 면적 = 신고 면적 일치 · 직접 작성(캐드/파워포인트 가능)</div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-rec">권장</span> 중소기업확인서</div>
+        <div class="dg-where">기업규모·유효기간 근거(연구원 수 요건 판정) · <a href="https://sminfo.mss.go.kr" target="_blank">중소기업현황정보시스템</a></div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-rec">권장</span> 재무제표 / 표준재무제표증명</div>
+        <div class="dg-where">매출·자본금·총자산 근거 · <a href="https://www.hometax.go.kr" target="_blank">홈택스</a></div>
+      </div>
+      <div class="dg-item">
+        <div class="dg-head"><span class="dg-rec">권장</span> 조직도</div>
+        <div class="dg-where">연구소/전담부서와 일반부서 구분 · 직접 작성</div>
+      </div>
     </div>
-  </div>
+    <div class="cr-hint" style="margin-top:10px">※ 업로드하면 AI가 <b>이 목록과 대조</b>해 있음/부족/없음을 자동 표시합니다. 없는 서류는 표시되니 그것만 추가로 준비하세요.</div>
+  </details>
 
   <div class="howto">
-    <b>📌 사용법 (두 가지 중 택1)</b>
+    <b>📌 이렇게 진행하세요</b>
     <ol>
-      <li><b>[추천]</b> 서류를 NMSC 담당자에게 전달 → 받은 JSON을 위 칸에 붙여넣기 → 자동 완성 → 확인·수정</li>
-      <li>또는 아래 폼을 직접 채우기 → <b>[KOITA 입력값 생성]</b></li>
-      <li>생성 후 <b>rnd.or.kr</b> 옆에 켜두고 항목별 <b>[복사]</b>로 붙여넣기</li>
+      <li>위 칸에 준비된 서류를 <b>한꺼번에</b> 올립니다 (없는 건 나중에 추가)</li>
+      <li><b>[AI로 서류 분석해서 폼 채우기]</b> → 폼 자동 완성 + <b>서류 점검표</b> 표시</li>
+      <li>점검표에서 <b>부족·누락</b> 항목 확인 → 보완 후 재분석하거나 폼 직접 수정</li>
+      <li>확인·수정 후 <b>[KOITA 입력값 생성]</b> → <b>rnd.or.kr</b>에 항목별 <b>[복사]</b>로 붙여넣기</li>
     </ol>
   </div>
 
@@ -449,6 +495,8 @@ function saveWorkerUrl(){
 
 /* ---------- 자동 서류 파싱 ---------- */
 let _uploadedFiles = []; // {name, media_type, data(base64)}
+let _lastCoverage = null; // AI 서류 점검표 결과 (폼 재렌더 후 복원용)
+let _lastNotes = '';       // AI 확인요청 메모
 
 function bindDropzone(){
   const dz=document.getElementById('dropzone');
@@ -530,21 +578,15 @@ async function runAutoParse(){
 
     // 성공 - 폼 채우기
     applyData(result.data);
-    // JSON 칸에도 넣어줌(백업/수정용)
-    const ji=document.getElementById('json_import');
-    if(ji) ji.value=JSON.stringify(result.data,null,2);
 
-    status.style.color='var(--green)';
-    status.innerHTML='✅ 완료! 아래 폼이 채워졌습니다. 확인·수정 후 [KOITA 입력값 생성]을 누르세요.';
-
-    if(result.notes){
-      notesEl.style.display='block';
-      notesEl.innerHTML='<div class="warn-box"><div class="wt">⚠️ AI가 확인 요청한 사항 (꼭 검토)</div>'+escapeHtml(result.notes).replace(/\n/g,'<br>')+'</div>';
-    }
+    // 서류 점검표(coverage)를 전역에 저장 → 폼 재렌더 후에도 표시 유지
+    _lastCoverage = (result.data && result.data.coverage) ? result.data.coverage : null;
+    _lastNotes = result.notes || '';
 
     S.generated=false;
-    // 폼을 다시 그리되, 상태 메시지 유지 위해 약간 지연 후 스크롤
-    setTimeout(()=>{ render(); },300);
+    // 폼 전체를 다시 그림 (값 반영). 그린 뒤 점검표·상태를 복원
+    render();
+    setTimeout(()=>{ restoreParseResult(); },50);
 
   }catch(e){
     status.style.color='var(--red)';
@@ -553,22 +595,73 @@ async function runAutoParse(){
   }
 }
 
-/* ---------- JSON import / export ---------- */
-function importJSON(){
-  const raw=document.getElementById('json_import').value.trim();
-  if(!raw){alert('JSON을 붙여넣으세요');return;}
-  let obj;
-  try{ obj=JSON.parse(raw); }
-  catch(e){ alert('JSON 형식 오류: '+e.message+'\n\n{ } 중괄호와 따옴표를 확인하세요'); return; }
-  applyData(obj);
-  S.generated=false;
-  render();
-  // scroll to a confirmation
-  setTimeout(()=>alert('✅ 불러오기 완료! 폼을 확인하고 틀린 곳을 수정한 뒤 [KOITA 입력값 생성]을 누르세요.'),100);
+/* ---------- 서류 점검표(coverage) 렌더 ---------- */
+function renderCoverage(cov){
+  const el=document.getElementById('parseCoverage');
+  if(!el) return;
+  if(!cov || !Array.isArray(cov.items) || cov.items.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+
+  const meta={ ok:{i:'✅',t:'확인됨',c:'var(--green)',bg:'var(--green-l)'},
+               weak:{i:'⚠️',t:'부족·확인필요',c:'var(--amber)',bg:'var(--amber-l)'},
+               missing:{i:'❌',t:'없음',c:'var(--red)',bg:'var(--red-l)'} };
+
+  const okN=cov.items.filter(x=>x.status==='ok').length;
+  const weakN=cov.items.filter(x=>x.status==='weak').length;
+  const missN=cov.items.filter(x=>x.status==='missing').length;
+
+  const detected=Array.isArray(cov.detectedDocs)&&cov.detectedDocs.length
+    ? `<div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-bottom:8px">📎 인식한 서류: ${cov.detectedDocs.map(escapeHtml).join(', ')}</div>` : '';
+
+  const rows=cov.items.map(it=>{
+    const m=meta[it.status]||meta.weak;
+    const note=(it.status!=='ok'&&it.note)?`<div style="font-size:11.5px;font-weight:600;color:${m.c};margin-top:3px">↳ ${escapeHtml(it.note)}</div>`:'';
+    const src=(it.status==='ok'&&it.source)?`<span style="font-size:11px;font-weight:600;color:var(--gray)"> · ${escapeHtml(it.source)}</span>`:'';
+    return `<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:9px;background:${m.bg};margin-bottom:6px">
+      <span style="font-size:15px;flex-shrink:0">${m.i}</span>
+      <div style="flex:1">
+        <div style="font-size:12.5px;font-weight:800;color:${m.c}">${escapeHtml(it.label||it.key||'')} <span style="font-weight:900">— ${m.t}</span>${src}</div>
+        ${note}
+      </div>
+    </div>`;
+  }).join('');
+
+  const banner = missN>0
+    ? `<div style="font-size:12.5px;font-weight:900;color:var(--red)">❌ 꼭 필요한 서류 ${missN}건이 없습니다. 아래 표시된 서류를 추가로 준비해 다시 올려주세요.</div>`
+    : (weakN>0
+      ? `<div style="font-size:12.5px;font-weight:900;color:var(--amber)">⚠️ ${weakN}건은 확인이 더 필요합니다. 내용을 검토하세요.</div>`
+      : `<div style="font-size:12.5px;font-weight:900;color:var(--green)">✅ 필요한 서류가 모두 확인되었습니다.</div>`);
+
+  el.style.display='block';
+  el.innerHTML=`
+    <div style="border:2px solid var(--line);border-radius:12px;padding:14px 15px;background:#fff">
+      <div style="font-size:14px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:7px">🔍 서류 점검표
+        <span style="font-size:11px;font-weight:800;color:var(--gray)">확인 ${okN} · 부족 ${weakN} · 없음 ${missN}</span></div>
+      <div style="margin:6px 0 10px">${banner}</div>
+      ${detected}
+      ${rows}
+      <div class="cr-hint" style="margin-top:8px">※ 이 점검표는 업로드한 서류만으로 판단한 결과입니다. 실제 신고 전 원본 서류를 다시 확인하세요.</div>
+    </div>`;
 }
-function loadSampleJSON(){
-  document.getElementById('json_import').value = JSON.stringify(SAMPLE,null,2);
-  alert('펌킨푸드 예시 JSON을 칸에 넣었습니다. [불러와서 폼 채우기]를 누르세요.');
+
+/* 폼 재렌더 후 상태메시지·점검표·메모를 복원 */
+function restoreParseResult(){
+  const status=document.getElementById('parseStatus');
+  if(status){
+    status.style.display='block';
+    status.style.color='var(--green)';
+    status.innerHTML='✅ 완료! 아래 폼이 채워졌습니다. 서류 점검표를 확인하고, 폼을 검토·수정한 뒤 [KOITA 입력값 생성]을 누르세요.';
+  }
+  renderCoverage(_lastCoverage);
+  const notesEl=document.getElementById('parseNotes');
+  if(notesEl){
+    if(_lastNotes){
+      notesEl.style.display='block';
+      notesEl.innerHTML='<div class="warn-box"><div class="wt">⚠️ AI가 확인 요청한 사항 (꼭 검토)</div>'+escapeHtml(_lastNotes).replace(/\n/g,'<br>')+'</div>';
+    } else { notesEl.style.display='none'; notesEl.innerHTML=''; }
+  }
+  // 점검표로 부드럽게 스크롤
+  const cov=document.getElementById('parseCoverage');
+  if(cov && _lastCoverage){ cov.scrollIntoView({behavior:'smooth',block:'nearest'}); }
 }
 function applyData(obj){
   // 단순 필드
