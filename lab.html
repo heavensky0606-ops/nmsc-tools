@@ -183,6 +183,7 @@ function render(){
   else if(S.view==='guide') app.innerHTML = renderGuide();
   window.scrollTo(0,0);
   bindCopy();
+  if(S.view==='gen' && !S.generated){ bindDropzone(); renderFileList(); }
 }
 
 /* ---------- FORM ---------- */
@@ -190,9 +191,31 @@ function renderForm(){
   if(D.people.length===0) D.people.push(newPerson());
   if(D.equip.length===0) D.equip=[{name:'',qty:'1',loc:''}];
   return `
+  <div class="card" style="border:2px solid var(--green)">
+    <h2>🤖 서류 넣으면 AI가 자동 작성 <span style="font-size:11px;background:var(--green);color:#fff;padding:2px 8px;border-radius:20px">자동화</span></h2>
+    <p class="desc">사업자등록증·중소기업확인서·4대보험명부·졸업증명서 등을 넣으면 AI가 읽고 아래 폼을 전부 채웁니다 (PDF·이미지 가능)</p>
+    <div id="dropzone" style="border:2px dashed var(--green);border-radius:12px;padding:24px;text-align:center;background:var(--green-l);cursor:pointer;transition:.15s">
+      <div style="font-size:32px;margin-bottom:6px">📎</div>
+      <div style="font-size:13px;font-weight:800;color:var(--green)">여기로 서류를 끌어놓거나 클릭해서 선택</div>
+      <div style="font-size:11px;font-weight:600;color:var(--gray);margin-top:4px">여러 개 한번에 · PDF/JPG/PNG · 파일당 20MB</div>
+      <input type="file" id="fileInput" multiple accept="application/pdf,image/*" style="display:none">
+    </div>
+    <div id="fileList" style="margin-top:10px"></div>
+    <div class="fld" style="margin-top:10px"><label>회사 설명(선택) — 어떤 사업이고 무슨 연구를 할지 한두 줄</label><textarea id="companyNote" style="width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;font-family:inherit;resize:vertical" placeholder="예: 차량용 방향제를 제조·판매하는 회사. 향 지속성과 물성 안정성을 연구하려 함"></textarea></div>
+    <button class="btn" style="background:var(--green);color:#fff;margin-top:10px" onclick="runAutoParse()" id="parseBtn">🤖 AI로 서류 분석해서 폼 채우기</button>
+    <div id="parseStatus" style="margin-top:10px;font-size:12.5px;font-weight:700;display:none"></div>
+    <div id="parseNotes" style="margin-top:10px;display:none"></div>
+    <details style="margin-top:10px">
+      <summary style="font-size:11.5px;font-weight:700;color:var(--gray);cursor:pointer">⚙️ 서버 주소 설정 (최초 1회)</summary>
+      <div class="fld" style="margin-top:8px"><label>Cloudflare Worker URL</label><input id="workerUrl" value="${localStorage_get('nmsc_worker_url')}" placeholder="https://nmsc-lab-parser.○○○.workers.dev/parse-docs" style="font-size:11px;font-family:monospace"></div>
+      <button class="btn sec" style="padding:8px;font-size:12px;margin-top:6px" onclick="saveWorkerUrl()">주소 저장</button>
+      <div class="cr-hint" style="margin-top:6px">※ 서버 주소는 이 브라우저에만 저장됩니다. NMSC 담당자에게 문의하세요.</div>
+    </details>
+  </div>
+
   <div class="card" style="border:2px solid var(--blue)">
-    <h2>📥 업체 데이터 불러오기 (AI 자동작성 결과 붙여넣기)</h2>
-    <p class="desc">NMSC 담당자(Claude)가 서류를 보고 만들어 준 JSON을 여기 붙여넣으면 아래 폼이 전부 자동으로 채워집니다</p>
+    <h2>📥 또는 JSON 직접 붙여넣기 (수동)</h2>
+    <p class="desc">담당자가 만들어 준 JSON을 붙여넣어 폼을 채웁니다</p>
     <textarea id="json_import" style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:8px;padding:11px;font-size:12px;font-family:monospace;resize:vertical" placeholder='여기에 { "bizName": "...", ... } 형태의 JSON을 붙여넣으세요'></textarea>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="importJSON()">📥 불러와서 폼 채우기</button>
@@ -414,6 +437,121 @@ function generate(){
   S.generated=true; render();
 }
 function editForm(){S.generated=false;render()}
+
+/* ---------- localStorage helpers (안전) ---------- */
+function localStorage_get(k){ try{return localStorage.getItem(k)||''}catch(e){return ''} }
+function localStorage_set(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
+function saveWorkerUrl(){
+  const u=document.getElementById('workerUrl').value.trim();
+  localStorage_set('nmsc_worker_url',u);
+  alert('서버 주소를 저장했습니다.');
+}
+
+/* ---------- 자동 서류 파싱 ---------- */
+let _uploadedFiles = []; // {name, media_type, data(base64)}
+
+function bindDropzone(){
+  const dz=document.getElementById('dropzone');
+  const fi=document.getElementById('fileInput');
+  if(!dz||!fi) return;
+  dz.onclick=()=>fi.click();
+  dz.ondragover=(e)=>{e.preventDefault();dz.style.background='#d5f0e0';};
+  dz.ondragleave=()=>{dz.style.background='';};
+  dz.ondrop=(e)=>{e.preventDefault();dz.style.background='';handleFiles(e.dataTransfer.files);};
+  fi.onchange=()=>handleFiles(fi.files);
+}
+function handleFiles(fileList){
+  const arr=Array.from(fileList);
+  arr.forEach(file=>{
+    if(file.size > 20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return; }
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const b64=reader.result.split(',')[1];
+      _uploadedFiles.push({name:file.name, media_type:file.type||'application/octet-stream', data:b64});
+      renderFileList();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function renderFileList(){
+  const el=document.getElementById('fileList');
+  if(!el) return;
+  if(_uploadedFiles.length===0){el.innerHTML='';return;}
+  el.innerHTML = _uploadedFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:5px">
+      <span style="font-size:16px">${f.media_type.includes('pdf')?'📄':'🖼️'}</span>
+      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}</span>
+      <button onclick="removeFile(${i})" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:900;cursor:pointer">삭제</button>
+    </div>`).join('');
+}
+function removeFile(i){_uploadedFiles.splice(i,1);renderFileList();}
+
+async function runAutoParse(){
+  const workerUrl = (document.getElementById('workerUrl')?.value || localStorage_get('nmsc_worker_url')).trim();
+  const status=document.getElementById('parseStatus');
+  const notesEl=document.getElementById('parseNotes');
+  const btn=document.getElementById('parseBtn');
+  notesEl.style.display='none'; notesEl.innerHTML='';
+
+  if(!workerUrl){
+    status.style.display='block';
+    status.style.color='var(--red)';
+    status.innerHTML='❌ 서버 주소가 없습니다. 아래 [서버 주소 설정]을 펼쳐 URL을 저장하세요.';
+    return;
+  }
+  if(_uploadedFiles.length===0){
+    status.style.display='block';
+    status.style.color='var(--red)';
+    status.innerHTML='❌ 먼저 서류를 올려주세요.';
+    return;
+  }
+
+  status.style.display='block';
+  status.style.color='var(--amber)';
+  status.innerHTML='⏳ AI가 서류를 읽는 중입니다... (10~30초)';
+  btn.disabled=true; btn.style.opacity='0.6';
+
+  const note=document.getElementById('companyNote')?.value||'';
+
+  try{
+    const resp=await fetch(workerUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({files:_uploadedFiles, note})
+    });
+    const result=await resp.json();
+
+    if(result.error && !result.data){
+      status.style.color='var(--red)';
+      status.innerHTML='❌ 오류: '+escapeHtml(result.error||'')+(result.raw?'<br><br><b>AI 응답 원문:</b><br><textarea style="width:100%;min-height:120px;font-size:11px;font-family:monospace">'+escapeHtml(result.raw)+'</textarea>':'')+(result.detail?'<br><small>'+escapeHtml(result.detail)+'</small>':'');
+      btn.disabled=false; btn.style.opacity='1';
+      return;
+    }
+
+    // 성공 - 폼 채우기
+    applyData(result.data);
+    // JSON 칸에도 넣어줌(백업/수정용)
+    const ji=document.getElementById('json_import');
+    if(ji) ji.value=JSON.stringify(result.data,null,2);
+
+    status.style.color='var(--green)';
+    status.innerHTML='✅ 완료! 아래 폼이 채워졌습니다. 확인·수정 후 [KOITA 입력값 생성]을 누르세요.';
+
+    if(result.notes){
+      notesEl.style.display='block';
+      notesEl.innerHTML='<div class="warn-box"><div class="wt">⚠️ AI가 확인 요청한 사항 (꼭 검토)</div>'+escapeHtml(result.notes).replace(/\n/g,'<br>')+'</div>';
+    }
+
+    S.generated=false;
+    // 폼을 다시 그리되, 상태 메시지 유지 위해 약간 지연 후 스크롤
+    setTimeout(()=>{ render(); },300);
+
+  }catch(e){
+    status.style.color='var(--red)';
+    status.innerHTML='❌ 통신 실패: '+escapeHtml(e.message)+'<br><small>서버 주소가 맞는지, Worker가 배포됐는지 확인하세요.</small>';
+    btn.disabled=false; btn.style.opacity='1';
+  }
+}
 
 /* ---------- JSON import / export ---------- */
 function importJSON(){
