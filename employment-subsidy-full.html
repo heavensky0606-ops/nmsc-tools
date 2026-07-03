@@ -233,6 +233,26 @@
   .warn b{font-weight:900;color:var(--red)}
   .footer{text-align:center;font-size:11px;color:#9aa8b8;margin-top:26px;line-height:1.7}
   .err{background:#fde8e8;color:var(--red);padding:13px;border-radius:10px;font-size:13px;font-weight:700;margin-top:12px}
+  /* AI 명부 업로드 */
+  .ai-card{border:2px solid var(--blue);background:var(--blue-ll)}
+  .ai-badge{font-size:11px;background:var(--blue);color:#fff;padding:2px 9px;border-radius:20px;font-weight:800;margin-left:6px;vertical-align:middle}
+  .dz{border:2px dashed var(--blue);border-radius:12px;padding:26px 16px;text-align:center;background:#fff;cursor:pointer;transition:.15s}
+  .dz:hover{background:var(--blue-ll)}
+  .dz-ic{font-size:32px;margin-bottom:6px}
+  .dz-t{font-size:14px;font-weight:800;color:var(--blue-d)}
+  .dz-s{font-size:12px;font-weight:600;color:var(--gray);margin-top:4px}
+  .flist{margin-top:10px}
+  .fitem{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:5px}
+  .fitem .fn{flex:1;font-size:12px;font-weight:700;word-break:break-all;color:var(--ink)}
+  .fitem .fx{background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:900;cursor:pointer}
+  .ai-status{margin-top:10px;font-size:13px;font-weight:700;display:none}
+  .ai-note{margin-top:10px;display:none}
+  .note-box{background:var(--blue-ll);border:1.5px solid var(--blue);border-radius:11px;padding:12px 14px;font-size:12.5px;font-weight:600;color:var(--blue-d);line-height:1.6}
+  .note-box .nt{font-weight:900;margin-bottom:4px}
+  .srv-set{margin-top:10px}
+  .srv-set summary{font-size:12px;font-weight:700;color:var(--gray);cursor:pointer}
+  .srv-set input{width:100%;padding:10px 12px;font-size:12px;border:2px solid var(--line);border-radius:9px;font-family:'SF Mono',Menlo,monospace;color:var(--ink);margin-top:8px}
+  .or-div{text-align:center;font-size:12px;font-weight:800;color:var(--gray);margin:16px 0 2px}
   @media(max-width:560px){.selrow{grid-template-columns:1fr}h1{font-size:21px}.forg{margin-left:0;width:100%}}
 </style>
 </head>
@@ -244,8 +264,29 @@
 </div></header>
 
 <div class="wrap">
+  <div class="card ai-card">
+    <div class="step">명부 올리기 (사진·PDF)<span class="ai-badge">AI 자동인식</span></div>
+    <div class="howto"><b>4대보험 사업장 가입자 명부</b>를 사진 찍거나 PDF로 올리면 AI가 읽어서 자동으로 진단합니다.<br>텍스트로 복사가 안 되는 스캔본·캡처·모바일 사진도 그대로 됩니다.</div>
+    <div class="dz" id="dz">
+      <div class="dz-ic">📎</div>
+      <div class="dz-t">여기로 명부를 끌어놓거나 클릭해서 선택</div>
+      <div class="dz-s">여러 장 한번에 · PDF/JPG/PNG · 파일당 20MB</div>
+      <input type="file" id="fileInput" multiple accept="application/pdf,image/*" style="display:none">
+    </div>
+    <div class="flist" id="flist"></div>
+    <button class="btn" id="aiRun" style="margin-top:12px">🤖 AI로 명부 읽고 진단하기</button>
+    <div class="ai-status" id="aiStatus"></div>
+    <div class="ai-note" id="aiNote"></div>
+    <details class="srv-set">
+      <summary>⚙️ 서버 주소 설정 (최초 1회)</summary>
+      <input id="rosterWorkerUrl" placeholder="https://parse-docs.○○○.workers.dev/parse-roster">
+      <button class="btn" id="saveRosterUrl" style="margin-top:8px;padding:10px;font-size:13px">주소 저장</button>
+      <div style="font-size:11px;color:var(--gray);font-weight:600;margin-top:6px">※ 서버 주소는 이 브라우저에만 저장됩니다. NMSC 담당자에게 문의하세요.</div>
+    </details>
+  </div>
+
   <div class="card">
-    <div class="step">명부 붙여넣기</div>
+    <div class="step">또는 명부 붙여넣기</div>
     <div class="howto"><b>4대보험 사업장 가입자 명부</b>를 화면에서 드래그해 복사(Ctrl+C) 후 아래에 붙여넣으세요(Ctrl+V).<br>이름·주민번호·자격취득일이 함께 복사되면 자동으로 읽습니다. 엑셀·한글 명부도 그대로 됩니다.</div>
 
     <textarea id="input" placeholder="명부 표를 드래그 복사해서 여기에 붙여넣기 ↓
@@ -323,6 +364,123 @@ const EXAMPLE=`1	590309-2******	이원자	-	2018.09.01	-	-
 8	990116-2******	김정미	2025.12.11	2025.12.11	2025.12.11	2025.12.11`;
 
 document.getElementById('loadEx').onclick=()=>{document.getElementById('input').value=EXAMPLE};
+
+/* ================= AI 명부 자동 인식 ================= */
+const RKEY='nmsc_roster_worker_url';
+let _rosterFiles=[]; // {name, media_type, data(base64)}
+(function initRosterUrl(){
+  try{const u=localStorage.getItem(RKEY)||'';const el=document.getElementById('rosterWorkerUrl');if(el)el.value=u;}catch(e){}
+})();
+document.getElementById('saveRosterUrl').onclick=()=>{
+  const u=document.getElementById('rosterWorkerUrl').value.trim();
+  try{localStorage.setItem(RKEY,u);}catch(e){}
+  alert('서버 주소를 저장했습니다.');
+};
+(function bindRosterDz(){
+  const dz=document.getElementById('dz'),fi=document.getElementById('fileInput');
+  if(!dz||!fi)return;
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.style.background='var(--blue-l)';};
+  dz.ondragleave=()=>{dz.style.background='';};
+  dz.ondrop=e=>{e.preventDefault();dz.style.background='';rosterHandleFiles(e.dataTransfer.files);};
+  fi.onchange=()=>rosterHandleFiles(fi.files);
+})();
+function rosterHandleFiles(fileList){
+  Array.from(fileList).forEach(file=>{
+    if(file.size>20*1024*1024){alert(file.name+' : 20MB를 초과해 제외합니다');return;}
+    const reader=new FileReader();
+    reader.onload=()=>{
+      _rosterFiles.push({name:file.name,media_type:file.type||'application/octet-stream',data:reader.result.split(',')[1]});
+      renderRosterFiles();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function renderRosterFiles(){
+  const el=document.getElementById('flist');
+  if(!el)return;
+  el.innerHTML=_rosterFiles.map((f,i)=>`<div class="fitem"><span>${f.media_type.includes('pdf')?'📄':'🖼️'}</span><span class="fn">${escHtml(f.name)}</span><button class="fx" onclick="rosterRemoveFile(${i})">삭제</button></div>`).join('');
+}
+function rosterRemoveFile(i){_rosterFiles.splice(i,1);renderRosterFiles();}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// AI가 준 people 배열 → parseRoster가 읽는 표준 텍스트(탭 구분)로 변환
+function peopleToRosterText(people){
+  return people.map((p,idx)=>{
+    const n=idx+1;
+    const by=p.birthY||'';
+    const sx=p.sex==='남'?'남':(p.sex==='여'?'여':'');
+    // 생년을 YYYY.01.01 형태 가짜날짜로 넣지 않고, 4자리 생년으로 (parseRoster가 4자리 생년 인식)
+    const hire=(p.hireY?String(p.hireY)+'.'+String(p.hireM||1).padStart(2,'0')+'.01':'');
+    const fg=p.foreign?'외국인':'';
+    return [n,by,p.name||'',sx,hire,fg].filter(x=>x!=='').join('\t');
+  }).join('\n');
+}
+
+async function runAiRoster(){
+  const workerUrl=(document.getElementById('rosterWorkerUrl')?.value||'').trim();
+  const status=document.getElementById('aiStatus');
+  const noteEl=document.getElementById('aiNote');
+  const btn=document.getElementById('aiRun');
+  noteEl.style.display='none';noteEl.innerHTML='';
+  const show=(color,html)=>{status.style.display='block';status.style.color=color;status.innerHTML=html;};
+
+  if(!workerUrl){show('var(--red)','❌ 서버 주소가 없습니다. 아래 [서버 주소 설정]을 펼쳐 URL을 저장하세요.');return;}
+  if(_rosterFiles.length===0){show('var(--red)','❌ 먼저 명부 파일을 올려주세요.');return;}
+
+  show('var(--amber)','⏳ AI가 명부를 읽는 중입니다... (10~40초)');
+  btn.disabled=true;btn.style.opacity='0.6';
+
+  try{
+    const resp=await fetch(workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:_rosterFiles})});
+    const result=await resp.json();
+
+    if(result.error && !result.data){
+      show('var(--red)','❌ 오류: '+escHtml(result.error||'')+(result.raw?'<br><br><b>AI 응답 원문:</b><br><textarea style="width:100%;min-height:110px;font-size:11px">'+escHtml(result.raw)+'</textarea>':'')+(result.detail?'<br><small>'+escHtml(result.detail)+'</small>':''));
+      btn.disabled=false;btn.style.opacity='1';return;
+    }
+
+    const data=result.data||{};
+    const people=Array.isArray(data.people)?data.people:[];
+    if(people.length===0){
+      show('var(--red)','❌ 명부에서 직원 정보를 찾지 못했습니다. 사진이 선명한지 확인하거나, 아래에 텍스트로 붙여넣어 주세요.');
+      btn.disabled=false;btn.style.opacity='1';return;
+    }
+
+    // textarea 채우기 (표준 형식)
+    document.getElementById('input').value=peopleToRosterText(people);
+
+    // 회사명·소재지 자동 반영
+    if(data.company){const c=document.getElementById('company');if(c&&!c.value.trim())c.value=data.company;}
+    if(data.sido){
+      const opt=[...sidoSel.options].find(o=>o.value===data.sido);
+      if(opt){sidoSel.value=data.sido;sidoSel.onchange();
+        if(data.sigungu){setTimeout(()=>{const g=[...sgSel.options].find(o=>o.value===data.sigungu||o.value.includes(data.sigungu)||data.sigungu.includes(o.value));if(g){sgSel.value=g.value;sgSel.onchange();}},60);}
+      }
+    }
+
+    show('var(--green)','✅ 명부를 읽었습니다! '+people.length+'명 인식. 아래 진단 결과를 확인하세요. (소재지·규모는 필요시 위에서 조정)');
+
+    if(result.notes){
+      noteEl.style.display='block';
+      noteEl.innerHTML='<div class="note-box"><div class="nt">⚠️ AI가 확인 요청한 사항</div>'+escHtml(result.notes).replace(/\n/g,'<br>')+'</div>';
+    }
+
+    // 소재지 셀렉트가 setTimeout으로 채워지므로 살짝 뒤에 진단 실행
+    setTimeout(()=>{runDiagnosis();
+      const res=document.getElementById('result');
+      if(res)res.scrollIntoView({behavior:'smooth',block:'start'});
+    },140);
+
+  }catch(e){
+    show('var(--red)','❌ 통신 실패: '+escHtml(e.message)+'<br><small>서버 주소가 맞는지, Worker가 배포됐는지 확인하세요.</small>');
+    btn.disabled=false;btn.style.opacity='1';
+  }finally{
+    setTimeout(()=>{btn.disabled=false;btn.style.opacity='1';},200);
+  }
+}
+document.getElementById('aiRun').onclick=runAiRoster;
+
 
 // ---- 시도/시군구 드롭다운 ----
 const sidoSel=document.getElementById('sido');
@@ -481,7 +639,7 @@ function diagnose(p, region, size){
   return {age,flags};
 }
 
-document.getElementById('run').onclick=()=>{
+function runDiagnosis(){
   const err=document.getElementById('err');err.innerHTML='';
   const raw=document.getElementById('input').value;
   if(!raw.trim()){err.innerHTML='<div class="err">명부를 붙여넣어 주세요.</div>';return;}
@@ -494,7 +652,8 @@ document.getElementById('run').onclick=()=>{
   const ctx={company,region,size,sido:sidoSel.value,sigungu:sgSel.value,companyProgs:getCheckedCompanyProgs()};
   render(roster,region,size,matchedOrgs,ctx);
   saveHistory(roster,res_cache,ctx); // res_cache는 render에서 채움
-};
+}
+document.getElementById('run').onclick=runDiagnosis;
 
 // ---- 조회 이력 (localStorage, 개인정보 제외 요약만) ----
 const HKEY='nmsc_subsidy_history';
