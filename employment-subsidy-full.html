@@ -252,6 +252,21 @@
   .srv-set{margin-top:10px}
   .srv-set summary{font-size:12px;font-weight:700;color:var(--gray);cursor:pointer}
   .srv-set input{width:100%;padding:10px 12px;font-size:12px;border:2px solid var(--line);border-radius:9px;font-family:'SF Mono',Menlo,monospace;color:var(--ink);margin-top:8px}
+  /* 필수 서류 2종 */
+  .doc2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .doc2-item{border:1.5px solid var(--line);border-radius:11px;padding:12px;background:#fff}
+  .doc2-h{font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:6px}
+  .doc2-req{font-size:10px;font-weight:900;color:#fff;background:var(--red);padding:2px 7px;border-radius:20px;flex-shrink:0}
+  .doc2-d{font-size:11.5px;color:var(--gray);font-weight:600;line-height:1.5;margin-top:5px}
+  /* 직접 입력 접이식 */
+  .paste-fold{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .paste-fold>summary{cursor:pointer;padding:14px 18px;font-size:13px;font-weight:800;color:var(--gray);list-style:none;user-select:none}
+  .paste-fold>summary::-webkit-details-marker{display:none}
+  .paste-fold>summary::before{content:"▸ ";font-weight:900;color:var(--blue)}
+  .paste-fold[open]>summary::before{content:"▾ "}
+  .paste-fold[open]>summary{border-bottom:1px solid var(--line)}
+  .paste-in{padding:4px 18px 18px}
+  @media(max-width:560px){.doc2{grid-template-columns:1fr}}
   .or-div{text-align:center;font-size:12px;font-weight:800;color:var(--gray);margin:16px 0 2px}
   @media(max-width:560px){.selrow{grid-template-columns:1fr}h1{font-size:21px}.forg{margin-left:0;width:100%}}
 </style>
@@ -265,16 +280,28 @@
 
 <div class="wrap">
   <div class="card ai-card">
-    <div class="step">명부 올리기 (사진·PDF)<span class="ai-badge">AI 자동인식</span></div>
-    <div class="howto"><b>4대보험 사업장 가입자 명부</b>를 사진 찍거나 PDF로 올리면 AI가 읽어서 자동으로 진단합니다.<br>텍스트로 복사가 안 되는 스캔본·캡처·모바일 사진도 그대로 됩니다.</div>
+    <div class="step">서류 올리기 (사진·PDF)<span class="ai-badge">AI 자동인식</span></div>
+    <div class="howto">아래 <b>2가지 서류를 모두</b> 올리면 AI가 읽어서 직원 진단 준비 + 회사 소재지·규모까지 자동으로 채웁니다.<br>텍스트 복사가 안 되는 스캔본·캡처·모바일 사진도 그대로 됩니다.</div>
+
+    <div class="doc2">
+      <div class="doc2-item">
+        <div class="doc2-h"><span class="doc2-req">필수</span> 사업자등록증</div>
+        <div class="doc2-d">회사 주소·상호·업종 확인 → 소재지 자동입력</div>
+      </div>
+      <div class="doc2-item">
+        <div class="doc2-h"><span class="doc2-req">필수</span> 4대보험 가입자명부</div>
+        <div class="doc2-d">직원 생년·입사일 → 지원금 대상 판정</div>
+      </div>
+    </div>
+
     <div class="dz" id="dz">
       <div class="dz-ic">📎</div>
-      <div class="dz-t">여기로 명부를 끌어놓거나 클릭해서 선택</div>
+      <div class="dz-t">여기로 서류 2종을 끌어놓거나 클릭해서 선택</div>
       <div class="dz-s">여러 장 한번에 · PDF/JPG/PNG · 파일당 20MB</div>
       <input type="file" id="fileInput" multiple accept="application/pdf,image/*" style="display:none">
     </div>
     <div class="flist" id="flist"></div>
-    <button class="btn" id="aiRun" style="margin-top:12px">🤖 AI로 명부 읽고 진단하기</button>
+    <button class="btn" id="aiRun" style="margin-top:12px">🤖 AI로 읽고 자동 채우기</button>
     <div class="ai-status" id="aiStatus"></div>
     <div class="ai-note" id="aiNote"></div>
     <details class="srv-set">
@@ -285,19 +312,23 @@
     </details>
   </div>
 
-  <div class="card">
-    <div class="step">또는 명부 붙여넣기</div>
-    <div class="howto"><b>4대보험 사업장 가입자 명부</b>를 화면에서 드래그해 복사(Ctrl+C) 후 아래에 붙여넣으세요(Ctrl+V).<br>이름·주민번호·자격취득일이 함께 복사되면 자동으로 읽습니다. 엑셀·한글 명부도 그대로 됩니다.</div>
-
-    <textarea id="input" placeholder="명부 표를 드래그 복사해서 여기에 붙여넣기 ↓
+  <details class="paste-fold">
+    <summary>✏️ 직접 입력·수정 — 명부를 텍스트로 붙여넣거나 손으로 고칠 때</summary>
+    <div class="paste-in">
+      <div class="howto" style="margin-top:4px"><b>4대보험 사업장 가입자 명부</b>를 화면에서 드래그해 복사(Ctrl+C) 후 아래에 붙여넣으세요(Ctrl+V). 엑셀·한글 명부도 그대로 됩니다.</div>
+      <textarea id="input" placeholder="명부 표를 드래그 복사해서 여기에 붙여넣기 ↓
 
 예시)
 1  590309-2******  이원자  -  2018.09.01  -  -
 2  730218-1******  김성호  2025.05.08  2025.05.08  ...
 8  990116-2******  김정미  2025.12.11  2025.12.11  ..."></textarea>
-    <span class="ex" id="loadEx">▶ 예시 데이터로 먼저 체험해보기</span>
+      <span class="ex" id="loadEx">▶ 예시 데이터로 먼저 체험해보기</span>
+    </div>
+  </details>
 
-    <div style="margin-top:14px">
+  <div class="card">
+    <div class="step">회사 정보 <span style="font-weight:500;color:var(--gray);letter-spacing:0">(AI가 채움 · 필요시 수정)</span></div>
+    <div style="margin-top:4px">
       <label>회사명 <span style="font-weight:500;color:var(--gray)">(이력·보고서에 표시)</span></label>
       <input type="text" id="company" placeholder="예: 주식회사 신태전무역" style="width:100%;padding:13px 14px;font-size:15px;border:2px solid var(--line);border-radius:11px;font-family:inherit;color:var(--ink);font-weight:600">
     </div>
@@ -321,19 +352,19 @@
       </div>
     </div>
     <div class="region-hint" id="regionHint">시/군/구까지 선택하면 청년 제도에 담당 운영기관이 자동으로 연결됩니다.</div>
-
-    <details class="company-check">
-      <summary>🏢 회사 상황 체크 (선택) — 명부로는 못 잡는 회사 단위 제도까지 진단</summary>
-      <div class="cc-in">
-        <div class="cc-desc">대표님께 아래를 여쭤보고 해당하는 것만 체크하세요. 명부 진단에 더해 회사가 받을 수 있는 제도가 추가로 나옵니다.</div>
-        <div id="ccList"></div>
-      </div>
-    </details>
-
-    <button class="btn" id="run">고용지원금 진단하기</button>
-    <button class="btn ghost" id="histBtn">📋 조회 이력 보기</button>
-    <div id="err"></div>
   </div>
+
+  <details class="company-check">
+    <summary>🏢 더 받을 수 있는 제도 확인 (선택) — 명부로는 못 잡는 회사 단위 제도</summary>
+    <div class="cc-in">
+      <div class="cc-desc">대표님께 아래를 여쭤보고 해당하는 것만 체크하세요. 명부 진단에 더해 회사가 받을 수 있는 제도가 추가로 나옵니다.</div>
+      <div id="ccList"></div>
+    </div>
+  </details>
+
+  <button class="btn" id="run" style="margin-top:16px">고용지원금 진단하기</button>
+  <button class="btn ghost" id="histBtn">📋 조회 이력 보기</button>
+  <div id="err"></div>
   <div id="result"></div>
 </div>
 
@@ -396,10 +427,28 @@ function rosterHandleFiles(fileList){
     reader.readAsDataURL(file);
   });
 }
+function guessDocKind(name){
+  const n=(name||'').toLowerCase();
+  if(/사업자|등록증|사업자등록|biz|규모|중소기업/.test(n)) return {label:'사업자등록증',ok:true};
+  if(/명부|가입자|4대|사대|보험|국민연금|건강보험|roster|근로자/.test(n)) return {label:'명부',ok:true};
+  return {label:'',ok:false};
+}
 function renderRosterFiles(){
   const el=document.getElementById('flist');
   if(!el)return;
-  el.innerHTML=_rosterFiles.map((f,i)=>`<div class="fitem"><span>${f.media_type.includes('pdf')?'📄':'🖼️'}</span><span class="fn">${escHtml(f.name)}</span><button class="fx" onclick="rosterRemoveFile(${i})">삭제</button></div>`).join('');
+  if(_rosterFiles.length===0){el.innerHTML='';return;}
+  let html=_rosterFiles.map((f,i)=>{
+    const k=guessDocKind(f.name);
+    const tag=k.ok?`<span style="font-size:11px;font-weight:800;color:var(--blue-d)">${k.label}</span>`:'';
+    return `<div class="fitem"><span>${f.media_type.includes('pdf')?'📄':'🖼️'}</span><span class="fn">${escHtml(f.name)}</span>${tag}<button class="fx" onclick="rosterRemoveFile(${i})">삭제</button></div>`;
+  }).join('');
+  // 2종 준비 안내
+  if(_rosterFiles.length>=2){
+    html+=`<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-top:6px">✔ 서류 ${_rosterFiles.length}개 준비됨 — [AI로 읽고 자동 채우기]를 누르세요</div>`;
+  }else{
+    html+=`<div style="font-size:11.5px;color:var(--amber);font-weight:700;margin-top:6px">⚠️ 1개 더 필요 — 사업자등록증과 4대보험 명부 2가지를 모두 올려주세요</div>`;
+  }
+  el.innerHTML=html;
 }
 function rosterRemoveFile(i){_rosterFiles.splice(i,1);renderRosterFiles();}
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -426,9 +475,10 @@ async function runAiRoster(){
   const show=(color,html)=>{status.style.display='block';status.style.color=color;status.innerHTML=html;};
 
   if(!workerUrl){show('var(--red)','❌ 서버 주소가 없습니다. 아래 [서버 주소 설정]을 펼쳐 URL을 저장하세요.');return;}
-  if(_rosterFiles.length===0){show('var(--red)','❌ 먼저 명부 파일을 올려주세요.');return;}
+  if(_rosterFiles.length===0){show('var(--red)','❌ 먼저 서류(사업자등록증 + 4대보험 명부)를 올려주세요.');return;}
+  if(_rosterFiles.length<2){show('var(--amber)','⚠️ 서류가 1개만 있습니다. <b>사업자등록증과 4대보험 명부 2가지를 모두</b> 올려주세요.<br><small>명부만으로 진행하려면 아래 [✏️ 직접 입력·수정]에서 소재지를 직접 골라 진단할 수 있습니다.</small>');return;}
 
-  show('var(--amber)','⏳ AI가 명부를 읽는 중입니다... (10~40초)');
+  show('var(--amber)','⏳ AI가 서류를 읽는 중입니다... (10~40초)');
   btn.disabled=true;btn.style.opacity='0.6';
 
   try{
@@ -443,38 +493,42 @@ async function runAiRoster(){
     const data=result.data||{};
     const people=Array.isArray(data.people)?data.people:[];
     if(people.length===0){
-      show('var(--red)','❌ 명부에서 직원 정보를 찾지 못했습니다. 사진이 선명한지 확인하거나, 아래에 텍스트로 붙여넣어 주세요.');
+      show('var(--red)','❌ 명부에서 직원 정보를 찾지 못했습니다. 4대보험 명부 사진이 선명한지 확인하거나, 아래 [✏️ 직접 입력·수정]에서 텍스트로 붙여넣어 주세요.');
       btn.disabled=false;btn.style.opacity='1';return;
     }
 
-    // textarea 채우기 (표준 형식)
+    // textarea 채우기 (표준 형식) — 진단은 하지 않고 폼만 채움
     document.getElementById('input').value=peopleToRosterText(people);
 
-    // 회사명·소재지 자동 반영
-    if(data.company){const c=document.getElementById('company');if(c&&!c.value.trim())c.value=data.company;}
+    // 회사명·소재지·규모 자동 반영
+    let filled=[];
+    if(data.company){const c=document.getElementById('company');if(c){c.value=data.company;filled.push('회사명');}}
+    let sidoOk=false,sgOk=false;
     if(data.sido){
       const opt=[...sidoSel.options].find(o=>o.value===data.sido);
-      if(opt){sidoSel.value=data.sido;sidoSel.onchange();
+      if(opt){sidoSel.value=data.sido;sidoSel.onchange();sidoOk=true;
         if(data.sigungu){setTimeout(()=>{const g=[...sgSel.options].find(o=>o.value===data.sigungu||o.value.includes(data.sigungu)||data.sigungu.includes(o.value));if(g){sgSel.value=g.value;sgSel.onchange();}},60);}
       }
     }
+    if(sidoOk)filled.push('소재지');
 
-    show('var(--green)','✅ 명부를 읽었습니다! '+people.length+'명 인식. 아래 진단 결과를 확인하세요. (소재지·규모는 필요시 위에서 조정)');
+    // 회사정보 카드로 스크롤(확인 유도)
+    const okMsg='✅ 서류를 읽었습니다! <b>'+people.length+'명</b> 인식'+(filled.length?' · '+filled.join('·')+' 자동입력':'')+'.<br>아래 <b>회사 정보</b>가 맞는지 확인하고, 필요하면 제도 체크 후 <b>[고용지원금 진단하기]</b>를 누르세요.';
+    const warnMsg=(!sidoOk)?'<br><span style="color:var(--amber)">⚠️ 소재지를 자동으로 못 넣었습니다. 아래 회사 정보에서 시/도·시/군/구를 직접 골라주세요(운영기관 연결에 필요).</span>':'';
+    show('var(--green)',okMsg+warnMsg);
 
     if(result.notes){
       noteEl.style.display='block';
       noteEl.innerHTML='<div class="note-box"><div class="nt">⚠️ AI가 확인 요청한 사항</div>'+escHtml(result.notes).replace(/\n/g,'<br>')+'</div>';
     }
 
-    // 소재지 셀렉트가 setTimeout으로 채워지므로 살짝 뒤에 진단 실행
-    setTimeout(()=>{runDiagnosis();
-      const res=document.getElementById('result');
-      if(res)res.scrollIntoView({behavior:'smooth',block:'start'});
-    },140);
+    setTimeout(()=>{
+      const anchor=document.getElementById('company');
+      if(anchor)anchor.closest('.card').scrollIntoView({behavior:'smooth',block:'start'});
+    },160);
 
   }catch(e){
     show('var(--red)','❌ 통신 실패: '+escHtml(e.message)+'<br><small>서버 주소가 맞는지, Worker가 배포됐는지 확인하세요.</small>');
-    btn.disabled=false;btn.style.opacity='1';
   }finally{
     setTimeout(()=>{btn.disabled=false;btn.style.opacity='1';},200);
   }
