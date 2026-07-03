@@ -506,15 +506,31 @@ async function runAiRoster(){
     let sidoOk=false,sgOk=false;
     if(data.sido){
       const opt=[...sidoSel.options].find(o=>o.value===data.sido);
-      if(opt){sidoSel.value=data.sido;sidoSel.onchange();sidoOk=true;
-        if(data.sigungu){setTimeout(()=>{const g=[...sgSel.options].find(o=>o.value===data.sigungu||o.value.includes(data.sigungu)||data.sigungu.includes(o.value));if(g){sgSel.value=g.value;sgSel.onchange();}},60);}
+      if(opt){
+        sidoOk=true;
+        // 시/도 설정 + 시군구 옵션 즉시 채우기(동기)
+        sidoSel.value=data.sido;
+        sgSel.innerHTML='<option value="">선택</option>';
+        sgSel.disabled=false;
+        (SGMAP[data.sido]||[]).forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sgSel.appendChild(o);});
+        // 시군구 매칭(구까지 붙은 값도 시 단위로)
+        if(data.sigungu){
+          const g=[...sgSel.options].find(o=>o.value && (o.value===data.sigungu||o.value.includes(data.sigungu)||data.sigungu.includes(o.value)));
+          if(g){sgSel.value=g.value;sgOk=true;}
+        }
+        updateHint();
       }
     }
-    if(sidoOk)filled.push('소재지');
+    if(sidoOk)filled.push(sgOk?'소재지(시·군·구)':'소재지(시/도)');
 
     // 회사정보 카드로 스크롤(확인 유도)
     const okMsg='✅ 서류를 읽었습니다! <b>'+people.length+'명</b> 인식'+(filled.length?' · '+filled.join('·')+' 자동입력':'')+'.<br>아래 <b>회사 정보</b>가 맞는지 확인하고, 필요하면 제도 체크 후 <b>[고용지원금 진단하기]</b>를 누르세요.';
-    const warnMsg=(!sidoOk)?'<br><span style="color:var(--amber)">⚠️ 소재지를 자동으로 못 넣었습니다. 아래 회사 정보에서 시/도·시/군/구를 직접 골라주세요(운영기관 연결에 필요).</span>':'';
+    let warnMsg='';
+    if(!sidoOk){
+      warnMsg='<br><span style="color:var(--amber)">⚠️ 소재지를 자동으로 못 넣었습니다. 아래 회사 정보에서 시/도·시/군/구를 직접 골라주세요(운영기관 연결에 필요).</span>';
+    }else if(!sgOk){
+      warnMsg='<br><span style="color:var(--amber)">⚠️ 시/도('+data.sido+')는 넣었지만 시/군/구를 자동으로 못 잡았습니다. 아래에서 시/군/구를 직접 골라주세요(운영기관 연결에 필요).</span>';
+    }
     show('var(--green)',okMsg+warnMsg);
 
     if(result.notes){
