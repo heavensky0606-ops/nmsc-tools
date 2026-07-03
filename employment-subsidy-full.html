@@ -281,7 +281,7 @@
 <div class="wrap">
   <div class="card ai-card">
     <div class="step">서류 올리기 (사진·PDF)<span class="ai-badge">AI 자동인식</span></div>
-    <div class="howto">아래 <b>2가지 서류를 모두</b> 올리면 AI가 읽어서 직원 진단 준비 + 회사 소재지·규모까지 자동으로 채웁니다.<br>텍스트 복사가 안 되는 스캔본·캡처·모바일 사진도 그대로 됩니다.</div>
+    <div class="howto">아래 <b>2가지 서류만</b> 있으면 됩니다. 올리면 AI가 읽어서 직원 진단 준비 + 회사 소재지까지 자동으로 채웁니다.<br>텍스트 복사가 안 되는 스캔본·캡처·모바일 사진도 그대로 됩니다. (재무제표 등 다른 서류가 섞여 있어도 이 2가지만 읽으니 괜찮습니다)</div>
 
     <div class="doc2">
       <div class="doc2-item">
@@ -442,9 +442,12 @@ function renderRosterFiles(){
     const tag=k.ok?`<span style="font-size:11px;font-weight:800;color:var(--blue-d)">${k.label}</span>`:'';
     return `<div class="fitem"><span>${f.media_type.includes('pdf')?'📄':'🖼️'}</span><span class="fn">${escHtml(f.name)}</span>${tag}<button class="fx" onclick="rosterRemoveFile(${i})">삭제</button></div>`;
   }).join('');
-  // 2종 준비 안내
+  // 준비 상태 안내
   if(_rosterFiles.length>=2){
     html+=`<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-top:6px">✔ 서류 ${_rosterFiles.length}개 준비됨 — [AI로 읽고 자동 채우기]를 누르세요</div>`;
+    if(_rosterFiles.length>3){
+      html+=`<div style="font-size:11px;color:var(--gray);font-weight:600;margin-top:3px">※ 재무제표 등 다른 서류가 섞여 있어도 <b>사업자등록증·명부 2가지만</b> 읽습니다. 나머지는 무시되니 그대로 두셔도 됩니다.</div>`;
+    }
   }else{
     html+=`<div style="font-size:11.5px;color:var(--amber);font-weight:700;margin-top:6px">⚠️ 1개 더 필요 — 사업자등록증과 4대보험 명부 2가지를 모두 올려주세요</div>`;
   }
@@ -467,7 +470,11 @@ function peopleToRosterText(people){
 }
 
 async function runAiRoster(){
-  const workerUrl=(document.getElementById('rosterWorkerUrl')?.value||'').trim();
+  let workerUrl=(document.getElementById('rosterWorkerUrl')?.value||'').trim();
+  // 사용자가 어떤 경로를 넣어도(/parse-docs 등) 올바른 엔드포인트로 자동 교정
+  if(workerUrl){
+    workerUrl=workerUrl.replace(/\/(parse-docs|parse-roster|generate-plan|generate-note)\/?$/,'').replace(/\/+$/,'')+'/parse-roster';
+  }
   const status=document.getElementById('aiStatus');
   const noteEl=document.getElementById('aiNote');
   const btn=document.getElementById('aiRun');
@@ -531,7 +538,19 @@ async function runAiRoster(){
     }else if(!sgOk){
       warnMsg='<br><span style="color:var(--amber)">⚠️ 시/도('+data.sido+')는 넣었지만 시/군/구를 자동으로 못 잡았습니다. 아래에서 시/군/구를 직접 골라주세요(운영기관 연결에 필요).</span>';
     }
-    show('var(--green)',okMsg+warnMsg);
+    // AI가 반환한 소재지 원본값 (원인 파악용)
+    const dbg='<br><small style="color:var(--gray);font-weight:600">· AI 인식 소재지: 시/도 "'+escHtml(data.sido||'(없음)')+'" / 시·군·구 "'+escHtml(data.sigungu||'(없음)')+'"</small>';
+    show('var(--green)',okMsg+warnMsg+dbg);
+
+    // 시/군/구를 못 채웠으면 해당 드롭다운을 강조해서 놓치지 않게
+    const needSg = (sidoOk && !sgOk) || (!sidoOk);
+    if(needSg){
+      const target = !sidoOk ? sidoSel : sgSel;
+      target.style.borderColor='var(--red)';
+      target.style.background='#fff5f5';
+      const clear=()=>{target.style.borderColor='';target.style.background='';target.removeEventListener('change',clear);};
+      target.addEventListener('change',clear);
+    }
 
     if(result.notes){
       noteEl.style.display='block';

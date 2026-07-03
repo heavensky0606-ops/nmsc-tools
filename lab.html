@@ -622,7 +622,11 @@ function renderFileList(){
 function removeFile(i){_uploadedFiles.splice(i,1);renderFileList();}
 
 async function runAutoParse(){
-  const workerUrl = (document.getElementById('workerUrl')?.value || localStorage_get('nmsc_worker_url')).trim();
+  let workerUrl = (document.getElementById('workerUrl')?.value || localStorage_get('nmsc_worker_url')).trim();
+  // 어떤 경로를 넣어도(/parse-roster 등) 올바른 엔드포인트로 자동 교정
+  if(workerUrl){
+    workerUrl=workerUrl.replace(/\/(parse-docs|parse-roster|generate-plan|generate-note)\/?$/,'').replace(/\/+$/,'')+'/parse-docs';
+  }
   const status=document.getElementById('parseStatus');
   const notesEl=document.getElementById('parseNotes');
   const btn=document.getElementById('parseBtn');
@@ -1072,7 +1076,7 @@ jLoad();
 function jWorkerBase(){
   // 저장된 parse-docs URL에서 베이스 추출 → /generate-plan 등으로 변환
   const u=(localStorage_get('nmsc_worker_url')||'').trim();
-  return u.replace(/\/parse-docs\/?$/,'').replace(/\/$/,'');
+  return u.replace(/\/(parse-docs|parse-roster|generate-plan|generate-note)\/?$/,'').replace(/\/+$/,'');
 }
 
 function renderJournal(){
