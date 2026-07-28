@@ -1195,8 +1195,11 @@ function renderJournal(){
           </select>
         </div>
         <div class="fld"><label>&nbsp;</label>
-          <button class="btn sec" style="width:100%" onclick="jDeleteCompany()">선택 회사 삭제</button>
+          <button class="btn" style="background:var(--blue);color:#fff;width:100%" onclick="jAddNewCompany()">＋ 새 업체 추가</button>
         </div>
+      </div>
+      <div style="margin-top:6px;text-align:right">
+        <button class="btn sec" style="padding:7px 12px;font-size:11.5px" onclick="jDeleteCompany()">선택 회사 삭제</button>
       </div>
 
       <details style="margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden">
@@ -1227,17 +1230,21 @@ function renderJournal(){
       </details>
     </div>
 
-    ${co && co.plan ? renderJPlanSummary(co) : renderJRegister()}
+    ${(J._addNew || !(co && co.plan)) ? renderJRegister(names.length) : renderJPlanSummary(co)}
 
-    ${co && co.plan ? renderJNoteSection(co, ym) : ''}
+    ${(!J._addNew && co && co.plan) ? renderJNoteSection(co, ym) : ''}
   </div>`;
 }
 
 /* ---- STEP1: 회사 등록 (설립 완료 업체 간편 등록) ---- */
-function renderJRegister(){
+function renderJRegister(hasOthers){
   const ty=new Date().getFullYear();
   return `
-  <div class="card">
+  <div class="card" style="${hasOthers?'border:2px solid var(--blue)':''}">
+    ${hasOthers?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:900;color:var(--blue-d)">새 업체를 등록하는 중입니다</div>
+      <button class="btn sec" style="padding:6px 12px;font-size:11.5px" onclick="jCancelAdd()">취소하고 돌아가기</button>
+    </div>`:''}
     <h2>STEP 1 — 업체 등록 <span style="font-size:11px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px">1분</span></h2>
     <p class="desc"><b>이미 설립(인정)이 끝난 업체</b>도 여기서 바로 시작합니다. 아래 칸만 채우고 아래쪽 파란 버튼을 누르면 등록이 끝나고, 곧바로 분기 보고서를 만들 수 있습니다.</p>
 
@@ -1460,7 +1467,7 @@ function jQuickRegister(){
               :((D.equip||[]).filter(e=>e&&e.name))
   };
   J.companies[f.bizName]={ plan, notes:(J.companies[f.bizName]?.notes)||{} };
-  J.cur=f.bizName; jSave(); jCloudPush(f.bizName);
+  J.cur=f.bizName; J._addNew=false; _jFiles=[]; jSave(); jCloudPush(f.bizName);
   alert('['+f.bizName+'] 등록 완료!\n아래 [연구개발보고서·노트 생성]에서 분기를 선택해 만드세요.');
   render();
 }
@@ -1508,7 +1515,7 @@ async function jGeneratePlan(){
     plan.labApproved=f.approve||''; plan.bizDesc=biz; plan.dept=plan.dept||dept;
     plan.equipList=(_jParsedExtra&&_jParsedExtra.equip&&_jParsedExtra.equip.length)?_jParsedExtra.equip:((D.equip||[]).filter(e=>e&&e.name));
     J.companies[bizName]={ plan, notes:(J.companies[bizName]?.notes)||{} };
-    J.cur=bizName; jSave(); jCloudPush(bizName);
+    J.cur=bizName; J._addNew=false; _jFiles=[]; jSave(); jCloudPush(bizName);
     show('var(--blue)','연구계획서 생성 완료. 아래에서 확인하세요.');
     setTimeout(()=>{render();},400);
   }catch(e){
@@ -1516,6 +1523,12 @@ async function jGeneratePlan(){
     btn.disabled=false;btn.style.opacity='1';
   }
 }
+
+function jAddNewCompany(){
+  J._addNew=true; _jFiles=[]; _jParsedExtra=null; render();
+  setTimeout(()=>{ document.getElementById('jDropzone')?.scrollIntoView({behavior:'smooth',block:'center'}); },120);
+}
+function jCancelAdd(){ J._addNew=false; _jFiles=[]; render(); }
 
 function jSaveWorkerUrl(){
   const u=(document.getElementById('jWorkerUrl')?.value||'').trim();
