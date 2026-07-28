@@ -16,7 +16,7 @@
 <style>
 :root{--bg:#f4f6fa;--card:#fff;--soft:#f8fafc;--line:#e4e9f0;--line2:#d3dbe6;
 --txt:#16233a;--sub:#69758a;--mute:#96a1b3;--blue:#2563eb;--blue2:#1d4ed8;--blue3:#1e40af;
---bbg:#eef4ff;--bbd:#bfd4fb;--red:#dc2626;--rbg:#fdecec;--rbd:#f0c9c9;--grn:#0d9488;--grnbg:#e6f7f4;--amb:#b45309;--abg:#fef4e6}
+--bbg:#eef4ff;--bbd:#bfd4fb;--red:#dc2626;--rbg:#fdecec;--rbd:#f0c9c9;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--txt);padding-bottom:56px;font-size:15px;
 font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
@@ -42,7 +42,7 @@ color:var(--sub);font-size:14px;cursor:pointer;font-weight:700;white-space:nowra
 .b.p:active{background:var(--blue2)}
 .ht{font-size:12px;color:var(--sub);margin-top:9px}
 .pan{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px}
-.pan.rd{border-color:var(--rbd)}
+.pan.rd{border-color:var(--line)}
 .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:700}
 .exr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);cursor:pointer}
 .exr:last-child{border-bottom:none}
@@ -61,7 +61,8 @@ color:var(--sub);font-size:14px;cursor:pointer;font-weight:700;white-space:nowra
 .ex .l{font-size:10px;color:var(--mute)}
 .ex .d{font-size:15px;font-weight:700;margin-top:2px}
 .bd{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px}
-.ok{background:var(--grnbg);color:var(--grn)}.so{background:var(--abg);color:var(--amb)}
+.ok{background:var(--bbg);color:var(--blue3)}
+.so{background:var(--rbg);color:var(--red)}
 .exd{background:var(--rbg);color:var(--red)}.bl{background:var(--bbg);color:var(--blue3)}
 .tg{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
 .t{font-size:11px;background:var(--soft);color:var(--sub);padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
@@ -79,14 +80,25 @@ display:flex;justify-content:space-between;gap:10px;align-items:flex-start;z-ind
 .eb .l{font-size:12px;color:var(--blue3)}
 .eb .v{font-size:26px;font-weight:800;color:var(--blue3);margin-top:3px}
 .eb .r{font-size:12.5px;margin-top:5px;color:var(--blue3)}
-.eb.dg{background:var(--rbg);border-color:var(--rbd)}
-.eb.dg .l,.eb.dg .v,.eb.dg .r{color:var(--red)}
+
 .eg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .e{padding:13px 5px;border-radius:11px;text-align:center;color:#fff;cursor:pointer}
 .e:active{opacity:.85}
-.e1{background:#3b82f6}.e2{background:#2563eb}.e3{background:#1d4ed8}
+.e1,.e2,.e3{background:var(--blue)}
+.e:active{background:var(--blue2)}
 .e .a{font-size:17px;font-weight:800}.e .c{font-size:11px;margin-top:2px}
-.pw{font-size:12px;color:var(--amb);text-align:center;min-height:17px;margin:9px 0 11px;font-weight:700}
+.eg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.e2b{padding:11px 5px;border-radius:11px;text-align:center;cursor:pointer;
+background:var(--bbg);border:1px solid var(--bbd);color:var(--blue3)}
+.e2b:active{background:#e2ecfd}
+.e2b.off{background:var(--soft);border-color:var(--line);color:var(--mute)}
+.e2b.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.adj{text-align:center;font-size:12px;color:var(--blue);margin-top:7px;cursor:pointer;
+padding:5px;font-weight:700}
+.adj:active{opacity:.5}
+.a2{font-size:14px;font-weight:800}
+.c2{font-size:10.5px;margin-top:2px;opacity:.85}
+.pw{font-size:12px;color:var(--blue3);text-align:center;min-height:17px;margin:9px 0 11px;font-weight:700}
 .lb{font-size:12.5px;font-weight:700;color:var(--sub);margin:0 0 8px}
 .mi,.fi{width:100%;background:var(--soft);border:1px solid var(--line);border-radius:9px;color:var(--txt);
 padding:10px;font-size:14px;font-family:inherit;outline:none}
@@ -116,8 +128,8 @@ border:1px solid var(--line);cursor:pointer}
 .fl{font-size:12px;color:var(--sub);font-weight:700;margin:11px 0 5px}
 .note{background:var(--bbg);border:1px solid var(--bbd);border-radius:8px;padding:8px 10px;
 font-size:11.5px;color:var(--blue3);line-height:1.6;margin-top:9px}
-.warn{background:var(--abg);border:1px solid #f5dcb0;border-radius:8px;padding:8px 10px;
-font-size:11.5px;color:var(--amb);line-height:1.6;margin-top:9px}
+.warn{background:var(--bbg);border:1px solid var(--bbd);border-radius:8px;padding:8px 10px;
+font-size:11.5px;color:var(--blue3);line-height:1.6;margin-top:9px}
 .ag{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;background:var(--bbg);
 border:1px solid var(--bbd);border-radius:10px;margin-bottom:8px;cursor:pointer}
 .ag:active{opacity:.75}
@@ -161,7 +173,7 @@ border-bottom:1px dashed var(--line);cursor:pointer}
 .sugm{font-size:12px;color:var(--mute);padding:8px 2px}
 .sugp{background:var(--bbg);border:1px solid var(--bbd);border-radius:8px;padding:8px 10px;
 font-size:12.5px;color:var(--blue3);margin-top:6px}
-.del{font-size:11.5px;color:var(--red);background:var(--rbg);border:1px solid var(--rbd);
+.del{font-size:11.5px;color:var(--sub);background:var(--soft);border:1px solid var(--line2);
 border-radius:8px;padding:6px 10px;margin-left:10px;cursor:pointer;font-weight:700;white-space:nowrap}
 .del:active{opacity:.7}
 .rsum{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
@@ -211,9 +223,9 @@ border-bottom:1px dashed var(--line);cursor:pointer}
 .dl{font-size:11px;color:var(--mute);border:1px solid var(--line);background:var(--soft);
 border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:700}
 .dl:active{background:var(--line)}
-.dlc{background:var(--rbg);border:1px solid var(--rbd);border-radius:8px;padding:8px 10px;
-margin-top:7px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.dly{margin-left:auto;background:var(--red);color:#fff;border-radius:7px;padding:5px 12px;
+.dlc{background:var(--soft);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;
+margin-top:7px;font-size:12px;color:var(--sub);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.dly{margin-left:auto;background:var(--blue);color:#fff;border-radius:7px;padding:5px 12px;
 cursor:pointer;font-weight:700;font-size:12px}
 .dln{background:#fff;border:1px solid var(--line2);color:var(--sub);border-radius:7px;
 padding:5px 12px;cursor:pointer;font-weight:700;font-size:12px}
@@ -370,7 +382,7 @@ function rebuild(){
   document.getElementById('st').textContent=`업체 ${BIZ.length}곳`;
 }
 function setSync(t,cls){SYNC=t;const el=document.getElementById('lgt');
-  if(el){el.textContent=t;el.style.color=cls==='e'?'var(--red)':cls==='w'?'var(--amb)':'var(--sub)'}}
+  if(el){el.textContent=t;el.style.color=cls==='e'?'var(--red)':cls==='w'?'var(--blue3)':'var(--sub)'}}
 async function pullSheet(){
   if(!CFG.url){render();return setSync('시트 미연결','e')}
   setSync('시트에서 불러오는 중…','w');
@@ -402,7 +414,7 @@ async function pushRow(obj){
     setSync(`시트 저장됨 · ${ROWS.length}행`,'');
   }catch(err){setSync(`시트 저장 실패 · 대기 ${qGet().length}건`,'e')}
 }
-let DELP=null;
+let DELP=null,RZ=false,PZ=false;
 function askDel(sr){DELP=(DELP===sr)?null:sr;draw()}
 async function doDel(sr){
   if(!CFG.url)return toast('시트 미연결 상태에서는 삭제할 수 없습니다');
@@ -721,7 +733,7 @@ function openAgent(id){
   openMask();
 }
 function openMask(){document.getElementById('msk').classList.add('on');document.body.style.overflow='hidden'}
-function open2(id){CUR=id;CURP=(byId[id]||{}).cur||'';FORM=null;draw();openMask()}
+function open2(id){CUR=id;CURP=(byId[id]||{}).cur||'';FORM=null;RZ=false;PZ=false;DELP=null;draw();openMask()}
 function close2(){document.getElementById('msk').classList.remove('on');document.body.style.overflow='';CUR=null;CURP='';FORM=null;render()}
 document.getElementById('msk').onclick=e=>{if(e.target.id==='msk')close2()};
 
@@ -737,7 +749,6 @@ function draw(){
   const b=byId[CUR];
   const ev=[...b.ev].sort((x,y)=>(y.d||'').localeCompare(x.d||''));
   const r=b.exp?dd(TD(),b.exp):null;
-  const dg=r!==null&&r<=4;
   const inn=EDGES.filter(e=>e.t===b.id),out=EDGES.filter(e=>e.f===b.id);
   const ags=AGENTS.filter(a=>a.rel.some(x=>x.b===b.id));
   document.getElementById('sheet').innerHTML=`
@@ -745,13 +756,39 @@ function draw(){
 <div class="s2">${fp(b.cur)}${b.rg?' · '+esc(b.rg):''}${b.bz?' · '+esc(b.bz):''}</div></div>
 <button class="x" onclick="close2()">✕</button></div>
 <div class="sb">
-<div class="eb${dg?' dg':''}"><div class="l">현재 만료일</div><div class="v">${fk(b.exp)}</div>
-<div class="r">${b.exp?(r<0?`만료 ${-r}일 지남`:remT(r)):''}</div></div>
+<div class="eb"><div class="l">현재 만료일</div><div class="v">${fk(b.exp)}</div>
+<div class="r">${(()=>{const p=lastPause(b);
+return p?`일시정지 중 · ${pauseDays(p)}일 경과`:(b.exp?(r<0?`만료 ${-r}일 지남`:remT(r)):'')})()}</div></div>
 <div class="eg">
 <div class="e e1" onclick="ext(30)" onmouseover="pw(30)" onmouseout="cw()"><div class="a">30일</div><div class="c">10만원</div></div>
 <div class="e e2" onclick="ext(60)" onmouseover="pw(60)" onmouseout="cw()"><div class="a">60일</div><div class="c">18만원</div></div>
 <div class="e e3" onclick="ext(90)" onmouseover="pw(90)" onmouseout="cw()"><div class="a">90일</div><div class="c">25만원</div></div>
-</div><div class="pw" id="pwv"></div>
+</div>
+${(()=>{const p=lastPause(b);const dz=p?pauseDays(p):null;
+return `<div class="eg2">
+<div class="e2b${p?' off':''}" onclick="pause()"><div class="a2">일시정지</div>
+<div class="c2">${p?`${fk(p.d)}부터`:'오늘 기준 바로 적용'}</div></div>
+<div class="e2b${p?'':' off'}" onclick="resume()"><div class="a2">복귀</div>
+<div class="c2">${p?`${dz}일 바로 적용`:'정지 상태 아님'}</div></div></div>
+<div class="adj" onclick="${p?'togRz()':'togPz()'}">${(PZ||RZ)?'닫기':'날짜·일수 직접 지정'}</div>
+${(PZ&&!p)?`<div class="bx" style="margin-top:8px;border-color:var(--bbd)">
+<div class="lb">정지한 날 지정</div>
+<input class="fi" id="pzd" type="date" value="${TD()}" onchange="pzPv()" style="font-size:15px">
+<div class="pw" id="pzp" style="margin:9px 0 0"></div>
+<div class="bfull" style="margin-top:9px" onclick="pause()">일시정지 적용</div>
+<div class="note">지난 날짜로 소급 입력할 때만 쓰세요. 정지한 당일은 사용으로 처리됩니다.</div></div>`:''}
+${(RZ&&p)?`<div class="bx" style="margin-top:8px;border-color:var(--bbd)">
+<div class="lb">복귀한 날 지정</div>
+<input class="fi" id="rzdt" type="date" value="${TD()}" onchange="rzDate()" style="font-size:15px;margin-bottom:9px">
+<div class="lb">더할 일수</div>
+<div style="display:flex;gap:7px;align-items:center">
+<input class="fi" id="rzd" type="tel" value="${dz}" style="text-align:center;font-weight:800;font-size:17px"
+ oninput="rzPv()"><span style="font-size:13px;color:var(--sub);white-space:nowrap">일</span></div>
+<div class="pw" id="rzp" style="margin:9px 0 0"></div>
+<div class="bfull" style="margin-top:9px" onclick="resume()">복귀 적용</div>
+<div class="note">${fk(p.d)} 정지 (당일은 사용으로 처리) · 다음날부터 오늘까지 ${dz}일.
+필요하면 숫자를 고치세요.</div></div>`:''}`})()}
+<div class="pw" id="pwv"></div>
 <textarea class="mi" id="memo" rows="2" placeholder="비고 (선택)"></textarea>
 <div class="r2">
 <div class="sb2 ${FORM==='ph'?'on':''}" onclick="tog('ph')">번호변경</div>
@@ -856,6 +893,70 @@ function bonus(){const b=byId[CUR],e=nx(b.exp,10);
   ap({bid:b.id,g:'소개서비스',d:TD(),a:'',e:e,n:b.nm,p:b.cur,m:'소개서비스 10일 추가',bn:'10'});
   toast(`소개 서비스 10일 → ${fk(e)}`)}
 function ap(r){pl(r);draw()}
+function pauseDays(p){const n=dd(p.d,TD());return Math.max(0,(n||0)-1)}
+function lastPause(b){
+  let p=null;
+  [...b.ev].sort((x,y)=>(x.d||'').localeCompare(y.d||'')).forEach(e=>{
+    const g=e.g||'';
+    if(/일시\s*(정지|중지)/.test(g)&&!/복귀|해지|해제|off/i.test(g))p=e;
+    else if(/복귀|해지|해제|off/i.test(g)&&p)p=null;
+  });
+  return p;
+}
+function togPz(){const b=byId[CUR];if(lastPause(b))return toast('이미 일시정지 상태입니다');
+  PZ=!PZ;RZ=false;draw();if(PZ)setTimeout(pzPv,10)}
+function pzPv(){
+  const b=byId[CUR],el=document.getElementById('pzd');if(!el)return;
+  const d=el.value||TD();
+  const rem=b.exp?dd(d,b.exp):null;
+  const p=document.getElementById('pzp');
+  if(p)p.textContent=rem===null?'만료일 정보 없음'
+    :rem<0?`${fk(d)} 기준 이미 ${-rem}일 만료됨`
+    :`${fk(d)} 정지 · 잔여 ${rem}일 보관 (만료 ${fk(b.exp)})`;
+}
+function rzDate(){
+  const b=byId[CUR],p=lastPause(b),el=document.getElementById('rzdt'),n=document.getElementById('rzd');
+  if(!p||!el||!n)return;
+  const g=dd(p.d,el.value||TD());
+  n.value=Math.max(0,(g||0)-1);rzPv();
+}
+function togRz(){const b=byId[CUR];if(!lastPause(b))return toast('일시정지 상태가 아닙니다');
+  RZ=!RZ;PZ=false;draw();if(RZ)setTimeout(rzPv,10)}
+function rzPv(){
+  const b=byId[CUR],el=document.getElementById('rzd');if(!el)return;
+  const n=parseInt((el.value||'').replace(/\D/g,''),10)||0;
+  const x=new Date(b.exp||TD());x.setDate(x.getDate()+n);
+  const p=document.getElementById('rzp');
+  if(p)p.textContent=`${fk(b.exp)} + ${n}일 → ${fk(x.toISOString().slice(0,10))}`;
+}
+function pause(){
+  const b=byId[CUR];
+  if(lastPause(b))return toast('이미 일시정지 상태입니다');
+  const el=document.getElementById('pzd');
+  const pd=(el&&el.value)?el.value:TD();
+  const rem=b.exp?dd(pd,b.exp):null;
+  const m=(document.getElementById('memo').value||'').trim();
+  const note=['일시정지'+(rem!==null?` (잔여 ${rem}일)`:''),m].filter(Boolean).join(' / ');
+  PZ=false;
+  ap({bid:b.id,g:'일시정지',d:pd,a:'',e:b.exp,n:b.nm,p:b.cur,m:note});
+  toast(rem!==null?`${fk(pd)} 정지 · 잔여 ${rem}일`:'일시정지');
+}
+function resume(){
+  const b=byId[CUR];
+  const p=lastPause(b);
+  if(!p)return toast('일시정지 상태가 아닙니다');
+  const el=document.getElementById('rzd'),dt=document.getElementById('rzdt');
+  const rd=(dt&&dt.value)?dt.value:TD();
+  const days=el?(parseInt((el.value||'').replace(/\D/g,''),10)||0):pauseDays(p);
+  const base=b.exp||TD();
+  const x=new Date(base);x.setDate(x.getDate()+(days||0));
+  const ne=x.toISOString().slice(0,10);
+  const m=(document.getElementById('memo').value||'').trim();
+  const note=[`복귀 (${days}일 추가)`,m].filter(Boolean).join(' / ');
+  RZ=false;
+  ap({bid:b.id,g:'일시정지복귀',d:rd,a:'',e:ne,n:b.nm,p:b.cur,m:note});
+  toast(`복귀 · ${days}일 추가 → ${fk(ne)}`);
+}
 function addRef(){
   const b=byId[CUR];
   if(!PICK)return toast('목록에서 소개자를 선택하세요');
