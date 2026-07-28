@@ -229,9 +229,84 @@ margin-top:7px;font-size:12px;color:var(--sub);display:flex;align-items:center;g
 cursor:pointer;font-weight:700;font-size:12px}
 .dln{background:#fff;border:1px solid var(--line2);color:var(--sub);border-radius:7px;
 padding:5px 12px;cursor:pointer;font-weight:700;font-size:12px}
+
+/* ── PIN 잠금 게이트 ── */
+#pinGate{position:fixed;inset:0;z-index:99999;background:var(--card);
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom)}
+#pinGate.hide{display:none}
+#pinGate .pgLock{width:74px;height:74px;border-radius:50%;background:var(--bbg);
+display:flex;align-items:center;justify-content:center;margin-bottom:32px}
+#pinGate .pgLock svg{width:32px;height:32px;stroke:var(--blue)}
+#pinGate .pgDots{display:flex;gap:16px;margin-bottom:40px}
+#pinGate .pgDot{width:52px;height:56px;border-radius:15px;background:var(--soft);
+border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;
+transition:border-color .15s,background .15s}
+#pinGate .pgDot.on{border-color:var(--blue);background:#fff}
+#pinGate .pgDot.on::after{content:"";width:13px;height:13px;border-radius:50%;background:var(--blue)}
+#pinGate .pgDots.err{animation:pgShake .38s}
+#pinGate .pgDots.err .pgDot{border-color:var(--red)}
+@keyframes pgShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
+40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+#pinGate .pgPad{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;width:100%;max-width:300px}
+#pinGate .pgKey{height:62px;border-radius:15px;background:#fff;border:1.5px solid var(--line);
+font-size:25px;font-weight:600;color:var(--txt);display:flex;align-items:center;
+justify-content:center;cursor:pointer;user-select:none;transition:background .1s,transform .05s}
+#pinGate .pgKey:active{background:var(--bbg);transform:scale(.97)}
+#pinGate .pgKey.t{font-size:16px;font-weight:500;color:var(--sub)}
 </style>
 </head>
 <body>
+<div id="pinGate">
+  <div class="pgLock" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="10" width="16" height="11" rx="2.5"></rect>
+      <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+    </svg>
+  </div>
+  <div class="pgDots" id="pgDots">
+    <div class="pgDot"></div><div class="pgDot"></div><div class="pgDot"></div><div class="pgDot"></div>
+  </div>
+  <div class="pgPad" id="pgPad">
+    <div class="pgKey" data-k="1">1</div>
+    <div class="pgKey" data-k="2">2</div>
+    <div class="pgKey" data-k="3">3</div>
+    <div class="pgKey" data-k="4">4</div>
+    <div class="pgKey" data-k="5">5</div>
+    <div class="pgKey" data-k="6">6</div>
+    <div class="pgKey" data-k="7">7</div>
+    <div class="pgKey" data-k="8">8</div>
+    <div class="pgKey" data-k="9">9</div>
+    <div class="pgKey t" data-k="clear">지움</div>
+    <div class="pgKey" data-k="0">0</div>
+    <div class="pgKey t" data-k="back">←</div>
+  </div>
+</div>
+<script>
+/* ▼ 여기 4자리를 원하는 비밀번호로 바꾸세요 ▼ */
+var PIN_CODE = "1440";
+/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+(function(){
+  var buf="", gate=document.getElementById("pinGate"),
+      box=document.getElementById("pgDots"),
+      dots=box.querySelectorAll(".pgDot");
+  function draw(){dots.forEach(function(d,i){d.classList.toggle("on",i<buf.length)});}
+  function ok(){gate.classList.add("hide");}          /* 매번 재입력: 상태 저장 안 함 */
+  function no(){box.classList.add("err");
+    setTimeout(function(){box.classList.remove("err");buf="";draw();},420);}
+  function put(n){if(buf.length>=4)return;buf+=n;draw();
+    if(buf.length===4)setTimeout(function(){buf===PIN_CODE?ok():no();},110);}
+  document.getElementById("pgPad").addEventListener("click",function(e){
+    var k=e.target.closest(".pgKey");if(!k)return;var v=k.getAttribute("data-k");
+    if(v==="clear"){buf="";draw();}
+    else if(v==="back"){buf=buf.slice(0,-1);draw();}
+    else put(v);});
+  document.addEventListener("keydown",function(e){
+    if(gate.classList.contains("hide"))return;
+    if(e.key>="0"&&e.key<="9")put(e.key);
+    else if(e.key==="Backspace"){buf=buf.slice(0,-1);draw();}});
+})();
+</script>
 <div class="wrap">
 <div class="hd">
 <div class="hr"><h1>제휴 연장 관리</h1><div class="st" id="st"></div></div>
