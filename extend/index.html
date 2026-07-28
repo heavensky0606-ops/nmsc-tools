@@ -30,12 +30,13 @@ h1{font-size:15px;margin:0;font-weight:700}
 color:var(--sub);border:1px solid var(--line);cursor:pointer;font-weight:600}
 .tab.on{background:var(--bbg);color:var(--blue3);border-color:var(--bbd)}
 .sr{display:flex;gap:7px;margin-top:10px}
-#q{flex:1;background:var(--soft);border:1.5px solid var(--line2);border-radius:10px;color:var(--txt);
-font-size:19px;padding:11px;letter-spacing:4px;text-align:center;outline:none;font-weight:700}
+#q{flex:1;min-width:0;background:var(--soft);border:1.5px solid var(--line2);border-radius:10px;
+color:var(--txt);font-size:19px;padding:11px 8px;letter-spacing:3px;text-align:center;
+outline:none;font-weight:700}
 #q:focus{border-color:var(--blue);background:#fff}
 #q::placeholder{letter-spacing:0;font-size:14px;font-weight:400;color:var(--mute)}
-.b{border:1.5px solid var(--line2);background:var(--soft);border-radius:10px;padding:0 14px;color:var(--sub);
-font-size:14px;cursor:pointer;font-weight:700;white-space:nowrap}
+.b{border:1.5px solid var(--line2);background:var(--soft);border-radius:10px;padding:0 13px;
+color:var(--sub);font-size:14px;cursor:pointer;font-weight:700;white-space:nowrap;flex-shrink:0}
 .b:active{background:var(--line)}
 .b.p{background:var(--blue);border-color:var(--blue);color:#fff}
 .b.p:active{background:var(--blue2)}
@@ -130,7 +131,28 @@ pointer-events:none;transition:.25s;max-width:90%;text-align:center}
 .tst.on{opacity:1;bottom:36px}
 .lg{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);
 padding:9px 13px;display:flex;gap:8px;align-items:center;justify-content:space-between;z-index:40}
-.lg .t2{font-size:12px;color:var(--sub)}
+.lg .t2{font-size:12px;color:var(--sub);min-width:0;overflow:hidden;
+text-overflow:ellipsis;white-space:nowrap;flex:1}
+.lg{padding-bottom:calc(9px + env(safe-area-inset-bottom,0px))}
+body{padding-bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+@media (max-width:430px){
+  .wrap{padding:0 10px 10px}
+  .hd{padding:12px}
+  .tabs{gap:5px}
+  .tab{font-size:12.5px;padding:8px 2px}
+  #q{font-size:17px;letter-spacing:2px;padding:11px 6px}
+  .b{padding:0 10px;font-size:13px}
+  .cd{font-size:12.5px}
+  .en{font-size:13.5px}
+  .em{font-size:11px}
+  .ml{width:52px;font-size:12px}
+  .mv{width:70px;font-size:11.5px}
+}
+@media (max-width:360px){
+  .tab{font-size:11.5px}
+  #q{font-size:16px;letter-spacing:1px}
+  .b{padding:0 8px;font-size:12.5px}
+}
 .sug{border:1px solid var(--bbd);border-radius:9px;margin-top:6px;background:var(--card);max-height:250px;overflow-y:auto}
 .si{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;
 border-bottom:1px dashed var(--line);cursor:pointer}
@@ -350,7 +372,7 @@ function rebuild(){
 function setSync(t,cls){SYNC=t;const el=document.getElementById('lgt');
   if(el){el.textContent=t;el.style.color=cls==='e'?'var(--red)':cls==='w'?'var(--amb)':'var(--sub)'}}
 async function pullSheet(){
-  if(!CFG.url){render();return setSync('시트 미연결 — 하단 [시트 연결]을 누르세요','e')}
+  if(!CFG.url){render();return setSync('시트 미연결','e')}
   setSync('시트에서 불러오는 중…','w');
   try{
     const r=await fetch(CFG.url+'?token='+encodeURIComponent(CFG.token),{redirect:'follow'});
@@ -360,7 +382,7 @@ async function pullSheet(){
     rebuild();render();
     setSync(`시트 연결됨 · ${ROWS.length}행`,'');
     flushQueue();
-  }catch(err){render();setSync('시트 연결 실패 — 저장된 데이터로 표시 중','e')}
+  }catch(err){render();setSync('연결 실패 — 저장본 표시','e')}
 }
 function qGet(){try{return JSON.parse(localStorage.getItem(QUEUE)||'[]')}catch(e){return[]}}
 function qSet(v){localStorage.setItem(QUEUE,JSON.stringify(v))}
@@ -420,7 +442,7 @@ function pl(rec){
 }
 async function init(){
   let c=null;try{c=JSON.parse(localStorage.getItem(CACHE)||'null')}catch(e){}
-  if(c&&c.rows&&c.rows.length){ROWS=c.rows;rebuild();render();setSync('저장된 데이터 표시 중…','w')}
+  if(c&&c.rows&&c.rows.length){ROWS=c.rows;rebuild();render();setSync('저장본 표시 중…','w')}
   else{setSync('시트에서 불러오는 중…','w')}
   await pullSheet();
 }
