@@ -635,8 +635,12 @@ function renderRev(){
   </div>`;
 }
 function renderHome(){
-  const soon=BIZ.filter(b=>b.exp).map(b=>({b,n:dd(TD(),b.exp)})).filter(x=>x.n>=0&&x.n<=4)
-    .sort((a,b)=>a.n-b.n);
+  const soon=BIZ.filter(b=>b.exp&&!lastPause(b)).map(b=>({b,n:dd(TD(),b.exp)}))
+    .filter(x=>x.n>=0&&x.n<=4).sort((a,b)=>a.n-b.n);
+  const allPz=BIZ.map(b=>({b,p:lastPause(b)})).filter(x=>x.p)
+    .sort((a,b)=>(b.p.d||'').localeCompare(a.p.d||''));
+  const paused=allPz.filter(x=>pauseDays(x.p)<=180);
+  const oldPz=allPz.length-paused.length;
   const top=!soon.length?
     `<div class="pan"><div class="emp" style="padding:22px 20px">4일 이내 만료 예정 업체가 없습니다.</div></div>`:
     `<div class="pan rd"><div class="ph"><span style="color:var(--red)">만료 임박 · 4일 이내</span>
@@ -644,7 +648,17 @@ function renderHome(){
     ${soon.map(x=>`<div class="exr" onclick="open2(${x.b.id})">
     <div><span class="en">${esc(x.b.nm)}</span><span class="em">${x.b.cur.slice(-4)}${x.b.rg?' · '+esc(x.b.rg):''}${x.b.bz?' · '+esc(x.b.bz):''}</span></div>
     <div><div class="ed">${fk(x.b.exp)}</div><div class="es">${remT(x.n)}</div></div></div>`).join('')}</div>`;
-  document.getElementById('res').innerHTML=top+calHTML();
+  const pz=!paused.length?'':`<div class="pan"><div class="ph"><span>일시정지 중</span>
+  <span style="color:var(--mute);font-weight:400">${paused.length}곳</span></div>
+  ${paused.map(x=>`<div class="exr" onclick="open2(${x.b.id})">
+  <div style="min-width:0"><span class="en">${esc(x.b.nm)}</span>
+  <span class="em">${x.b.cur.slice(-4)}${x.b.rg?' · '+esc(x.b.rg):''}</span></div>
+  <div style="text-align:right;white-space:nowrap">
+  <div style="font-size:12.5px;font-weight:700;color:var(--blue3)">잔여 ${x.b.exp?Math.max(0,dd(x.p.d,x.b.exp)):'-'}일</div>
+  <div style="font-size:10.5px;color:var(--mute)">${fk(x.p.d)}부터 · ${pauseDays(x.p)}일 경과</div></div></div>`).join('')}
+  ${oldPz?`<div style="font-size:11.5px;color:var(--mute);padding-top:9px;margin-top:4px;border-top:1px dashed var(--line)">
+  180일 넘게 정지 상태인 곳 ${oldPz}곳은 숨김 (사실상 종료된 업체)</div>`:''}</div>`;
+  document.getElementById('res').innerHTML=top+pz+calHTML();
 }
 function cardH(b,q){
   const old=q&&b.cur.slice(-4)!==q;
@@ -654,7 +668,8 @@ function cardH(b,q){
   ${b.ph.length>1?`<span class="bd bl">번호 ${b.ph.length}개</span>`:''}</div>
   ${rn?`<div class="pv">이전 상호 · ${esc(b.nms.slice(0,-1).slice(-3).join(', '))}</div>`:''}
   <div class="pn">${fp(b.cur)}${old?' <span style="color:#b45309">← 옛 번호로 검색됨</span>':''}</div></div>
-  <div class="ex"><div class="l">현재 만료일</div><div class="d">${expH(b.exp)}</div>${bdg(b.exp)}</div></div>
+  <div class="ex"><div class="l">현재 만료일</div><div class="d">${expH(b.exp)}</div>
+  ${lastPause(b)?'<span class="bd bl">일시정지 중</span>':bdg(b.exp)}</div></div>
   <div class="tg">${b.rg?`<span class="t">${esc(b.rg)}</span>`:''}${b.bz?`<span class="t">${esc(b.bz)}</span>`:''}
   <span class="t">이력 ${b.ev.length}건</span>${b.db?`<span class="t">디비 ${esc(b.db)}</span>`:''}</div></div>`;
 }
