@@ -254,6 +254,11 @@ font-size:25px;font-weight:600;color:var(--txt);display:flex;align-items:center;
 justify-content:center;cursor:pointer;user-select:none;transition:background .1s,transform .05s}
 #pinGate .pgKey:active{background:var(--bbg);transform:scale(.97)}
 #pinGate .pgKey.t{font-size:16px;font-weight:500;color:var(--sub)}
+.rvrange{display:flex;align-items:center;gap:9px;margin-bottom:13px}
+.rvrange input[type=date]{flex:1;min-width:0;padding:9px 11px;border:1.5px solid var(--line2);
+border-radius:9px;background:#fff;color:var(--txt);font-size:14px;font-family:inherit}
+.rvrange input[type=date]:focus{outline:none;border-color:var(--blue)}
+.rvtil{color:var(--mute);font-weight:700}
 </style>
 </head>
 <body>
@@ -678,14 +683,17 @@ function calHTML(){
 }
 function pickDay(k){SEL=(SEL===k)?'':k;render()}
 function renderRev(){
-  const t=new Date(),ty=t.getFullYear(),tm=t.getMonth()+1;
+  const t=new Date(),ty=t.getFullYear(),tm=t.getMonth()+1,td=t.getDate();
   if(!window.RP)window.RP='m';
   const P=window.RP;
-  let from='',to='',label='';
   const p2=n=>('0'+n).slice(-2);
+  if(!window.RCF)window.RCF=`${ty}-01-01`;
+  if(!window.RCT)window.RCT=`${ty}-${p2(tm)}-${p2(td)}`;
+  let from='',to='',label='';
   if(P==='m'){from=`${ty}-${p2(tm)}-01`;to=`${ty}-${p2(tm)}-31`;label=`${ty}년 ${tm}월`}
   else if(P==='pm'){let y=ty,m=tm-1;if(m<1){m=12;y--}from=`${y}-${p2(m)}-01`;to=`${y}-${p2(m)}-31`;label=`${y}년 ${m}월`}
   else if(P==='y'){from=`${ty}-01-01`;to=`${ty}-12-31`;label=`${ty}년`}
+  else if(P==='custom'){let a=window.RCF,b=window.RCT;if(a>b){const z=a;a=b;b=z}from=a;to=b;label=`${from} ~ ${to}`}
   else{from='0000-01-01';to='9999-12-31';label='전체 기간'}
   let s=0,n=0;const byG={},byM={};
   ROWS.forEach(r=>{const d=kd(r[1]);if(!d||d<from||d>to)return;
@@ -693,20 +701,26 @@ function renderRev(){
     const g=(r[0]||'기타').slice(0,4);byG[g]=(byG[g]||0)+1;
     const ym=d.slice(0,7);byM[ym]=(byM[ym]||0)+a});
   const gs=Object.keys(byG).sort((x,y)=>byG[y]-byG[x]).slice(0,3);
-  const mk=Object.keys(byM).sort().slice(-12);
+  const allM=Object.keys(byM).sort();
+  const mk=(P==='all'||P==='custom')?allM:allM.slice(-12);
   const mx=Math.max(1,...mk.map(k=>byM[k]));
   document.getElementById('res').innerHTML=`
   <div class="pan"><div class="chips" style="margin-bottom:13px">
-  ${[['m','이번달'],['pm','지난달'],['y','올해'],['all','전체']].map(x=>
+  ${[['m','이번달'],['pm','지난달'],['y','올해'],['all','전체'],['custom','기간설정']].map(x=>
     `<span class="ch${P===x[0]?' on':''}" onclick="window.RP='${x[0]}';render()">${x[1]}</span>`).join('')}</div>
+  ${P==='custom'?`<div class="rvrange">
+    <input type="date" value="${window.RCF}" onchange="window.RCF=this.value;render()">
+    <span class="rvtil">~</span>
+    <input type="date" value="${window.RCT}" onchange="window.RCT=this.value;render()">
+  </div>`:''}
   <div class="eb"><div class="l">${label} 매출</div><div class="v">${won(s)}</div>
   <div class="r">${n}건${n?' · 건당 평균 '+won(Math.round(s/n)):''}</div></div>
   <div class="rev3">${gs.map(g=>`<div class="rvc"><div class="rvl">${esc(g)}</div>
   <div class="rvv">${byG[g]}건</div></div>`).join('')}</div>
-  <div class="lb" style="margin-top:16px">월별 추이</div>
-  ${mk.map(k=>`<div class="mrow"><span class="ml">${k}</span>
+  <div class="lb" style="margin-top:16px">월별 추이${mk.length?` <span style="color:var(--mute);font-weight:600;font-size:12px">· ${mk.length}개월</span>`:''}</div>
+  ${mk.length?mk.map(k=>`<div class="mrow"><span class="ml">${k}</span>
   <div class="mb"><div class="mf" style="width:${Math.round(byM[k]/mx*100)}%;${k===ty+'-'+p2(tm)?'background:var(--blue)':''}"></div></div>
-  <span class="mv"${k===ty+'-'+p2(tm)?' style="color:var(--blue);font-weight:800"':''}>${byM[k].toLocaleString('ko-KR')}</span></div>`).join('')}
+  <span class="mv"${k===ty+'-'+p2(tm)?' style="color:var(--blue);font-weight:800"':''}>${byM[k].toLocaleString('ko-KR')}</span></div>`).join(''):`<div class="emp" style="padding:16px 4px">해당 기간 매출 내역이 없습니다.</div>`}
   </div>`;
 }
 function renderHome(){
