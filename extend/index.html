@@ -186,6 +186,15 @@ border-bottom:1px dashed var(--line);cursor:pointer}
 .mb{flex:1;height:8px;background:#eef1f6;border-radius:4px;overflow:hidden}
 .mf{height:8px;background:#93b4f0;border-radius:4px}
 .mv{font-size:12px;color:var(--txt);width:78px;text-align:right;flex-shrink:0}
+.dl{font-size:11px;color:var(--mute);border:1px solid var(--line);background:var(--soft);
+border-radius:7px;padding:3px 8px;cursor:pointer;font-weight:700}
+.dl:active{background:var(--line)}
+.dlc{background:var(--rbg);border:1px solid var(--rbd);border-radius:8px;padding:8px 10px;
+margin-top:7px;font-size:12px;color:var(--red);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.dly{margin-left:auto;background:var(--red);color:#fff;border-radius:7px;padding:5px 12px;
+cursor:pointer;font-weight:700;font-size:12px}
+.dln{background:#fff;border:1px solid var(--line2);color:var(--sub);border-radius:7px;
+padding:5px 12px;cursor:pointer;font-weight:700;font-size:12px}
 </style>
 </head>
 <body>
@@ -273,7 +282,7 @@ function buildFromRows(rows){
   const uni=(a,b)=>{const ra=find(a),rb=find(b);if(ra!==rb)par[ra]=rb};
   const recs=rows.map(r=>({g:r[0]||'',d:kd(r[1]),a:r[3]||'',p:nrm(r[5]),
     n:String(r[6]||'').trim(),e:kd(r[7]),rg:String(r[8]||'').trim(),
-    bz:String(r[9]||'').trim(),m:String(r[10]||''),db:String(r[11]||'')}))
+    bz:String(r[9]||'').trim(),m:String(r[10]||''),db:String(r[11]||''),sr:r[12]||0}))
     .filter(r=>r.d&&(r.p||r.n));
   recs.forEach(r=>{if(r.p)find(r.p)});
   recs.forEach(r=>{
@@ -297,7 +306,7 @@ function buildFromRows(rows){
     const b={id:++id,ph:ph,cur:ph[ph.length-1]||'',nms:nms,nm:nms[nms.length-1]||'',
       exp:exp,rg:rg,bz:bz,db:db,
       ev:g.map(r=>{const pr=pref(r.m);
-        return{g:r.g,d:r.d,a:r.a,e:r.e,n:r.n,p:r.p,m:r.m,ref:pr.ref,bn:pr.bn}})};
+        return{g:r.g,d:r.d,a:r.a,e:r.e,n:r.n,p:r.p,m:r.m,ref:pr.ref,bn:pr.bn,sr:r.sr}})};
     biz.push(b);ph.forEach(p=>ids[p]=b.id);
   });
   const byN={},byL4={};
@@ -370,6 +379,27 @@ async function pushRow(obj){
     qSet(qGet().filter(x=>x!==obj&&JSON.stringify(x)!==JSON.stringify(obj)));
     setSync(`시트 저장됨 · ${ROWS.length}행`,'');
   }catch(err){setSync(`시트 저장 실패 · 대기 ${qGet().length}건`,'e')}
+}
+let DELP=null;
+function askDel(sr){DELP=(DELP===sr)?null:sr;draw()}
+async function doDel(sr){
+  if(!CFG.url)return toast('시트 미연결 상태에서는 삭제할 수 없습니다');
+  const row=ROWS.find(r=>+r[12]===+sr);
+  if(!row)return toast('해당 기록을 찾을 수 없습니다');
+  setSync('삭제 중…','w');
+  try{
+    const r=await fetch(CFG.url,{method:'POST',redirect:'follow',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({token:CFG.token,action:'delete',row:+sr,check:row})});
+    const j=await r.json();
+    if(!j.ok){
+      if(j.err==='MISMATCH'){toast('시트가 변경됐습니다 — 새로고침 후 다시 시도하세요');await pullSheet();return}
+      throw new Error(j.err);
+    }
+    DELP=null;toast('삭제됨');
+    await pullSheet();
+    if(CUR&&byId[CUR])draw();else close2();
+  }catch(e){setSync('삭제 실패','e');toast('삭제 실패 — 다시 시도하세요')}
 }
 async function flushQueue(){
   const q=qGet();if(!q.length||!CFG.url)return;
@@ -745,8 +775,13 @@ ${out.map(e=>{const t=byId[e.t];return`<div class="ri" onclick="go(${e.t})">
 <div class="bx"><div class="lb" style="display:flex;justify-content:space-between">
 <span>입금 이력</span><span style="color:var(--mute)">${ev.length}건</span></div>
 <div class="hs">${ev.map(e=>`<div class="hi">
-<div class="h1"><span>${e.d?fk(e.d):'—'} ${gtag(e.g)}${e.lo?'<span class="gt ok">신규기록</span>':''}</span>
-<span style="font-weight:700">${fa(e.a)}</span></div>
+<div class="h1"><span>${e.d?fk(e.d):'—'} ${gtag(e.g)}</span>
+<span style="display:flex;align-items:center;gap:8px">
+<span style="font-weight:700">${fa(e.a)}</span>
+${e.sr?`<span class="dl" onclick="event.stopPropagation();askDel(${e.sr})">삭제</span>`:''}</span></div>
+${DELP===e.sr?`<div class="dlc">이 기록을 시트에서 완전히 지웁니다.
+<span class="dly" onclick="doDel(${e.sr})">삭제</span>
+<span class="dln" onclick="askDel(${e.sr})">취소</span></div>`:''}
 ${e.e?`<div class="h2">만료일 → ${fk(e.e)}</div>`:''}
 ${e.n&&e.n!==b.nm?`<div class="h2">상호: ${esc(e.n)}</div>`:''}
 ${e.p&&e.p!==b.cur?`<div class="h2">번호: ${fp(e.p)}</div>`:''}
