@@ -136,6 +136,21 @@ details.card[open] > summary::before{content:"▼ "}
 .jn-photo img{width:100%;max-height:220px;object-fit:contain;border:1px solid #ccc;border-radius:4px}
 .jn-cap{font-size:11px;font-weight:700;color:#333;margin-top:3px}
 .jn-phx{position:absolute;top:4px;right:4px;background:var(--red);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:900;cursor:pointer}
+/* 본문 섹션 하단에 들어가는 사진 블록 */
+.jn-photos{page-break-inside:avoid}
+.jn-inphotos{margin:9px 0 4px;page-break-inside:avoid}
+.jn-inphotos .jn-photos{grid-template-columns:1fr 1fr}
+.jn-photos.one{grid-template-columns:1fr;max-width:64%}
+.jn-phcap{font-size:11px;font-weight:800;color:#0060df;margin-bottom:4px}
+/* 사진 관리 리스트(화면 전용) */
+.jph-row{display:grid;grid-template-columns:66px 1fr 168px 54px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px;margin-top:6px;background:#fff}
+.jph-row img{width:66px;height:50px;object-fit:cover;border-radius:5px;border:1px solid #ddd}
+.jph-row input,.jph-row select{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:7px 8px;font-size:11.5px;font-family:inherit;background:#fff}
+.jph-del{background:var(--red);color:#fff;border:none;border-radius:7px;padding:8px 0;font-size:11px;font-weight:900;cursor:pointer}
+.jq-chip{display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;color:#111}
+.jq-chip.done{border-color:var(--blue);background:var(--blue-ll);color:var(--blue-d)}
+.jq-chip.todo{border-color:var(--red);color:var(--red)}
+@media(max-width:560px){.jph-row{grid-template-columns:56px 1fr;grid-auto-rows:auto}.jph-row img{grid-row:span 2}}
 @media print{
   body *{visibility:hidden}
   .jn-sheet,.jn-sheet *{visibility:visible}
@@ -1201,6 +1216,15 @@ function renderJournal(){
           <div class="cr-hint" style="margin-top:8px">※ 계획서·노트 텍스트는 클라우드(D1)에 자동 저장됩니다. 사진은 용량 관계로 이 브라우저에만 저장 — 노트 생성 후 바로 PDF로 뽑아두세요. 백업 파일에는 사진까지 포함됩니다.</div>
         </div>
       </details>
+
+      <details style="margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden">
+        <summary style="cursor:pointer;padding:11px 14px;font-size:12.5px;font-weight:800;color:var(--blue-d);list-style:none">⚙️ 서버 주소 설정 (최초 1회) <span style="font-weight:700;font-size:11.5px;margin-left:6px;color:${jWorkerBase()?'var(--blue)':'var(--red)'}">${jWorkerBase()?'설정됨':'미설정 — AI 생성 불가'}</span></summary>
+        <div style="padding:4px 14px 14px">
+          <div class="fld"><label>Cloudflare Worker URL</label><input id="jWorkerUrl" value="${escapeHtml(localStorage_get('nmsc_worker_url'))}" placeholder="https://nmsc-lab-parser.○○○.workers.dev/parse-docs" style="font-size:11px;font-family:monospace"></div>
+          <button class="btn" style="background:var(--blue);color:#fff;margin-top:8px;padding:10px;width:100%" onclick="jSaveWorkerUrl()">서버 주소 저장</button>
+          <div class="cr-hint" style="margin-top:6px">※ [신규 업체 입력] 탭과 같은 주소를 씁니다. 이 브라우저에만 저장됩니다.</div>
+        </div>
+      </details>
     </div>
 
     ${co && co.plan ? renderJPlanSummary(co) : renderJRegister()}
@@ -1209,38 +1233,236 @@ function renderJournal(){
   </div>`;
 }
 
-/* ---- STEP1: 회사 등록 ---- */
+/* ---- STEP1: 회사 등록 (설립 완료 업체 간편 등록) ---- */
 function renderJRegister(){
+  const ty=new Date().getFullYear();
   return `
   <div class="card">
-    <h2>STEP 1 — 회사 등록 &amp; 연구계획서 생성 <span style="font-size:11px;color:var(--gray);font-weight:600">(회사당 연 1회)</span></h2>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <div style="border:1.5px solid var(--blue);border-radius:10px;padding:12px;background:var(--blue-ll)">
-        <div style="font-size:13px;font-weight:800;color:var(--blue-d)">방법 A — [신규 업체 입력] 탭 데이터 가져오기</div>
-        <div style="font-size:11.5px;color:var(--gray);font-weight:600;margin-top:3px">설립 신고 작업 직후라면 이 버튼 하나로 회사·연구원·연구과제가 자동으로 넘어옵니다</div>
-        <button class="btn" style="background:var(--blue);color:#fff;margin-top:8px;padding:10px" onclick="jImportFromD()">현재 입력된 업체 정보 가져오기</button>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff">
-        <div style="font-size:13px;font-weight:800">방법 B — 직접 입력</div>
-        <div class="frow" style="margin-top:8px">
-          <div class="fld"><label>회사명</label><input id="j_bizName" placeholder="㈜○○○"></div>
-          <div class="fld"><label>업종/주요제품</label><input id="j_biz" placeholder="예: 종이 케이스(중이패키지) 제조"></div>
-        </div>
-        <div class="frow">
-          <div class="fld"><label>대표자명</label><input id="j_ceo" placeholder="홍길동"></div>
-          <div class="fld"><label>연구원(서명자, 쉼표구분)</label><input id="j_people" placeholder="이선희, 김철수"></div>
-        </div>
-        <div class="frow">
-          <div class="fld"><label>수행 부서</label><select id="j_dept"><option>연구개발전담부서</option><option>기업부설연구소</option></select></div>
-          <div class="fld"><label>계획 시작 (연-월)</label><input id="j_start" type="month" value="${new Date().getFullYear()}-01"></div>
-        </div>
-        <div class="fld"><label>연구과제 아이디어 (KOITA 개요서의 과제 3개 붙여넣기, 없으면 비워두기 — AI가 업종으로 생성)</label><textarea id="j_tasks" style="width:100%;min-height:60px;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;font-family:inherit" placeholder="예: 1. 친환경 종이 소재 내구성 연구  2. 포장 구조 최적화  3. 인쇄 품질 안정화"></textarea></div>
+    <h2>STEP 1 — 업체 등록 <span style="font-size:11px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px">1분</span></h2>
+    <p class="desc"><b>이미 설립(인정)이 끝난 업체</b>도 여기서 바로 시작합니다. 아래 칸만 채우고 아래쪽 파란 버튼을 누르면 등록이 끝나고, 곧바로 분기 보고서를 만들 수 있습니다.</p>
+
+    <div style="border:1.5px solid var(--blue);border-radius:10px;padding:11px 12px;background:var(--blue-ll);margin-bottom:12px">
+      <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">진행 순서</div>
+      <div style="font-size:12px;font-weight:700;color:#234;margin-top:4px;line-height:1.75">
+        ① 아래 정보 입력 → ② <b>[업체 등록하기]</b> 클릭 → ③ 인정일 이후 분기가 자동으로 목록에 뜸 → ④ <b>[미작성 분기 전부 생성]</b> → ⑤ 사진 넣고 인쇄
       </div>
     </div>
-    <button class="btn" style="background:var(--red);color:#fff" onclick="jGeneratePlan()" id="jPlanBtn">연구계획서 생성</button>
+
+    <div style="border:2px solid var(--blue);border-radius:12px;padding:14px;background:#fff;margin-bottom:12px">
+      <div style="font-size:13.5px;font-weight:900;color:var(--blue-d)">📎 서류 올리면 AI가 아래 칸을 자동으로 채웁니다 <span style="font-size:10.5px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px;margin-left:4px">추천</span></div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:4px;line-height:1.7">
+        <b>연구소·전담부서 인정서</b>(인정일·부서명·연구원) · <b>사업자등록증</b>(회사명·대표·업종) · <b>연구계획서/KOITA 개요서</b>(연구과제) · 장비 목록 — 있는 것만 한꺼번에 올리세요
+      </div>
+      <div id="jDropzone" style="border:2px dashed var(--blue);border-radius:12px;padding:22px;text-align:center;background:var(--blue-ll);cursor:pointer;transition:.15s;margin-top:10px">
+        <div style="font-size:30px;margin-bottom:5px">📎</div>
+        <div style="font-size:13px;font-weight:800;color:var(--blue-d)">여기로 서류를 끌어놓거나 클릭해서 선택</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray);margin-top:4px">여러 개 한번에 · PDF/JPG/PNG · 파일당 20MB</div>
+        <input type="file" id="jFileInput" multiple accept="application/pdf,image/*" style="display:none">
+      </div>
+      <div id="jFileList" style="margin-top:10px"></div>
+      <button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:13px;font-size:14px" id="jParseBtn" onclick="jParseDocs()">서류 분석해서 자동 입력</button>
+      <div id="jParseStatus" style="margin-top:9px;font-size:12.5px;font-weight:800;display:none"></div>
+      <div class="cr-hint" style="margin-top:6px">※ 서버 주소가 설정돼 있어야 합니다(위 ⚙️). 서류가 없으면 아래 칸에 직접 입력해도 됩니다.</div>
+    </div>
+
+    <details style="margin-bottom:10px">
+      <summary style="font-size:11.5px;font-weight:800;color:var(--blue-d);cursor:pointer">이미 [신규 업체 입력] 탭에서 작업 중이라면 → 자동으로 가져오기</summary>
+      <button class="btn sec" style="width:100%;margin-top:7px;padding:10px" onclick="jImportFromD()">현재 입력된 업체 정보 가져오기</button>
+    </details>
+
+    <div class="frow">
+      <div class="fld"><label>회사명 <span style="color:var(--red)">*</span></label><input id="j_bizName" placeholder="㈜펌킨푸드"></div>
+      <div class="fld"><label>대표자명 <span style="color:var(--red)">*</span></label><input id="j_ceo" placeholder="홍길동"></div>
+    </div>
+    <div class="fld"><label>업종 / 주요제품 <span style="color:var(--red)">*</span> <span style="color:var(--gray);font-weight:600">— 무엇을 만들고 파는 회사인지 구체적으로</span></label><input id="j_biz" placeholder="예: 중국식자재 수입·가공 (분모자 등 당면류)"></div>
+    <div class="frow">
+      <div class="fld"><label>연구원 (쉼표 구분, 앞사람이 기록자) <span style="color:var(--red)">*</span></label><input id="j_people" placeholder="김위, 하철학"></div>
+      <div class="fld"><label>구분</label><select id="j_dept"><option>연구개발전담부서</option><option>기업부설연구소</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fld"><label>연구소·전담부서 <b>인정일</b> <span style="color:var(--gray);font-weight:600">(인정서에 적힌 날짜)</span></label><input id="j_approve" type="date"></div>
+      <div class="fld"><label>보고서 시작 (연-월)</label><input id="j_start" type="month" value="${ty}-01"></div>
+    </div>
+    <div class="cr-hint" style="margin:-4px 0 10px">※ 인정일을 넣으면 <b>인정일이 속한 분기부터 지금까지</b> 써야 할 보고서 목록이 자동으로 만들어집니다. 보고서 시작월은 비워두면 인정일 기준으로 자동 조정됩니다.</div>
+
+    <div class="fld"><label>연구과제 (줄바꿈으로 1~3개) <span style="color:var(--gray);font-weight:600">— KOITA 개요서에 쓴 과제를 그대로 붙여넣으면 가장 정확</span></label>
+      <textarea id="j_tasks" style="width:100%;min-height:66px;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;font-family:inherit" placeholder="예)
+수입 당면(분모자) 식감·복원력 개선 연구
+보관 중 변질 방지를 위한 포장·보관 조건 연구
+원료 배합비에 따른 품질 편차 줄이기 연구"></textarea></div>
+
+    <details style="margin-bottom:12px">
+      <summary style="font-size:11.5px;font-weight:800;color:var(--blue-d);cursor:pointer">이미 만들어 둔 연구계획서(HWP·PDF)가 있다면 → 본문 붙여넣기 (선택)</summary>
+      <textarea id="j_planPaste" style="width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12px;font-family:inherit;margin-top:7px" placeholder="한글 파일을 열어 Ctrl+A → Ctrl+C 한 뒤 여기에 붙여넣으세요. 과제명·목표·월별 계획을 그대로 살려서 정리합니다."></textarea>
+    </details>
+
+    <button class="btn" style="background:var(--blue);color:#fff;width:100%;font-size:15px;padding:15px" onclick="jQuickRegister()">업체 등록하기 (서버 없이 즉시)</button>
+    <button class="btn sec" style="width:100%;margin-top:8px" onclick="jGeneratePlan()" id="jPlanBtn">AI로 연구계획서까지 만들기 (서버 필요 · 30초)</button>
     <div id="jPlanStatus" style="margin-top:10px;font-size:12.5px;font-weight:700;display:none"></div>
-    <div class="cr-hint" style="margin-top:8px">※ 기존 연구계획서(HWP)가 있으면: 한글에서 PDF로 저장 → [신규 업체 입력] 탭 서류칸에 올려 파싱하거나, 위 칸에 과제 내용을 붙여넣으세요.</div>
+    <div class="cr-hint" style="margin-top:8px">※ 위 파란 버튼은 인터넷 서버 없이 바로 등록됩니다. 계획서 문서 자체가 필요하면 등록 후 [계획서 다시 생성]으로 언제든 AI 작성이 가능합니다.
+    <a href="javascript:void(0)" onclick="jFillSample()" style="color:var(--blue);font-weight:800;margin-left:6px">예시 채우기(펌킨푸드)</a></div>
   </div>`;
+}
+
+/* ===== 연구일지 전용 서류 업로드 → AI 자동 입력 ===== */
+let _jFiles = [];              // {name, media_type, data}
+let _jParsedExtra = null;      // {equip:[], tasks:[], labName, labAddr, area}
+
+function bindJournalDropzone(){
+  const dz=document.getElementById('jDropzone'), fi=document.getElementById('jFileInput');
+  if(!dz||!fi) return;
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.style.background='#d7e8ff';};
+  dz.ondragleave=()=>{dz.style.background='';};
+  dz.ondrop=e=>{e.preventDefault();dz.style.background='';jHandleFiles(e.dataTransfer.files);};
+  fi.onchange=()=>jHandleFiles(fi.files);
+  jRenderFileList();
+}
+function jHandleFiles(fileList){
+  Array.from(fileList).forEach(file=>{
+    if(file.size>20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return; }
+    const rd=new FileReader();
+    rd.onload=()=>{ _jFiles.push({name:file.name, media_type:file.type||'application/octet-stream', data:rd.result.split(',')[1]}); jRenderFileList(); };
+    rd.readAsDataURL(file);
+  });
+}
+function jRenderFileList(){
+  const el=document.getElementById('jFileList'); if(!el) return;
+  if(!_jFiles.length){ el.innerHTML=''; return; }
+  el.innerHTML=_jFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:5px">
+      <span style="font-size:16px">${f.media_type.includes('pdf')?'📄':'🖼️'}</span>
+      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}</span>
+      <button onclick="jRemoveFile(${i})" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:900;cursor:pointer">삭제</button>
+    </div>`).join('');
+}
+function jRemoveFile(i){ _jFiles.splice(i,1); jRenderFileList(); }
+
+async function jParseDocs(){
+  const base=jWorkerBase();
+  const st=document.getElementById('jParseStatus');
+  const show=(c,h)=>{ if(st){st.style.display='block';st.style.color=c;st.innerHTML=h;} };
+  if(!base){ show('var(--red)','❌ 서버 주소가 없습니다. 맨 위 [⚙️ 서버 주소 설정]에서 저장하세요.'); return; }
+  if(!_jFiles.length){ show('var(--red)','❌ 먼저 서류를 올려주세요.'); return; }
+  const btn=document.getElementById('jParseBtn'); if(btn){btn.disabled=true;btn.style.opacity='.6';}
+  show('var(--amber)','⏳ AI가 서류를 읽는 중입니다... (10~30초)');
+  const note='이 회사는 이미 기업부설연구소 또는 연구개발전담부서 인정을 받은 업체입니다(설립 완료). 연구소인정서에서 인정일(foundLabDate)·부서명(labName)·구분(labType)을, 사업자등록증에서 회사명·대표자·업종·주요제품을, 연구계획서나 KOITA 개요서가 있으면 연구과제(overview.tasks)를, 장비 목록이 있으면 equip을 정확히 읽어주세요. 연구원 명단은 people로 주세요.';
+  try{
+    const resp=await fetch(base+'/parse-docs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:_jFiles, note})});
+    const r=await resp.json();
+    if(r.error && !r.data){
+      show('var(--red)','❌ 오류: '+escapeHtml(r.error||'')+(r.raw?'<br><textarea style="width:100%;min-height:100px;font-size:11px">'+escapeHtml(r.raw)+'</textarea>':''));
+      if(btn){btn.disabled=false;btn.style.opacity='1';} return;
+    }
+    const d=r.data||{};
+    const el=(id,v)=>{ const e=document.getElementById(id); if(e && v) e.value=v; };
+    const filled=[];
+    if(d.bizName){ el('j_bizName',d.bizName); filled.push('회사명'); }
+    if(d.ceo){ el('j_ceo',d.ceo); filled.push('대표자'); }
+    const biz=[d.mainProduct||'', d.researchTopic||''].filter(Boolean).join(' / ');
+    if(biz){ el('j_biz',biz); filled.push('업종·주요제품'); }
+    if(Array.isArray(d.people)&&d.people.length){
+      const names=d.people.filter(p=>p.role!=='manage').map(p=>p.name).filter(Boolean);
+      if(names.length){ el('j_people',names.join(', ')); filled.push('연구원 '+names.length+'명'); }
+    }
+    if(d.foundLabDate){ el('j_approve',d.foundLabDate); el('j_start',String(d.foundLabDate).slice(0,7)); filled.push('인정일'); }
+    const dp=document.getElementById('j_dept');
+    if(dp){ dp.value = (d.labType==='lab'||/연구소/.test(d.labName||'')) ? '기업부설연구소' : '연구개발전담부서'; }
+    // 연구과제
+    let tasks='';
+    if(d.overview && Array.isArray(d.overview.tasks) && d.overview.tasks.length){
+      tasks=d.overview.tasks.map(t=>[t.n,t.c].filter(Boolean).join(': ')).join('\n');
+    } else if(d.researchTopic){ tasks=d.researchTopic; }
+    if(tasks){ el('j_tasks',tasks); filled.push('연구과제'); }
+    // 보고서에 쓸 장비 목록 보관
+    _jParsedExtra={ equip:Array.isArray(d.equip)?d.equip:[], labName:d.labName||'', labAddr:d.labAddr||'', area:d.area||'' };
+
+    const docs=(d.coverage&&Array.isArray(d.coverage.detectedDocs)&&d.coverage.detectedDocs.length)
+      ? '<div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:4px">📎 인식한 서류: '+d.coverage.detectedDocs.map(escapeHtml).join(', ')+'</div>' : '';
+    const miss=[];
+    if(!document.getElementById('j_approve')?.value) miss.push('인정일');
+    if(!document.getElementById('j_people')?.value) miss.push('연구원');
+    if(!document.getElementById('j_biz')?.value) miss.push('업종·주요제품');
+    show('var(--blue)','✅ 자동 입력 완료 — '+(filled.join(' · ')||'읽은 항목 없음')
+      +(_jParsedExtra.equip.length?' · 장비 '+_jParsedExtra.equip.length+'종':'')+docs
+      +(miss.length?'<div style="color:var(--red);margin-top:5px">⚠️ 못 읽은 항목: <b>'+miss.join(', ')+'</b> — 아래 칸에 직접 채워주세요</div>':'')
+      +'<div style="color:#234;margin-top:5px;font-weight:700">아래 내용을 확인·수정한 뒤 [업체 등록하기]를 누르세요.</div>');
+  }catch(e){
+    show('var(--red)','❌ 통신 실패: '+escapeHtml(e.message));
+  }
+  if(btn){btn.disabled=false;btn.style.opacity='1';}
+}
+
+/* 샘플 채우기 */
+function jFillSample(){
+  const el=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v;};
+  el('j_bizName', SAMPLE.bizName); el('j_ceo', SAMPLE.ceo);
+  el('j_biz', SAMPLE.mainProduct+' 수입·가공 ('+SAMPLE.ksicBiz+')');
+  el('j_people', SAMPLE.people.map(p=>p.name).join(', '));
+  const dp=document.getElementById('j_dept'); if(dp) dp.value=SAMPLE.labName;
+  el('j_approve', SAMPLE.foundLabDate);
+  el('j_start', SAMPLE.foundLabDate.slice(0,7));
+  el('j_tasks','수입 당면(분모자)의 식감·복원력 개선 연구\n보관 중 변질을 막기 위한 포장·보관 조건 연구\n원료 배합비에 따른 품질 편차 줄이기 연구');
+}
+
+/* 입력값 모으기 */
+function jFormVals(){
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  return {bizName:v('j_bizName'), ceo:v('j_ceo'), biz:v('j_biz'), people:v('j_people'),
+    dept:document.getElementById('j_dept')?.value||'연구개발전담부서',
+    approve:v('j_approve'), start:v('j_start'), tasks:v('j_tasks'), planPaste:v('j_planPaste')};
+}
+
+/* ---- 서버 없이 즉시 등록 (설립 완료 업체용) ---- */
+function jQuickRegister(){
+  const f=jFormVals();
+  if(!f.bizName){ alert('회사명을 입력하세요.'); return; }
+  if(!f.people){ alert('연구원 이름을 최소 1명 입력하세요. (보고서 기록자 서명란에 들어갑니다)'); return; }
+  // 시작 시점: 인정일 우선
+  let startYm = f.approve ? f.approve.slice(0,7) : (f.start || (new Date().getFullYear()+'-01'));
+  const year = parseInt(startYm.slice(0,4));
+  const m0 = parseInt(startYm.slice(5,7))||1;
+  const first=(f.people.split(',')[0]||'').trim();
+
+  // 과제 → 주요내용(대주제) + 소주제 자동 분해
+  let bigs=f.tasks.split('\n').map(s=>s.replace(/^\s*\d+[.)]\s*/,'').trim()).filter(Boolean);
+  if(!bigs.length){
+    const b=f.biz||'주요 제품';
+    bigs=[b+' 품질 향상 연구', b+' 공정·조건 최적화 연구', b+' 보관·안정성 개선 연구'];
+  }
+  const subTpl=['현황 조사 및 기준값 설정','시험 조건 설계 및 시제품 제작','측정·시험 및 결과 정리','문제점 분석 및 개선안 적용'];
+  // "과제명: 설명" 형태면 앞은 대주제, 뒤는 소주제로 분리
+  const mainContents=bigs.slice(0,3).map(b=>{
+    const m=b.split(/\s*[:：]\s*/);
+    const title=(m[0]||b).trim();
+    const desc=m.slice(1).join(': ').trim();
+    return {big:title, subs:(desc?[desc]:[]).concat(subTpl).slice(0,4)};
+  });
+
+  // 12개월 배분표 (시작월부터)
+  const flat=[]; mainContents.forEach(mc=>mc.subs.forEach(s=>flat.push(mc.big+' — '+s)));
+  const monthlyPlan=[];
+  for(let i=0;i<12;i++){
+    const mm=((m0-1+i)%12)+1;
+    monthlyPlan.push({month:mm, sub:flat[i%flat.length]});
+  }
+  monthlyPlan.sort((a,b)=>a.month-b.month);
+
+  const plan={
+    company:f.bizName, ceo:f.ceo, year:year,
+    projectTitle:(f.biz? f.biz+' 품질·공정 개선 연구' : bigs[0]),
+    director:first, goal:'현재 제품·공정에서 나타나는 문제를 찾아 원인을 확인하고, 시험을 통해 개선 조건을 정리해 사업화 전 단계까지 검증한다.',
+    people:f.people, mainContents, monthlyPlan,
+    startDate:startYm+'-01', dept:f.dept, manpower:String(f.people.split(',').filter(Boolean).length),
+    budget:'자체 부담', noteWriter:first, noteCycle:'분기 1회 작성(월별 진행내용 구분 기재)',
+    labApproved:f.approve||'', startYm:startYm, bizDesc:f.biz, planPaste:f.planPaste||'', quick:true,
+    equipList:(_jParsedExtra&&_jParsedExtra.equip&&_jParsedExtra.equip.length)?_jParsedExtra.equip
+              :((D.equip||[]).filter(e=>e&&e.name))
+  };
+  J.companies[f.bizName]={ plan, notes:(J.companies[f.bizName]?.notes)||{} };
+  J.cur=f.bizName; jSave(); jCloudPush(f.bizName);
+  alert('['+f.bizName+'] 등록 완료!\n아래 [연구개발보고서·노트 생성]에서 분기를 선택해 만드세요.');
+  render();
 }
 
 function jImportFromD(){
@@ -1249,9 +1471,11 @@ function jImportFromD(){
   if(!name){ alert('[신규 업체 입력] 탭에 회사명이 없습니다. 먼저 그 탭에서 업체 정보를 입력(또는 서류 분석)하세요.'); return; }
   const el=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v;};
   el('j_bizName', name);
-  el('j_biz', (D.industry? '' : '') + (D.researchTopic||D.mainProduct||''));
+  el('j_biz', [D.mainProduct||'', D.researchTopic||''].filter(Boolean).join(' / '));
   el('j_ceo', D.ceo||'');
   el('j_people', (D.people||[]).map(p=>p.name).filter(Boolean).join(', '));
+  el('j_approve', D.foundLabDate||'');
+  if(D.foundLabDate) el('j_start', D.foundLabDate.slice(0,7));
   const dept=document.getElementById('j_dept'); if(dept) dept.value = (D.labType==='lab'?'기업부설연구소':'연구개발전담부서');
   // 개요서 과제 3개
   let tasks='';
@@ -1266,24 +1490,23 @@ async function jGeneratePlan(){
   const base=jWorkerBase();
   const st=document.getElementById('jPlanStatus');
   const show=(c,h)=>{st.style.display='block';st.style.color=c;st.innerHTML=h;};
-  if(!base){ show('var(--red)','서버 주소가 없습니다. [신규 업체 입력] 탭의 서버 주소 설정을 먼저 저장하세요.'); return; }
-  const bizName=(document.getElementById('j_bizName')?.value||'').trim();
+  if(!base){ show('var(--red)','서버 주소가 없습니다. 위 ⚙️ 서버 주소 설정에서 저장하거나, 파란 [업체 등록하기] 버튼으로 서버 없이 등록하세요.'); return; }
+  const f=jFormVals();
+  const bizName=f.bizName;
   if(!bizName){ show('var(--red)','회사명을 입력하거나 [현재 입력된 업체 정보 가져오기]를 누르세요.'); return; }
-  const biz=(document.getElementById('j_biz')?.value||'').trim();
-  const ceo=(document.getElementById('j_ceo')?.value||'').trim();
-  const people=(document.getElementById('j_people')?.value||'').trim();
-  const dept=(document.getElementById('j_dept')?.value||'연구개발전담부서');
-  const start=(document.getElementById('j_start')?.value||'');
-  const tasks=(document.getElementById('j_tasks')?.value||'').trim();
+  const biz=f.biz, ceo=f.ceo, people=f.people, dept=f.dept, tasks=f.tasks;
+  const start=f.approve ? f.approve.slice(0,7) : (f.start||'');
 
   show('var(--amber)','AI가 연구계획서를 작성 중입니다... (20~40초)');
   const btn=document.getElementById('jPlanBtn'); btn.disabled=true; btn.style.opacity='.6';
   try{
-    const prompt=`[회사 정보]\n회사명: ${bizName}\n업종/주요제품: ${biz}\n대표자: ${ceo}\n연구원: ${people}\n수행 부서: ${dept}\n계획 시작: ${start} (이 달부터 12개월)\n\n[KOITA 개요서 연구과제(있으면 이걸 발전시켜 소주제 6개로)]\n${tasks||'(제공 안 됨 — 업종에 맞게 생성)'}\n\n위 정보로 1년치 연구개발계획서를 스키마대로 생성하세요. monthlyPlan은 ${start||'해당 연도 1월'}부터 12개월.`;
+    const prompt=`[회사 정보]\n회사명: ${bizName}\n업종/주요제품: ${biz}\n대표자: ${ceo}\n연구원: ${people}\n수행 부서: ${dept}\n연구소(전담부서) 인정일: ${f.approve||'(미입력)'}\n계획 시작: ${start} (이 달부터 12개월)\n\n[KOITA 개요서 연구과제(있으면 이걸 발전시켜 소주제 6개로)]\n${tasks||'(제공 안 됨 — 업종에 맞게 생성)'}\n\n${f.planPaste?('[이미 작성된 기존 연구계획서 본문 — 과제명·목표·월별 계획을 최대한 그대로 살려 정리할 것]\\n'+f.planPaste.slice(0,4000)+'\\n\\n'):''}위 정보로 1년치 연구개발계획서를 스키마대로 생성하세요. monthlyPlan은 ${start||'해당 연도 1월'}부터 12개월.`;
     const resp=await fetch(base+'/generate-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     const r=await resp.json();
     if(r.error && !r.data){ show('var(--red)','오류: '+escapeHtml(r.error)+(r.raw?'<br><textarea style="width:100%;min-height:100px;font-size:11px">'+escapeHtml(r.raw)+'</textarea>':'')); btn.disabled=false;btn.style.opacity='1'; return; }
     const plan=r.data; plan.ceo=ceo; plan.people=people; plan.startYm=start;
+    plan.labApproved=f.approve||''; plan.bizDesc=biz; plan.dept=plan.dept||dept;
+    plan.equipList=(_jParsedExtra&&_jParsedExtra.equip&&_jParsedExtra.equip.length)?_jParsedExtra.equip:((D.equip||[]).filter(e=>e&&e.name));
     J.companies[bizName]={ plan, notes:(J.companies[bizName]?.notes)||{} };
     J.cur=bizName; jSave(); jCloudPush(bizName);
     show('var(--blue)','연구계획서 생성 완료. 아래에서 확인하세요.');
@@ -1294,6 +1517,12 @@ async function jGeneratePlan(){
   }
 }
 
+function jSaveWorkerUrl(){
+  const u=(document.getElementById('jWorkerUrl')?.value||'').trim();
+  localStorage_set('nmsc_worker_url',u);
+  alert(u?'서버 주소를 저장했습니다.':'서버 주소를 비웠습니다.');
+  render();
+}
 function jSelectCompany(n){ J.cur=n; jSave(); render(); }
 function jDeleteCompany(){
   if(!J.cur) return;
@@ -1332,13 +1561,52 @@ function jEditPlanTasks(){
 }
 
 /* ---- STEP3: 월간 노트 ---- */
+/* 인정일(또는 시작월)부터 현재 분기까지 써야 할 분기 목록 */
+function jQuarterList(co){
+  const p=co.plan||{};
+  const sd = p.labApproved || p.startYm || p.startDate || (p.year? p.year+'-01-01':'');
+  if(!sd) return [];
+  let y=parseInt(sd.slice(0,4)); const mm=parseInt(sd.slice(5,7))||1;
+  if(!y) return [];
+  let q=Math.floor((mm-1)/3)+1;
+  const now=new Date(), ny=now.getFullYear(), nq=Math.floor(now.getMonth()/3)+1;
+  const out=[]; let guard=0;
+  while((y<ny || (y===ny && q<=nq)) && guard++<40){ out.push(y+'-Q'+q); q++; if(q>4){q=1;y++;} }
+  return out;
+}
+
 function renderJNoteSection(co, ym){
   const noteKeys=Object.keys(co.notes||{}).sort();
   const hist=noteKeys.length?noteKeys.map(k=>`<button class="btn sec" style="padding:7px 10px;font-size:11.5px;flex:0 0 auto" onclick="jViewNote('${k}')">${k.includes('Q')?k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기':k.replace('-','.')}</button>`).join(''):'<span style="font-size:12px;color:var(--gray);font-weight:600">아직 생성된 보고서가 없습니다</span>';
   const curQ='Q'+(Math.floor((parseInt(ym.split('-')[1])-1)/3)+1);
+
+  // 작성 대상 분기 체크리스트
+  const qList=jQuarterList(co);
+  const missing=qList.filter(k=>!co.notes[k]);
+  const p=co.plan||{};
+  const chips=qList.map(k=>{
+    const done=!!co.notes[k];
+    const lbl=k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기';
+    return `<button class="jq-chip ${done?'done':'todo'}" onclick="${done?`jViewNote('${k}')`:`jGenerateNote('${k}')`}">${done?'✅':'⚪'} ${lbl}${done?'':' — 미작성'}</button>`;
+  }).join('');
+  const checklist = qList.length?`
+    <div style="border:1.5px solid ${missing.length?'var(--red)':'var(--blue)'};border-radius:11px;padding:12px;background:${missing.length?'#fff6f6':'var(--blue-ll)'};margin:8px 0 12px">
+      <div style="font-size:13px;font-weight:900;color:${missing.length?'var(--red)':'var(--blue-d)'}">
+        작성해야 할 분기 ${missing.length?`— <b>${missing.length}개 미작성</b>`:'— 모두 작성 완료'}
+      </div>
+      <div style="font-size:11.5px;color:var(--gray);font-weight:700;margin-top:3px">
+        ${p.labApproved?`인정일 ${escapeHtml(p.labApproved)} 기준`:'보고서 시작월 기준'} · 분기 클릭 = 그 분기만 생성/보기
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">${chips}</div>
+      ${missing.length?`<button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:13px;font-size:14px" onclick="jGenAllMissing()">미작성 분기 전부 생성 (${missing.length}개 · 약 ${missing.length}분)</button>
+      <div class="cr-hint" style="margin-top:6px">※ 앞 분기 → 뒤 분기 순서로 이어서 작성됩니다. 생성 중에는 창을 닫지 마세요.</div>`:''}
+      <div id="jBulkStatus" style="margin-top:8px;font-size:12.5px;font-weight:800;display:none"></div>
+    </div>`:'';
+
   return `
   <div class="card" style="border:2px solid var(--blue)">
     <h2>연구개발보고서·노트 생성</h2>
+    ${checklist}
     <div class="warn-box" style="margin:8px 0 12px"><div class="wt">분기(3개월) 작성, 법령상 문제 없나요? — 없습니다</div>
     법정 의무는 <b>연구개발 실적 연 1회 제출(매년 4/30, 시행규칙 제8조)</b>뿐이고 노트 작성 주기 규정은 없습니다. 다만 <b>"활동이 없다고 인정되면 인정취소"(법 제8조①10호)</b>이므로, 이 도구는 분기 보고서 안에 <b>월별로 무엇을 했는지 구분</b>해 작성해 상시 활동을 증빙합니다. ⚠️ 거짓 작성은 과태료 대상(법 제10조)이니 생성 후 <b>실제 활동과 맞는지 검토하고 서명</b>하세요.</div>
     <div class="frow">
@@ -1391,15 +1659,18 @@ function jPrevKey(key){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
-async function jGenerateNote(){
+async function jGenerateNote(forceKey, silent){
   const base=jWorkerBase();
   const st=document.getElementById('jNoteStatus');
-  const show=(c,h)=>{st.style.display='block';st.style.color=c;st.innerHTML=h;};
-  if(!base){ show('var(--red)','서버 주소가 없습니다. [신규 업체 입력] 탭의 서버 주소 설정을 먼저 저장하세요.'); return; }
-  const co=J.companies[J.cur]; if(!co||!co.plan){ show('var(--red)','계획서가 없습니다.'); return; }
-  const unit=document.getElementById('j_unit')?.value||'quarter';
-  const key = unit==='quarter' ? document.getElementById('j_q').value : document.getElementById('j_ym').value;
-  if(!key){ show('var(--red)','작성 기간을 선택하세요.'); return; }
+  const show=(c,h)=>{ if(!st) return; st.style.display='block';st.style.color=c;st.innerHTML=h; };
+  if(!base){ show('var(--red)','서버 주소가 없습니다. 맨 위 ⚙️ 서버 주소 설정에서 저장하세요.'); if(!silent) alert('서버 주소가 없습니다.\n연구일지 첫 카드의 [⚙️ 서버 주소 설정]을 열어 주소를 저장하세요.'); return false; }
+  const co=J.companies[J.cur]; if(!co||!co.plan){ show('var(--red)','계획서가 없습니다.'); return false; }
+  let key=forceKey;
+  if(!key){
+    const unit=document.getElementById('j_unit')?.value||'quarter';
+    key = unit==='quarter' ? document.getElementById('j_q')?.value : document.getElementById('j_ym')?.value;
+  }
+  if(!key){ show('var(--red)','작성 기간을 선택하세요.'); return false; }
   const p=co.plan;
   const per=jPeriod(key);
   const subs=(p.monthlyPlan||[]).filter(x=>per.months.includes(x.month)).map(x=>x.month+'월: '+x.sub).join('\n')||'(배분표에 없음 — 주요내용에서 적절히 선택)';
@@ -1410,21 +1681,46 @@ async function jGenerateNote(){
   const prev=prevManual?('[직전 보고서(수기)]\n'+prevManual.slice(0,2000)):prevGen;
 
   show('var(--amber)','AI가 '+per.label+' 연구개발보고서를 작성 중입니다... (30~60초)');
-  const btn=document.getElementById('jNoteBtn'); btn.disabled=true; btn.style.opacity='.6';
+  const btn=document.getElementById('jNoteBtn'); if(btn){btn.disabled=true; btn.style.opacity='.6';}
+  const unlock=()=>{ if(btn){btn.disabled=false;btn.style.opacity='1';} };
   try{
-    const prompt=`[연구계획서 요약]\n회사: ${p.company} (${p.ceo||''} 대표)\n연구과제명(대주제): ${p.projectTitle}\n목표: ${p.goal}\n주요내용: ${(p.mainContents||[]).map((m,i)=>(i+1)+'. '+m.big+' ('+(m.subs||[]).join(' / ')+')').join('  ')}\n전체 연구개발기간: ${p.year}년 1월 1일 ~ ${p.year}년 12월 31일 (계획 기준)\n참여 연구원: ${p.people||p.director||''}\n\n[작성 기간]\n${per.label} (${per.range})\n기간 내 세부주제(배분표):\n${subs}\n\n${prev||'(직전 보고서 없음 — 첫 기간이거나 이어받을 내용 없음)'}\n\n[문체 — 매우 중요]\n- 어려운 전문용어를 쓰지 마세요. 꼭 필요한 용어는 바로 뒤 괄호에 쉬운 말로 풀어 쓰세요. 예: "관능평가(직접 만지고 눈으로 보며 확인하는 평가)".\n- 한 문장은 짧게. 담당 연구원이 현장 실사에서 조사관 질문에 이 문장을 그대로 말로 설명할 수 있는 수준으로 쓰세요.\n- 영어 약어·수식·학술 표현 최소화. 실제 중소기업 직원이 쓴 것처럼 자연스럽고 구체적으로.\n\n[content 필수 구성 — 아래 번호·제목 그대로, 마크다운]\n# 1. 연구개요 (무엇을 왜 했는지 3~4문장)\n# 2. 연구배경 및 필요성 (현장의 불편·문제 → 그래서 이 연구가 필요함, 쉬운 말로)\n# 3. 연구 내용과 사용 장비 (무엇을 가지고 어떻게 구성했는지, 장비·재료는 표로)\n# 4. 연구방법 (작업 순서를 번호로, 측정·확인 조건은 표로)\n# 5. 실험결과 (측정값을 표로 + 그래프 블록 1개 이상 필수. 결과가 뜻하는 바를 한 줄씩 쉬운 말로)\n# 6. 시험평가 (직접 써보고·보고 평가한 관능평가 표 + 실제로 돌려본 시연 결과)\n# 7. 상태평가 (처음 켰을 때/오래 돌렸을 때/부하 걸었을 때 상태가 어땠는지 표 + 판단)\n# 8. 문제점 및 개선방향 (발견한 문제 → 원인 → 다음에 어떻게 고칠지)\n# 9. 결론 (이번 기간에 확인한 것과 다음 기간에 할 일, 4~5문장)\n${per.quarter?`\n[분기 보고서 추가 규칙]\n- 2번 또는 4번 안에 "월별 진행 내용" 표를 넣어 ${per.months.map(m=>m+'월').join('·')}에 각각 무엇을 했는지 반드시 구분해 쓰세요. (연구활동이 매달 계속됐음을 보여주는 용도)`:''}\n\n[그래프 블록 형식 — 5번 실험결과에 최소 1개]\n[그래프|그래프 제목|단위]\n항목이름1: 숫자\n항목이름2: 숫자\n(항목 3~6개, 실제 측정한 것처럼 자연스러운 값. 블록 앞뒤로 빈 줄)\n\n[법령 준수]\n- 내용은 반드시 "개발·시험·검증" 활동이어야 함. 생산·판매·영업 활동처럼 읽히는 문장 금지 (연구개발활동 정의: 사업화 전 단계까지).\n\n위 정보로 ${per.label} 연구개발보고서를 스키마대로 생성하세요. content는 위 1~9 구성을 그대로 따르고, 회사의 실제 업종에 밀착된 현실적 내용으로.`;
+    const prompt=`[연구계획서 요약]\n회사: ${p.company} (${p.ceo||''} 대표)\n업종·주요제품: ${p.bizDesc||'(미기재)'}\n보유 장비(3번 표에 이 장비들을 우선 사용): ${(p.equipList||[]).map(e=>e.name+(e.qty?'('+e.qty+'대)':'')).join(', ')||'(미기재 — 업종에 맞는 현실적 장비로)'}\n연구과제명(대주제): ${p.projectTitle}\n목표: ${p.goal}\n주요내용: ${(p.mainContents||[]).map((m,i)=>(i+1)+'. '+m.big+' ('+(m.subs||[]).join(' / ')+')').join('  ')}\n전체 연구개발기간: ${p.year}년 1월 1일 ~ ${p.year}년 12월 31일 (계획 기준)\n참여 연구원: ${p.people||p.director||''}\n\n[작성 기간]\n${per.label} (${per.range})\n기간 내 세부주제(배분표):\n${subs}\n\n${prev||'(직전 보고서 없음 — 첫 기간이거나 이어받을 내용 없음)'}\n\n[문체 — 매우 중요]\n- 어려운 전문용어를 쓰지 마세요. 꼭 필요한 용어는 바로 뒤 괄호에 쉬운 말로 풀어 쓰세요. 예: "관능평가(직접 만지고 눈으로 보며 확인하는 평가)".\n- 한 문장은 짧게. 담당 연구원이 현장 실사에서 조사관 질문에 이 문장을 그대로 말로 설명할 수 있는 수준으로 쓰세요.\n- 영어 약어·수식·학술 표현 최소화. 실제 중소기업 직원이 쓴 것처럼 자연스럽고 구체적으로.\n\n[content 필수 구성 — 아래 번호·제목 그대로, 마크다운]\n# 1. 연구개요 (무엇을 왜 했는지 3~4문장)\n# 2. 연구배경 및 필요성 (현장의 불편·문제 → 그래서 이 연구가 필요함, 쉬운 말로)\n# 3. 연구 내용과 사용 장비 (무엇을 가지고 어떻게 구성했는지, 장비·재료는 표로)\n# 4. 연구방법 (작업 순서를 번호로, 측정·확인 조건은 표로)\n# 5. 실험결과 (측정값을 표로 + 그래프 블록 1개 이상 필수. 결과가 뜻하는 바를 한 줄씩 쉬운 말로)\n# 6. 시험평가 (직접 써보고·보고 평가한 관능평가 표 + 실제로 돌려본 시연 결과)\n# 7. 상태평가 (처음 켰을 때/오래 돌렸을 때/부하 걸었을 때 상태가 어땠는지 표 + 판단)\n# 8. 문제점 및 개선방향 (발견한 문제 → 원인 → 다음에 어떻게 고칠지)\n# 9. 결론 (이번 기간에 확인한 것과 다음 기간에 할 일, 4~5문장)\n${per.quarter?`\n[분기 보고서 추가 규칙]\n- 2번 또는 4번 안에 "월별 진행 내용" 표를 넣어 ${per.months.map(m=>m+'월').join('·')}에 각각 무엇을 했는지 반드시 구분해 쓰세요. (연구활동이 매달 계속됐음을 보여주는 용도)`:''}\n\n[그래프 블록 형식 — 5번 실험결과에 최소 1개]\n[그래프|그래프 제목|단위]\n항목이름1: 숫자\n항목이름2: 숫자\n(항목 3~6개, 실제 측정한 것처럼 자연스러운 값. 블록 앞뒤로 빈 줄)\n\n[사진 안내(photoGuide)]\n- 5장 내외. 위 3번·4번·5번·6번·7번 항목 아래에 각각 붙일 수 있도록 그 순서대로, 회사에서 실제 찍을 수 있는 장면을 적으세요. (예: 저울 위에 시료를 올려 무게를 재는 장면)\n\n[법령 준수]\n- 내용은 반드시 "개발·시험·검증" 활동이어야 함. 생산·판매·영업 활동처럼 읽히는 문장 금지 (연구개발활동 정의: 사업화 전 단계까지).\n\n위 정보로 ${per.label} 연구개발보고서를 스키마대로 생성하세요. content는 위 1~9 구성을 그대로 따르고, 회사의 실제 업종에 밀착된 현실적 내용으로.`;
     const resp=await fetch(base+'/generate-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     const r=await resp.json();
-    if(r.error && !r.data){ show('var(--red)','오류: '+escapeHtml(r.error)+(r.raw?'<br><textarea style="width:100%;min-height:100px;font-size:11px">'+escapeHtml(r.raw)+'</textarea>':'')); btn.disabled=false;btn.style.opacity='1'; return; }
+    if(r.error && !r.data){ show('var(--red)','오류: '+escapeHtml(r.error)+(r.raw?'<br><textarea style="width:100%;min-height:100px;font-size:11px">'+escapeHtml(r.raw)+'</textarea>':'')); unlock(); return false; }
     const note=r.data; note.ym=key; note.photos=[];
     co.notes[key]=note; jSave(); jCloudPush(J.cur);
-    show('var(--blue)','생성 완료! 아래에서 확인·인쇄하세요.');
-    btn.disabled=false;btn.style.opacity='1';
-    jViewNote(key);
+    show('var(--blue)',per.label+' 생성 완료!');
+    unlock();
+    if(!silent){ render(); setTimeout(()=>jViewNote(key),80); }
+    return true;
   }catch(e){
     show('var(--red)','통신 실패: '+escapeHtml(e.message));
-    btn.disabled=false;btn.style.opacity='1';
+    unlock();
+    return false;
   }
+}
+
+/* ---- 미작성 분기 일괄 생성 ---- */
+async function jGenAllMissing(){
+  const co=J.companies[J.cur]; if(!co||!co.plan) return;
+  const missing=jQuarterList(co).filter(k=>!co.notes[k]);
+  if(!missing.length){ alert('미작성 분기가 없습니다.'); return; }
+  if(!jWorkerBase()){ alert('서버 주소가 없습니다.\n연구일지 첫 카드의 [⚙️ 서버 주소 설정]을 열어 주소를 저장하세요.'); return; }
+  if(!confirm(missing.length+'개 분기 보고서를 순서대로 만듭니다.\n약 '+missing.length+'분 걸립니다. 진행할까요?')) return;
+  const bs=document.getElementById('jBulkStatus');
+  const put=(c,h)=>{ if(bs){bs.style.display='block';bs.style.color=c;bs.innerHTML=h;} };
+  let ok=0;
+  for(let i=0;i<missing.length;i++){
+    const k=missing[i];
+    const lbl=k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기';
+    put('var(--amber)','('+(i+1)+'/'+missing.length+') '+lbl+' 작성 중... 창을 닫지 마세요');
+    const r=await jGenerateNote(k, true);
+    if(r) ok++; else { put('var(--red)','('+(i+1)+'/'+missing.length+') '+lbl+' 실패 — 여기까지 '+ok+'개 저장됨. 잠시 후 다시 시도하세요.'); break; }
+  }
+  const last=missing[ok-1];
+  if(ok===missing.length) alert('완료! '+ok+'개 분기 보고서를 만들었습니다.\n분기 버튼을 눌러 내용을 확인하고, 사진을 넣은 뒤 인쇄하세요.');
+  render(); if(last) setTimeout(()=>jViewNote(last),120);
 }
 
 /* ---- 그래프 블록 → SVG 막대그래프 ---- */
@@ -1444,12 +1740,37 @@ function jGraphSvg(title, unit, items){
     +`<text x="${W/2}" y="18" text-anchor="middle" font-size="13" font-weight="900" fill="#111">${escapeHtml(title||'측정 결과')}</text>${bars}</svg></div>`;
 }
 
-/* ---- 마크다운 표 → HTML (간단 렌더러) ---- */
-function mdToHtml(md){
+/* ---- 본문 섹션 목록 (# 제목) ---- */
+function jSectionsOf(content){
+  const out=[];
+  (content||'').split('\n').forEach(L=>{ const m=L.match(/^#{1,3}\s+(.+)$/); if(m) out.push(m[1].trim()); });
+  return out;
+}
+/* ---- 사진 블록 HTML (인쇄용, 버튼 없음) ---- */
+function jPhotoBlock(photos, label){
+  if(!photos || !photos.length) return '';
+  return '<div class="jn-inphotos">'+(label?'<div class="jn-phcap">'+escapeHtml(label)+'</div>':'')
+    +'<div class="jn-photos'+(photos.length===1?' one':'')+'">'
+    +photos.map(ph=>'<div class="jn-photo"><img src="'+ph.data+'"><div class="jn-cap">'+escapeHtml(ph.caption||'')+'</div></div>').join('')
+    +'</div></div>';
+}
+
+/* ---- 마크다운 표 → HTML (간단 렌더러) + 섹션별 사진 삽입 ---- */
+function mdToHtml(md, photos){
+  const bySec={};
+  (photos||[]).forEach(ph=>{ const s=parseInt(ph.sec)||0; if(s>0){ (bySec[s]=bySec[s]||[]).push(ph); } });
+  let secIdx=0;
   const lines=(md||'').split('\n');
   let html='',i=0;
   while(i<lines.length){
     const L=lines[i];
+    // 새 섹션 시작 → 직전 섹션의 사진을 먼저 붙인다
+    if(/^#{1,3}\s/.test(L)){
+      if(secIdx>0) html+=jPhotoBlock(bySec[secIdx]);
+      secIdx++;
+      html+='<div class="jn-h">'+escapeHtml(L.replace(/^#{1,3}\s/,'')).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>';
+      i++; continue;
+    }
     // [그래프|제목|단위] 블록
     const gm=L.match(/^\s*\[그래프\|([^|\]]*)\|?([^|\]]*)\]\s*$/);
     if(gm){
@@ -1475,12 +1796,12 @@ function mdToHtml(md){
     }
     let t=escapeHtml(L);
     t=t.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-    if(/^#{1,3}\s/.test(L)) t='<div class="jn-h">'+t.replace(/^#{1,3}\s/,'')+'</div>';
-    else if(/^\s*[-•]\s/.test(L)) t='<div class="jn-li">'+t.replace(/^\s*[-•]\s/,'· ')+'</div>';
+    if(/^\s*[-•]\s/.test(L)) t='<div class="jn-li">'+t.replace(/^\s*[-•]\s/,'· ')+'</div>';
     else if(t.trim()==='') t='<div style="height:7px"></div>';
     else t='<div class="jn-p">'+t+'</div>';
     html+=t; i++;
   }
+  if(secIdx>0) html+=jPhotoBlock(bySec[secIdx]);
   return html;
 }
 
@@ -1490,9 +1811,20 @@ function jViewNote(ym){
   const p=co.plan;
   const per=jPeriod(ym);
   const docName=per.quarter?'연구개발보고서':'연구노트';
-  const photosHtml=(n.photos||[]).map((ph,i)=>`
-    <div class="jn-photo"><img src="${ph.data}"><div class="jn-cap">${escapeHtml(ph.caption||'')}</div>
-    <button onclick="jRemovePhoto('${ym}',${i})" class="jn-phx no-print">삭제</button></div>`).join('');
+  // ── 사진: 본문 항목별 배치 ──
+  const secs=jSectionsOf(n.content);
+  const photos=(n.photos||[]);
+  const secOptions=(cur)=>['<option value="0" '+((parseInt(cur)||0)===0?'selected':'')+'>맨 아래(항목 밖)</option>']
+    .concat(secs.map((t,k)=>'<option value="'+(k+1)+'" '+((parseInt(cur)||0)===k+1?'selected':'')+'>'+escapeHtml(t.length>22?t.slice(0,22)+'…':t)+'</option>')).join('');
+  const photoRows=photos.map((ph,i)=>`
+    <div class="jph-row">
+      <img src="${ph.data}">
+      <input value="${escapeHtml(ph.caption||'')}" placeholder="사진 설명 (예: 시료 무게 측정 장면)" onchange="jSetPhoto('${ym}',${i},'caption',this.value)">
+      <select onchange="jSetPhoto('${ym}',${i},'sec',this.value)">${secOptions(ph.sec)}</select>
+      <button class="jph-del" onclick="jRemovePhoto('${ym}',${i})">삭제</button>
+    </div>`).join('');
+  const restPhotos=photos.filter(ph=>!(parseInt(ph.sec)>0 && parseInt(ph.sec)<=secs.length));
+  const restHtml=jPhotoBlock(restPhotos);
   const guideText=(n.photoGuide||[]).map((g,i)=>`${i+1}. ${g.scene}`).join('\n');
   const kakaoMsg=`대표님, ${per.label} ${docName}에 넣을 활동 사진을 부탁드립니다.\n아래 장면으로 스마트폰 사진 ${(n.photoGuide||[]).length}장만 찍어 보내주시면 저희가 보고서에 넣어 완성하겠습니다.\n\n${guideText}\n\n※ 연구소 실태조사 시 활동 사진이 요구되어, 보고서에 함께 보관해두면 좋습니다. 감사합니다!`;
 
@@ -1505,9 +1837,14 @@ function jViewNote(ym){
       <textarea id="jKakao" readonly style="width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;padding:9px;font-size:12px;font-family:inherit;margin-top:6px;background:#fff">${escapeHtml(kakaoMsg)}</textarea>
       <button class="btn" style="background:var(--blue);color:#fff;margin-top:6px;padding:9px" onclick="navigator.clipboard.writeText(document.getElementById('jKakao').value).then(()=>alert('복사됐습니다. 카톡/문자에 붙여넣으세요.'))">메시지 복사</button>
     </div>
-    <div class="fld"><label>받은 사진 올리기 (노트에 삽입됨 · 여러 장 가능)</label>
+    <div class="fld"><label>받은 사진 올리기 (여러 장 가능)</label>
       <input type="file" id="jPhotoInput" multiple accept="image/*" onchange="jAddPhotos('${ym}',this.files)">
     </div>
+    ${photos.length?`
+    <div style="margin-top:10px">
+      <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">사진 위치 지정 <span style="font-weight:700;color:var(--gray);font-size:11.5px">— 오른쪽에서 고른 항목의 <b>바로 아래</b>에 들어갑니다</span></div>
+      ${photoRows}
+    </div>`:'<div class="cr-hint" style="margin-top:6px">사진을 올리면 어느 항목 아래에 넣을지 고를 수 있습니다.</div>'}
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="window.print()">노트 인쇄 / PDF 저장</button>
       <button class="btn sec" style="flex:1" onclick="jCopyNoteText('${ym}')">본문 복사 (한글 템플릿용)</button>
@@ -1534,8 +1871,8 @@ function jViewNote(ym){
       <tr><th style="width:110px">연구과제명</th><td>${escapeHtml(n.taskTitle||'')}<br><span style="font-size:12px">(${escapeHtml(n.subTitle||'')})</span></td></tr>
       <tr><th>전체<br>연구개발기간</th><td>${p.year}년 01월 01일 ~ ${p.year}년 12월 31일</td></tr>
       <tr><th>연구개발기간</th><td>${per.range}</td></tr>
-      <tr><th>연구개발내용</th><td class="jn-content">${mdToHtml(n.content)}</td></tr>
-      ${(n.photos&&n.photos.length)?`<tr><th>연구활동 사진</th><td><div class="jn-photos">${photosHtml}</div></td></tr>`:''}
+      <tr><th>연구개발내용</th><td class="jn-content">${mdToHtml(n.content, photos)}</td></tr>
+      ${restPhotos.length?`<tr><th>연구활동 사진</th><td>${restHtml}</td></tr>`:''}
       <tr><th>참여인력</th><td>${escapeHtml(n.participants||p.people||'')}</td></tr>
       <tr><th>비 고</th><td></td></tr>
     </table>
@@ -1543,6 +1880,14 @@ function jViewNote(ym){
   el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+/* 새 사진의 기본 배치 항목: 연구내용·연구방법·실험결과·시험평가·상태평가 순환 */
+function jDefaultSec(n, idx){
+  const secs=jSectionsOf(n.content);
+  if(!secs.length) return 0;
+  const pref=[3,4,5,6,7].filter(x=>x<=secs.length);
+  const list=pref.length?pref:secs.map((_,i)=>i+1);
+  return list[idx % list.length];
+}
 function jAddPhotos(ym, files){
   const co=J.companies[J.cur]; const n=co?.notes?.[ym]; if(!n) return;
   Array.from(files).forEach(f=>{
@@ -1550,13 +1895,21 @@ function jAddPhotos(ym, files){
     const rd=new FileReader();
     rd.onload=()=>{
       const guide=n.photoGuide||[];
-      const cap=guide[(n.photos||[]).length]?.caption||'연구활동';
-      n.photos=n.photos||[]; n.photos.push({data:rd.result, caption:cap});
+      n.photos=n.photos||[];
+      const idx=n.photos.length;
+      const cap=(guide[idx]&&(guide[idx].caption||guide[idx].scene))||'연구활동';
+      n.photos.push({data:rd.result, caption:String(cap).slice(0,60), sec:jDefaultSec(n, idx)});
       try{ jSave(); }catch(e){ alert('브라우저 저장공간 부족 — 사진은 화면에만 유지됩니다. 인쇄 후 새로고침하면 사라질 수 있습니다.'); }
       jViewNote(ym);
     };
     rd.readAsDataURL(f);
   });
+}
+function jSetPhoto(ym,i,field,val){
+  const n=J.companies[J.cur]?.notes?.[ym]; if(!n||!n.photos||!n.photos[i]) return;
+  n.photos[i][field] = (field==='sec') ? (parseInt(val)||0) : val;
+  try{ jSave(); }catch(e){}
+  jViewNote(ym);
 }
 function jRemovePhoto(ym,i){
   const n=J.companies[J.cur]?.notes?.[ym]; if(!n)return;
@@ -1593,6 +1946,7 @@ function jPrintPlan(){
   w.document.close();
 }
 function bindJournal(){
+  bindJournalDropzone();
   // 탭 열 때 클라우드 자동 동기화 (세션당 1회)
   if(!J._pulled && jKey() && jWorkerBase()){
     J._pulled=true;
