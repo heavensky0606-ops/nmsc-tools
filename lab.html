@@ -2228,6 +2228,9 @@ function jGraphSvg(title, unit, items){
 /* ---- 본문 섹션 목록 (# 제목) ---- */
 function jSectionsOf(content){
   const out=[];
+  (content||'').split('\n').forEach(L=>{ const m=L.match(/^#\s+(.+)$/); if(m) out.push(m[1].trim()); });
+  if(out.length) return out;
+  // 큰 항목(#)이 하나도 없는 예전 본문은 종전대로 소제목까지 인정
   (content||'').split('\n').forEach(L=>{ const m=L.match(/^#{1,3}\s+(.+)$/); if(m) out.push(m[1].trim()); });
   return out;
 }
@@ -2246,13 +2249,17 @@ function mdToHtml(md, photos){
   (photos||[]).forEach(ph=>{ const s=parseInt(ph.sec)||0; if(s>0){ (bySec[s]=bySec[s]||[]).push(ph); } });
   let secIdx=0;
   const lines=(md||'').split('\n');
+  const hasBig=/^#\s+/m.test(md||'');
+  const isSecHead=L=> hasBig ? /^#\s/.test(L) : /^#{1,3}\s/.test(L);   // 사진을 붙일 기준선
   let html='',i=0;
   while(i<lines.length){
     const L=lines[i];
     // 새 섹션 시작 → 직전 섹션의 사진을 먼저 붙인다
     if(/^#{1,3}\s/.test(L)){
-      if(secIdx>0) html+=jPhotoBlock(bySec[secIdx]);
-      secIdx++;
+      if(isSecHead(L)){
+        if(secIdx>0) html+=jPhotoBlock(bySec[secIdx]);
+        secIdx++;
+      }
       html+='<div class="jn-h">'+escapeHtml(L.replace(/^#{1,3}\s/,'')).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>';
       i++; continue;
     }
@@ -2869,6 +2876,11 @@ function jRemapPhotos(n){
   if(!n || !n.content) return 0;
   const slots=jSecSlots(n);
   if(!slots.length) return 0;
+  // 배치 기준이 바뀌었으므로(소제목 제외) 예전에 잡힌 자리는 한 번 비우고 다시 계산
+  if(n.secVer!==2){
+    (n.photos||[]).forEach(ph=>{ if(!ph.manual) ph.sec=0; });
+    n.secVer=2;
+  }
   let moved=0;
   (n.photos||[]).forEach((ph,i)=>{
     if(ph.manual) return;                       // 사용자가 직접 고른 자리는 건드리지 않음
