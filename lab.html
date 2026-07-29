@@ -2080,7 +2080,7 @@ ${GRAPH}` },
         + '<div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:3px">창을 닫지 마세요 · 전체 약 '+Math.round(N*0.8)+'분</div>');
       const tail = content ? '\n\n[앞부분에서 이미 작성한 내용 — 문체와 숫자를 그대로 이어받고, 같은 내용을 반복하지 마세요]\n'+content.slice(-2000) : '';
       const volLine = `\n- 이 부분만 공백 포함 ${target}자 내외로 쓰세요. 지정한 항목 외에는 절대 쓰지 마세요.`
-        + `\n\n[사진 안내(photoGuide)]\n- 이번 부분과 관련해 회사에서 실제로 찍을 수 있는 장면을 ${part.g||1}개만 적으세요.\n- 장면 설명에 사람 이름과 날짜를 넣지 마세요. 예: "작업대에서 저울에 시료를 올려 무게를 재는 장면"\n- caption은 보고서 사진 아래에 들어갈 짧은 제목(20자 이내)으로 적으세요.`;
+        + `\n\n[사진 안내(photoGuide)]\n- 이번 부분과 관련해 회사에서 실제로 찍을 수 있는 장면을 ${part.g||1}개만 적으세요.\n- 앞 항목과 겹치지 않는, 서로 다른 작업 장면으로 적으세요(같은 저울 측정 장면을 반복하지 말 것).\n- 장면 설명에 사람 이름과 날짜를 넣지 마세요. 예: "작업대에서 저울에 시료를 올려 무게를 재는 장면"\n- caption은 보고서 사진 아래에 들어갈 짧은 제목(20자 이내)으로 적으세요.`;
       const prompt = COMMON+'\n\n'+part.spec+volLine+tail;
       try{
         const resp=await fetch(base+'/generate-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
@@ -2292,29 +2292,85 @@ mix:'data:image/webp;base64,UklGRrZoAABXRUJQVlA4IKpoAACQaQGdASowAnICPlEmkEYjoiGh
 const JILL_ALT={generic:'record'};
 function jIll(key){ return JILL[key] || JILL[JILL_ALT[key]||'record'] || null; }
 
-function jSceneKey(t){
-  const x=String(t||'');
-  if(/관능|촉감|만지|식감|냄새|맛보|손으로 눌러|손끝/.test(x)) return 'hand';
-  if(/배합|혼합|섞|교반|반죽|원료를 넣|계량해/.test(x)) return 'mix';
-  if(/저울|무게|중량/.test(x)) return 'weigh';
-  if(/pH|산도|전극|용액|희석|측정기로/i.test(x)) return 'probe';
-  if(/비교|나란히|대조|조건별|양쪽|늘어놓/.test(x)) return 'compare';
-  if(/현판|간판|출입구|명패|전경|외부 모습/.test(x)) return 'sign';
-  if(/회의|검토|논의|협의|함께 살펴|둘러앉|마주 앉/.test(x)) return 'meet';
-  if(/두께|길이|치수|지름|캘리퍼스|버니어|줄자|자로 재/.test(x)) return 'caliper';
-  if(/강도|내구|휨|인장|압축|하중|버티|휘어/.test(x)) return 'strength';
-  if(/시제품|조립|가공|제작|만들어|성형/.test(x)) return 'proto';
-  if(/설비|기계|장비를 가동|조작|가동|공정 라인/.test(x)) return 'machine';
-  if(/외관 검사|완제품|불량|선별|검수|포장 상태/.test(x)) return 'qc';
-  if(/기록지|체크리스트|점검표|양식에 적|적는 장면|기입/.test(x)) return 'record';
-  if(/삶|가열|끓|조리|냄비|해동|데치|익히/.test(x)) return 'pot';
-  if(/PC|컴퓨터|모니터|데이터|정리|분석|문헌|서류|입력/i.test(x)) return 'desk';
-  if(/온습도|온도계|습도|온도를/.test(x)) return 'thermo';
-  if(/냉장고|냉동고|보관고|창고|입고|적재|보관 상태/.test(x)) return 'fridge';
-  if(/현미경|확대|돋보기|자세히 관찰|정밀/.test(x)) return 'micro';
-  if(/시료|샘플|지퍼백|봉투|라벨|포장/.test(x)) return 'sample';
-  return 'generic';
+const JSCENE_RULES=[
+  ['hand',/관능|촉감|만지|식감|냄새|맛보|손으로 눌러|손끝/],
+  ['mix',/배합|혼합|섞|교반|반죽|원료를 넣|계량해/],
+  ['weigh',/저울|무게|중량/],
+  ['probe',/pH|산도|전극|용액|희석|측정기로/i],
+  ['compare',/비교|나란히|대조|조건별|양쪽|늘어놓/],
+  ['sign',/현판|간판|출입구|명패|전경|외부 모습/],
+  ['meet',/회의|검토|논의|협의|함께 살펴|둘러앉|마주 앉/],
+  ['caliper',/두께|길이|치수|지름|캘리퍼스|버니어|줄자|자로 재/],
+  ['strength',/강도|내구|휨|인장|압축|하중|버티|휘어/],
+  ['proto',/시제품|조립|가공|제작|만들어|성형/],
+  ['machine',/설비|기계|장비를 가동|조작|가동|공정 라인/],
+  ['qc',/외관 검사|완제품|불량|선별|검수|포장 상태/],
+  ['record',/기록지|체크리스트|점검표|양식에 적|적는 장면|기입/],
+  ['pot',/삶|가열|끓|조리|냄비|해동|데치|익히/],
+  ['desk',/PC|컴퓨터|모니터|데이터|정리|분석|문헌|서류|입력/i],
+  ['thermo',/온습도|온도계|습도|온도를/],
+  ['fridge',/냉장고|냉동고|보관고|창고|입고|적재|보관 상태|보관실/],
+  ['micro',/현미경|확대|돋보기|자세히 관찰|정밀/],
+  ['sample',/시료|샘플|지퍼백|봉투|라벨|포장/]
+];
+/* 장면 하나에 해당하는 후보 키를 우선순위대로 모두 반환 (중복 회피용) */
+function jSceneKeys(t){
+  const x=String(t||''), out=[];
+  JSCENE_RULES.forEach(([k,re])=>{ if(re.test(x)) out.push(k); });
+  out.push('generic');
+  return out;
 }
+function jSceneKey(t){ return jSceneKeys(t)[0]; }
+
+/* ---- 촬영 장면 중복 제거 ---- */
+function jGuideGrams(s){
+  const t=String(s||'').replace(/[\s.,·・\/\-()]/g,''), g=new Set();
+  for(let i=0;i<t.length-1;i++) g.add(t.slice(i,i+2));
+  return g;
+}
+function jGuideSim(a,b){
+  const A=jGuideGrams(a), B=jGuideGrams(b);
+  if(!A.size||!B.size) return 0;
+  let hit=0; A.forEach(x=>{ if(B.has(x)) hit++; });
+  return hit/(A.size+B.size-hit);
+}
+/* 본문에 근거가 있을 때만 채워 넣는 보충 장면 */
+const JGUIDE_FILL=[
+  {key:'thermo', need:/온습도|온도계|습도|보관실 온도/, scene:'보관 장소에 놓인 온습도계의 온도·습도 숫자를 확인하는 장면'},
+  {key:'record', need:/기록지|손으로 적|수기|기록하였다/, scene:'측정한 값을 현장에서 기록지에 손으로 적는 장면'},
+  {key:'sample', need:/지퍼백|밀폐용기|라벨/, scene:'시료를 지퍼백·밀폐용기에 나눠 담고 라벨을 붙이는 장면'},
+  {key:'fridge', need:/냉장|냉동|보관실|보관고/, scene:'보관고 문을 열고 시료가 놓인 상태를 확인하는 장면'},
+  {key:'desk', need:/PC|컴퓨터|정리 파일|표로 정리|입력/i, scene:'연구용 PC에서 측정값을 표로 정리하는 화면'},
+  {key:'compare', need:/비교|조건별|나란히/, scene:'조건별 시료를 나란히 놓고 상태를 비교하는 장면'}
+];
+/* n.photoGuide 를 정리(중복 제거+보충)해 그대로 저장. 가이드 그림·사진 자동배치가 같은 목록을 쓰게 함 */
+function jGuideList(n, want){
+  const src=(n&&n.photoGuide)||[];
+  const out=[], used=new Set();
+  src.forEach(g=>{
+    const scene=String(g.scene||g.caption||'').trim();
+    if(!scene) return;
+    if(out.some(o=>jGuideSim(o.scene,scene)>=0.62)) return;      // 문장이 사실상 같은 것 제거
+    const keys=jSceneKeys(scene);
+    const key=keys.find(k=>!used.has(k))||keys[0];               // 같은 유형이면 다른 유형으로 배정
+    used.add(key);
+    out.push({scene, caption:String(g.caption||'').trim(), key});
+  });
+  const body=String((n&&n.content)||'');
+  JGUIDE_FILL.forEach(f=>{
+    if(out.length>=want) return;
+    if(used.has(f.key)) return;
+    if(!f.need.test(body)) return;
+    used.add(f.key);
+    out.push({scene:f.scene, caption:'', key:f.key});
+  });
+  const cut=out.slice(0, want);
+  const before=JSON.stringify(src.map(g=>[g.scene||g.caption||'', g.key||'']));
+  const after=JSON.stringify(cut.map(g=>[g.scene, g.key]));
+  if(n && before!==after){ n.photoGuide=cut; try{jSave();}catch(e){} }
+  return cut;
+}
+
 /* 한글 줄바꿈 (글자 수 기준) */
 function jWrapKo(str, max){
   const words=String(str||'').split(/(\s+)/);
@@ -2328,7 +2384,7 @@ function jWrapKo(str, max){
 }
 
 function jGuideSvg(n, per, company){
-  const items=(n.photoGuide||[]).map((g,i)=>({no:i+1, scene:g.scene||g.caption||''}));
+  const items=jGuideList(n, per.quarter?6:4).map((g,i)=>({no:i+1, scene:g.scene||g.caption||'', key:g.key}));
   if(!items.length) return '';
   const W=1000, PAD=20, HEAD=178, CW=470, CH=430, GAP=20, FOOT=104;
   const rows=Math.ceil(items.length/2);
@@ -2348,7 +2404,7 @@ function jGuideSvg(n, per, company){
   items.forEach((it,i)=>{
     const col=i%2, row=Math.floor(i/2);
     const x=PAD+col*(CW+GAP), y=HEAD+row*(CH+GAP);
-    const key=jSceneKey(it.scene);
+    const key=it.key||jSceneKey(it.scene);
     const img=jIll(key);
     const tip=(JSCENE_TIP[key]||JSCENE_TIP.generic);
     const title=(JSCENE_TITLE[key]||JSCENE_TITLE.generic);
@@ -2465,6 +2521,7 @@ function jViewNote(ym){
     </div>`).join('');
   const restPhotos=photos.filter(ph=>!(parseInt(ph.sec)>0 && parseInt(ph.sec)<=secs.length));
   const restHtml=jPhotoBlock(restPhotos);
+  try{ jGuideList(n, per.quarter?6:4); }catch(e){}
   const equips=jEquipOf(n, co.plan);
   const eqList=equips.length
     ? equips.map((e,i)=>`${i+1}. ${e.name}${e.qty?' ('+e.qty+')':''}${e.use?' — '+e.use:''}`).join('\n')
