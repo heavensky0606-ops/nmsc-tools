@@ -150,6 +150,11 @@ details.card[open] > summary::before{content:"▼ "}
 .jq-chip{display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;color:#111}
 .jq-chip.done{border-color:var(--blue);background:var(--blue-ll);color:var(--blue-d)}
 .jq-chip.todo{border-color:var(--red);color:var(--red)}
+.jh{display:inline-flex;align-items:stretch;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.jh-b{border:0;background:transparent;padding:7px 10px;font-size:11.5px;font-weight:800;color:#111;cursor:pointer;font-family:inherit}
+.jh-b:hover{background:var(--blue-ll);color:var(--blue-d)}
+.jh-x{border:0;border-left:1.5px solid var(--line);background:#fff;color:#9aa7b4;padding:0 8px;font-size:12px;font-weight:900;cursor:pointer;line-height:1;font-family:inherit}
+.jh-x:hover{background:var(--red);color:#fff;border-left-color:var(--red)}
 @media(max-width:560px){.jph-row{grid-template-columns:56px 1fr;grid-auto-rows:auto}.jph-row img{grid-row:span 2}}
 @media print{
   body *{visibility:hidden}
@@ -1627,7 +1632,9 @@ function jQuarterList(co){
 
 function renderJNoteSection(co, ym){
   const noteKeys=Object.keys(co.notes||{}).sort();
-  const hist=noteKeys.length?noteKeys.map(k=>`<button class="btn sec" style="padding:7px 10px;font-size:11.5px;flex:0 0 auto" onclick="jViewNote('${k}')">${co.notes[k]&&!co.notes[k].content?'📷 ':''}${k.includes('Q')?k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기':k.replace('-','.')}</button>`).join(''):'<span style="font-size:12px;color:var(--gray);font-weight:600">아직 생성된 보고서가 없습니다</span>';
+  const histLbl=k=>k.includes('Q')?k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기':k.replace('-','.');
+  const hist=noteKeys.length?noteKeys.map(k=>`<span class="jh"><button class="jh-b" onclick="jViewNote('${k}')">${co.notes[k]&&!co.notes[k].content?'📷 ':''}${histLbl(k)}</button><button class="jh-x" title="이 이력 삭제" onclick="jDeleteNote('${k}')">✕</button></span>`).join(''):'<span style="font-size:12px;color:var(--gray);font-weight:600">아직 생성된 보고서가 없습니다</span>';
+  const histClearBtn=noteKeys.length>1?`<button class="btn sec" style="padding:5px 9px;font-size:11px;color:var(--red);border-color:var(--red)" onclick="jDeleteAllNotes()">이력 전체 삭제</button>`:'';
   const curQ='Q'+(Math.floor((parseInt(ym.split('-')[1])-1)/3)+1);
   const curKeyGuess=ym;
 
@@ -1724,8 +1731,12 @@ function renderJNoteSection(co, ym){
     </details>
     <div id="jNoteStatus" style="margin-top:10px;font-size:12.5px;font-weight:700;display:none"></div>
     <div style="margin-top:12px">
-      <div style="font-size:12px;font-weight:800;color:var(--blue-d);margin-bottom:6px">생성 이력</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:800;color:var(--blue-d)">생성 이력</div>
+        ${histClearBtn}
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${hist}</div>
+      <div class="cr-hint" style="margin-top:6px">※ ✕를 누르면 그 회차 보고서·사진·촬영장면이 함께 지워집니다. 남아 있는 직전 회차는 새 노트 생성 시 <b>연속성 참고자료</b>로 자동 반영되므로, 잘못 만든 회차는 지운 뒤 다시 생성하세요.</div>
     </div>
   </div>
   <div id="jNoteView"></div>`;
@@ -2875,6 +2886,38 @@ function jSetPhoto(ym,i,field,val){
   try{ jSave(); }catch(e){}
   jViewNote(ym);
 }
+/* ================= 생성 이력 삭제 ================= */
+function jHistLabel(k){
+  return k.includes('Q') ? (k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기') : k.replace('-','.');
+}
+function jDeleteNote(key){
+  const co=J.companies[J.cur]; if(!co||!co.notes||!co.notes[key]) return;
+  const n=co.notes[key];
+  const kind = n.content ? '보고서 본문' : '촬영 장면(사진 대기)';
+  const np=(n.photos||[]).length;
+  const msg='['+jHistLabel(key)+'] 이력을 삭제할까요?\n\n· '+kind+' 삭제'+(np?'\n· 첨부 사진 '+np+'장 함께 삭제':'')+
+    '\n\n삭제하면 되돌릴 수 없습니다. 다음 회차 생성 시 이 회차는 참고자료로 쓰이지 않습니다.';
+  if(!confirm(msg)) return;
+  delete co.notes[key];
+  if(J._forceGuide===key) delete J._forceGuide;
+  try{ jSave(); }catch(e){}
+  try{ jCloudPush(J.cur); }catch(e){}
+  render();
+  const el=document.getElementById('jNoteView'); if(el) el.innerHTML='';
+}
+function jDeleteAllNotes(){
+  const co=J.companies[J.cur]; if(!co||!co.notes) return;
+  const keys=Object.keys(co.notes); if(!keys.length) return;
+  if(!confirm('생성 이력 '+keys.length+'건을 모두 삭제할까요?\n\n보고서 본문·사진·촬영장면이 전부 지워집니다. 되돌릴 수 없습니다.\n(계획서와 업체 정보는 그대로 유지됩니다)')) return;
+  if(!confirm('한 번 더 확인합니다. 정말 전체 삭제할까요?')) return;
+  co.notes={};
+  delete J._forceGuide;
+  try{ jSave(); }catch(e){}
+  try{ jCloudPush(J.cur); }catch(e){}
+  render();
+  const el=document.getElementById('jNoteView'); if(el) el.innerHTML='';
+}
+
 function jRemovePhoto(ym,i){
   const n=J.companies[J.cur]?.notes?.[ym]; if(!n)return;
   n.photos.splice(i,1); try{jSave();}catch(e){} jViewNote(ym);
