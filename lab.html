@@ -1707,9 +1707,9 @@ function renderJNoteSection(co, ym){
     <div style="border:1.5px solid var(--blue);border-radius:11px;padding:12px;background:var(--blue-ll);margin:6px 0 12px">
       <div style="font-size:13px;font-weight:900;color:var(--blue-d)">① 사진부터 받기 <span style="font-weight:700;color:var(--gray);font-size:11.5px">— 계획서의 이번 회차 과제로 촬영 장면을 먼저 뽑습니다</span></div>
       <div style="font-size:11.5px;color:var(--gray);font-weight:700;margin:4px 0 8px">
-        노트를 쓰기 전에 촬영 장면 → 카톡 요청 → 사진 수령까지 끝내두면, 노트 생성 시 사진이 자동으로 들어갑니다.
+        노트를 쓰기 전에 촬영 장면 → 카톡 요청 → 사진 수령까지 끝내두면, 노트 생성 시 사진이 자동으로 들어갑니다. AI 서버를 쓰지 않아 즉시 나오고, 노트는 만들어지지 않습니다.
       </div>
-      <button class="btn" style="background:var(--blue);color:#fff;width:100%;padding:11px" id="jPreGuideBtn" onclick="jPreGuide()">촬영 가이드 먼저 뽑기 (약 20초)</button>
+      <button class="btn" style="background:var(--blue);color:#fff;width:100%;padding:11px" id="jPreGuideBtn" onclick="jPreGuide()">촬영 가이드 먼저 뽑기</button>
       <div id="jPreGuideStatus" style="margin-top:8px;font-size:12.5px;font-weight:700;display:none"></div>
     </div>
     <div class="frow">
@@ -2582,61 +2582,64 @@ function jEquipOf(n, plan){
 }
 
 
-/* ================= 촬영가이드 선행 생성 ================= */
-async function jPreGuide(forceKey){
+/* ================= 촬영가이드 선행 생성 (서버 호출 없음) ================= */
+/* 장비 목록에서 뽑는 장면 */
+const JSCENE_EQ=[
+  {key:'scale',  re:/저울|무게|중량/,              scene:'작업대에서 디지털 저울에 시료를 올려 무게를 재는 장면', cap:'시료 무게 측정'},
+  {key:'ph',     re:/ph|산도|산·알칼리|산알칼리/i, scene:'시료를 녹인 액체에 pH 측정기 전극을 담가 수치를 읽는 장면', cap:'pH 측정'},
+  {key:'thermo', re:/온습도|온도계|습도/,          scene:'보관 장소에 놓인 온습도계의 온도·습도 숫자를 확인하는 장면', cap:'보관 환경 온습도 확인'},
+  {key:'desk',   re:/pc|컴퓨터|노트북/i,           scene:'연구용 PC에서 측정값을 표로 정리하는 화면', cap:'측정값 정리'},
+  {key:'shoot',  re:/카메라|스마트폰/,             scene:'시료 표면 상태를 가까이에서 확대해 찍은 장면', cap:'표면 상태 확인'},
+  {key:'label',  re:/라벨|표시|스티커/,            scene:'시료에 라벨을 붙여 조건별로 구분하는 장면', cap:'시료 구분 표시'},
+  {key:'sample', re:/지퍼백|밀폐용기|보관용기/,    scene:'측정이 끝난 시료를 지퍼백·밀폐용기에 담아 다시 보관하는 장면', cap:'시료 재보관'},
+  {key:'record', re:/기록지|필기|수기/,            scene:'측정한 값을 현장에서 기록지에 손으로 적는 장면', cap:'현장 기록'},
+  {key:'fridge', re:/보관실|보관고|냉장|냉동|창고/, scene:'보관고 문을 열고 시료가 놓인 상태를 확인하는 장면', cap:'보관 상태 확인'},
+  {key:'device', re:/시험기|측정기|분석기|장비/,   scene:'시험 장비를 작동시켜 시료를 측정하는 장면', cap:'시험 진행'}
+];
+/* 이번 회차 계획 문장에서 뽑는 단계별 장면 */
+const JSCENE_PHASE=[
+  {key:'base',    re:/현황|기준값|초기|조사/,        scene:'조건별 시료를 작업대에 나란히 놓고 초기 상태를 확인하는 장면', cap:'초기 상태 확인'},
+  {key:'proto',   re:/설계|조건|시제품|제작|준비/,   scene:'시험 조건별로 시료를 나누어 준비하는 장면', cap:'시험 조건 준비'},
+  {key:'measure', re:/측정|시험|결과 정리|데이터/,   scene:'계기판 숫자가 보이도록 측정값을 읽어 기록하는 장면', cap:'측정값 기록'},
+  {key:'compare', re:/분석|개선|비교|문제|평가/,     scene:'앞선 결과와 이번 결과를 나란히 놓고 비교·검토하는 장면', cap:'결과 비교 검토'}
+];
+function jLocalGuide(p, per, want){
+  const subs=(p.monthlyPlan||[]).filter(x=>per.months.includes(x.month))
+    .map(x=>String(x.sub||'')).join(' ');
+  const eqTxt=(p.equipList||[]).map(e=>e?((e.name||'')+' '+(e.use||'')):'').join(' ');
+  const out=[], used=new Set();
+  const push=t=>{ if(used.has(t.key)||out.length>=want) return; used.add(t.key); out.push({scene:t.scene, caption:t.cap}); };
+  JSCENE_PHASE.forEach(t=>{ if(t.re.test(subs)) push(t); });   // 1순위: 이번 회차 단계
+  JSCENE_EQ.forEach(t=>{ if(t.re.test(eqTxt)) push(t); });     // 2순위: 보유 장비
+  JSCENE_EQ.forEach(t=>{ if(t.re.test(subs)) push(t); });      // 3순위: 계획 문장 속 장비
+  JSCENE_PHASE.forEach(push);                                  // 4순위: 기본 단계
+  JSCENE_EQ.forEach(push);                                     // 5순위: 기본 장비
+  return out.slice(0, want);
+}
+function jPreGuide(forceKey){
   const co=J.companies[J.cur];
   const st=document.getElementById('jPreGuideStatus');
   const show=(c,h)=>{ if(st){st.style.display='block';st.style.color=c;st.innerHTML=h;} };
   if(!co||!co.plan){ show('var(--red)','업체를 먼저 등록하세요.'); return; }
-  const base=jWorkerBase();
-  if(!base){ show('var(--red)','서버 주소가 없습니다. 위 ⚙️ 서버 주소 설정에서 저장하세요.'); return; }
   const key=forceKey||jCurKey();
   if(!key){ show('var(--red)','작성할 월(또는 분기)을 먼저 고르세요.'); return; }
   const p=co.plan;
   const per=jPeriod(key, jStartOf(key));
   const want=per.quarter?6:4;
-  const subs=(p.monthlyPlan||[]).filter(x=>per.months.includes(x.month))
-    .map(x=>x.month+'월: '+x.sub).join('\n')||'(배분표에 없음 — 주요 연구내용에서 적절히 선택)';
-  const eq=(p.equipList||[]).map(e=>e&&e.name).filter(Boolean).slice(0,10).join(', ');
-  const btn=document.getElementById('jPreGuideBtn');
-  if(btn){btn.disabled=true;btn.style.opacity='.6';}
-  show('var(--amber)','이번 회차 과제로 촬영 장면을 뽑는 중입니다... (약 20초)');
-  try{
-    const prompt=`[회사] ${p.company||J.cur} / ${p.bizDesc||''}
-[연구과제] ${p.projectTitle||''}
-[이번 회차] ${per.label}
-[이번 회차 계획 내용]
-${subs}
-[보유 장비] ${eq||'(미입력)'}
-
-위 계획으로 이 기간에 회사가 실제로 찍을 수 있는 촬영 장면을 ${want}개 제안하세요.
-- 서로 다른 작업 장면이어야 합니다(같은 측정 장면 반복 금지).
-- 사람 이름과 날짜는 넣지 마세요.
-- 예시 형식: "작업대에서 저울에 시료를 올려 무게를 재는 장면"
-- caption은 사진 아래 들어갈 20자 이내 짧은 제목입니다.
-다른 본문은 만들지 말고 photoGuide 배열만 채워서 반환하세요.
-JSON 형식: {"photoGuide":[{"scene":"...","caption":"..."}]}`;
-    const resp=await fetch(base+'/generate-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
-    const r=await resp.json();
-    const d=r.data||{};
-    let g=Array.isArray(d.photoGuide)?d.photoGuide:[];
-    if(!g.length){ show('var(--red)','촬영 장면을 받지 못했습니다. 다시 시도하거나 노트를 먼저 생성해 보세요.'); if(btn){btn.disabled=false;btn.style.opacity='1';} return; }
-    g=g.slice(0,want).map(x=>({scene:String(x.scene||x.caption||'').trim(), caption:String(x.caption||'').trim()})).filter(x=>x.scene);
-    co.notes=co.notes||{};
-    const prev=co.notes[key]||{};
-    co.notes[key]=Object.assign({}, prev, {
-      ym:key, photoGuide:g, photos:prev.photos||[],
-      content:prev.content||'', taskTitle:prev.taskTitle||p.projectTitle||'',
-      subTitle:prev.subTitle||'', participants:prev.participants||jPeopleLine(p)||''
-    });
-    jSave(); jCloudPush(J.cur);
-    show('var(--blue)','촬영 장면 '+g.length+'개를 만들었습니다. 아래에서 카톡 문구와 그림을 받으세요.');
-    if(btn){btn.disabled=false;btn.style.opacity='1';}
-    render(); setTimeout(()=>jViewNote(key),80);
-  }catch(e){
-    show('var(--red)','통신 실패: '+escapeHtml(e.message));
-    if(btn){btn.disabled=false;btn.style.opacity='1';}
-  }
+  co.notes=co.notes||{};
+  const prev=co.notes[key]||{};
+  if(prev.content && !confirm(per.label+' 노트가 이미 있습니다.\n본문은 그대로 두고 촬영 장면만 새로 뽑을까요?')) return;
+  const g=jLocalGuide(p, per, want);
+  if(!g.length){ show('var(--red)','촬영 장면을 만들지 못했습니다. 계획서의 월별 배분표를 확인하세요.'); return; }
+  co.notes[key]=Object.assign({}, prev, {
+    ym:key, photoGuide:g, photos:prev.photos||[],
+    content:prev.content||'', taskTitle:prev.taskTitle||p.projectTitle||'',
+    subTitle:prev.subTitle||'', participants:prev.participants||jPeopleLine(p)||''
+  });
+  J._forceGuide=key;
+  jSave(); jCloudPush(J.cur);
+  show('var(--blue)','촬영 장면 '+g.length+'개를 만들었습니다. 아래에서 카톡 문구와 그림을 받으세요.');
+  render(); setTimeout(()=>jViewNote(key),80);
 }
 
 /* 사진 대기 단계 화면 (본문 없음) */
@@ -2678,14 +2681,16 @@ function jViewGuideStage(ym){
     </div>
     <div id="jPhotoMsg" style="display:none;font-size:12px;font-weight:800;margin-top:6px"></div>
     <div class="cr-hint" style="margin-top:8px">현재 올린 사진 <b>${photos.length}장</b>${photos.length?' — 노트를 생성하면 그대로 옮겨집니다.':''}</div>
-    <button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:11px" onclick="jGenerateNote('${ym}')">사진 다 받았습니다 — ${docName} 생성</button>
+    ${n.content
+      ?`<button class="btn" style="background:var(--blue);color:#fff;width:100%;margin-top:10px;padding:11px" onclick="J._forceGuide=null;jViewNote('${ym}')">작성된 ${docName} 화면으로 돌아가기</button>`
+      :`<button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:11px" onclick="J._forceGuide=null;jGenerateNote('${ym}')">사진 다 받았습니다 — ${docName} 생성</button>`}
   </div>`;
 }
 
 /* 노트 보기 + 사진 + 인쇄 */
 function jViewNote(ym){
   const co=J.companies[J.cur]; const n=co?.notes?.[ym]; if(!n) return;
-  if(!n.content){ return jViewGuideStage(ym); }
+  if(!n.content || J._forceGuide===ym){ return jViewGuideStage(ym); }
   const p=co.plan;
   const per=jPeriod(ym, jStartOf(ym));
   const docName=per.quarter?'연구개발보고서':'연구노트';
