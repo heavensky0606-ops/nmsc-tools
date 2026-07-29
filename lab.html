@@ -2383,10 +2383,70 @@ function jWrapKo(str, max){
   return lines.slice(0,3);
 }
 
+/* ---- 본문에서 실제 기록된 수치 뽑기 (표 우선, 없으면 문장에서) ---- */
+function jRange(a, dec){
+  if(!a||!a.length) return '';
+  const f=v=>v.toFixed(dec);
+  const mn=Math.min.apply(null,a), mx=Math.max.apply(null,a);
+  return mn===mx ? f(mn) : f(mn)+'~'+f(mx);
+}
+function jMeasures(content){
+  const lines=String(content||'').split('\n');
+  const c={w:[],ph:[],temp:[],hum:[],score:[]};
+  let rowCount=0;
+  for(let i=0;i<lines.length;i++){
+    if(!(/^\s*\|/.test(lines[i]) && /^\s*\|[\s:\-|]+\|\s*$/.test(lines[i+1]||''))) continue;
+    const header=lines[i].split('|').slice(1,-1).map(s=>s.trim());
+    const rows=[]; let j=i+2;
+    while(j<lines.length && /^\s*\|/.test(lines[j])){ rows.push(lines[j].split('|').slice(1,-1).map(s=>s.trim())); j++; }
+    if(header.some(h=>/시료|샘플/.test(h))) rowCount=Math.max(rowCount, rows.length);
+    header.forEach((h,ci)=>{
+      let k=null;
+      if(/무게|중량/.test(h)) k='w';
+      else if(/pH/i.test(h)) k='ph';
+      else if(/온도/.test(h)) k='temp';
+      else if(/습도/.test(h)) k='hum';
+      else if(/점수|평점/.test(h)) k='score';
+      if(!k) return;
+      rows.forEach(r=>{
+        const m=String(r[ci]||'').match(/-?\d+(?:\.\d+)?/);
+        if(m) c[k].push(parseFloat(m[0]));
+      });
+    });
+    i=j-1;
+  }
+  const grab=(re,arr)=>{ let m; while((m=re.exec(content))!==null){ const v=parseFloat(m[1]); if(!isNaN(v)) arr.push(v); } };
+  if(!c.w.length)    grab(/(\d+(?:\.\d+)?)\s*g\b/g, c.w);
+  if(!c.ph.length)   grab(/pH[^0-9\-]{0,15}(\d(?:\.\d+)?)/gi, c.ph);
+  if(!c.temp.length) grab(/(-?\d+(?:\.\d+)?)\s*(?:°\s*C|℃)/g, c.temp);
+  if(!c.hum.length)  grab(/(\d+(?:\.\d+)?)\s*%/g, c.hum);
+  return {c, rowCount};
+}
+/* 장면 유형별로 카드에 넣을 "연구일지 기록값" 문구 */
+function jMeasureHints(content){
+  const {c, rowCount}=jMeasures(content);
+  const h={};
+  if(c.w.length)  h.weigh='무게 '+jRange(c.w,1)+' g';
+  if(c.ph.length) h.probe='pH '+jRange(c.ph,1);
+  const env=[];
+  if(c.temp.length) env.push('온도 '+jRange(c.temp,1)+'°C');
+  if(c.hum.length)  env.push('습도 '+jRange(c.hum,0)+'%');
+  if(env.length){ h.thermo=env.join(' · '); h.fridge=env.join(' · '); }
+  if(rowCount){ h.sample='시료 '+rowCount+'개'; h.compare='시료 '+rowCount+'개 비교'; }
+  if(c.score.length) h.hand='관능 점수 '+jRange(c.score,1)+'점';
+  const items=[];
+  if(c.w.length) items.push('무게'); if(c.ph.length) items.push('pH');
+  if(c.temp.length) items.push('온도'); if(c.hum.length) items.push('습도');
+  if(items.length){ h.record='기록 항목 : '+items.join('·'); h.desk=h.record; }
+  if(!h.weigh && c.w.length) h.weigh='무게 '+jRange(c.w,1)+' g';
+  return h;
+}
+
 function jGuideSvg(n, per, company){
   const items=jGuideList(n, per.quarter?6:4).map((g,i)=>({no:i+1, scene:g.scene||g.caption||'', key:g.key}));
   if(!items.length) return '';
-  const W=1000, PAD=20, HEAD=178, CW=470, CH=430, GAP=20, FOOT=104;
+  const W=1000, PAD=20, HEAD=178, CW=470, CH=482, GAP=20, FOOT=104;
+  const HINT=jMeasureHints((n&&n.content)||'');
   const rows=Math.ceil(items.length/2);
   const H=HEAD+rows*(CH+GAP)+FOOT;
   const F='Malgun Gothic, Apple SD Gothic Neo, sans-serif';
@@ -2418,12 +2478,20 @@ function jGuideSvg(n, per, company){
     o+=`<path d="M${x+22} ${y+302} H${x+CW-22}" stroke="#E8EFF8" stroke-width="2"/>`;
     /* 설명 */
     jWrapKo(it.scene, 27).forEach((L,k)=>{
-      o+=`<text x="${x+24}" y="${y+330+k*25}" font-size="15.5" font-weight="700" fill="#20303f">${jSvgEsc(L)}</text>`;
+      o+=`<text x="${x+24}" y="${y+330+k*24}" font-size="15.5" font-weight="700" fill="#20303f">${jSvgEsc(L)}</text>`;
     });
+    /* 연구일지에 기록된 실제 수치 */
+    const hint=HINT[key]||'';
+    if(hint){
+      o+=`<rect x="${x+22}" y="${y+392}" width="${CW-44}" height="28" rx="8" fill="#EAF3FF"/>`;
+      o+=`<text x="${x+34}" y="${y+411}" font-size="13.5" font-weight="800" fill="#0A5AD6">연구일지 기록값 · ${jSvgEsc(hint)}</text>`;
+    }
+    const tipY = hint ? y+426 : y+400;
+    const fileY = hint ? y+468 : y+442;
     /* 팁 + 파일명 */
-    o+=`<rect x="${x+22}" y="${y+CH-62}" width="${CW-44}" height="27" rx="8" fill="#FFF3F3"/>`;
-    o+=`<text x="${x+34}" y="${y+CH-43}" font-size="13.5" font-weight="800" fill="${R}">촬영 팁 · ${jSvgEsc(tip)}</text>`;
-    o+=`<text x="${x+24}" y="${y+CH-14}" font-size="14.5" font-weight="900" fill="${T}">저장할 파일 이름 :  ${it.no}</text>`;
+    o+=`<rect x="${x+22}" y="${tipY}" width="${CW-44}" height="27" rx="8" fill="#FFF3F3"/>`;
+    o+=`<text x="${x+34}" y="${tipY+19}" font-size="13.5" font-weight="800" fill="${R}">촬영 팁 · ${jSvgEsc(tip)}</text>`;
+    o+=`<text x="${x+24}" y="${fileY}" font-size="14.5" font-weight="900" fill="${T}">저장할 파일 이름 :  ${it.no}</text>`;
   });
 
   const fy=HEAD+rows*(CH+GAP);
