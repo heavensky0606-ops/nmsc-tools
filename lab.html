@@ -1596,7 +1596,8 @@ function renderJPlanSummary(co){
   <div class="card">
     <h2>연구개발계획서 — ${escapeHtml(p.company||'')} <span style="font-size:11px;color:var(--gray);font-weight:600">${p.year||''}년</span></h2>
     <table class="otable" style="margin-bottom:10px">
-      <tr><th style="width:130px">연구과제명</th><td>${escapeHtml(p.projectTitle||'')}</td></tr>
+      <tr><th style="width:130px">연구과제명</th><td>${escapeHtml(p.projectTitle||'')}
+        <button class="btn sec" style="padding:3px 8px;font-size:10.5px;margin-left:6px;vertical-align:middle" onclick="jEditField('projectTitle','연구과제명')">수정</button></td></tr>
       <tr><th>과제책임자</th><td>${escapeHtml(p.director||'')}</td></tr>
       <tr><th>목표</th><td>${escapeHtml(p.goal||'')}</td></tr>
       <tr><th>주요내용</th><td>${(p.mainContents||[]).map((m,i)=>`<b>${i+1}. ${escapeHtml(m.big)}</b><br>${(m.subs||[]).map(s=>'- '+escapeHtml(s)).join('<br>')}`).join('<br>')}</td></tr>
@@ -1612,6 +1613,16 @@ function renderJPlanSummary(co){
       <button class="btn sec" style="flex:1" onclick="jEditPlanTasks()">계획서 다시 생성</button>
     </div>
   </div>`;
+}
+function jEditField(field, label){
+  const co=J.companies[J.cur]; if(!co||!co.plan) return;
+  const cur=co.plan[field]||'';
+  const v=prompt(label+'을(를) 고쳐 주세요.\n\n※ KOITA 개요서에 신고한 과제명과 같아야 실사에서 문제가 없습니다.\n※ 이미 만든 보고서의 머리글에도 곧바로 반영됩니다.', cur);
+  if(v===null) return;
+  const nv=String(v).trim();
+  if(!nv){ alert('비워 둘 수 없습니다.'); return; }
+  co.plan[field]=nv;
+  jSave(); jCloudPush(J.cur); render();
 }
 function jEditPlanTasks(){
   if(!confirm('현재 계획서를 지우고 새로 생성 화면으로 돌아갈까요? (노트 기록은 유지)')) return;
@@ -1951,9 +1962,11 @@ ${SCENES}${REAL}
 
 [절대 쓰지 말 것 — 어기면 실사에서 문제가 됩니다]
 1) 회사를 밖에서 설명하는 문장 금지.
-   나쁜 예: "○○○는 중국에서 제품을 수입하여 국내에 유통하는 회사이다."
-   좋은 예: "수입 분모자 제품은 냉동 또는 냉장 상태로 들어오기 때문에, 보관 방법이 조금만 달라져도 상태가 크게 달라진다."
+   나쁜 예: "○○○는 해외에서 제품을 들여와 국내에 유통하는 회사이다."
+   좋은 예: "이 제품은 보관 온도가 조금만 달라져도 겉면 상태가 크게 달라진다."
    → 회사 소개 없이 대상 제품과 현상부터 바로 쓰세요. 회사 이름을 본문에 넣지 마세요.
+   → 대상 제품은 위 [연구계획서 요약]의 업종·주요제품과 연구과제명에 적힌 것만 쓰세요.
+     계획서에 없는 수식어(수입산·국내산·중국산 등 원산지, 제조 방식)를 임의로 붙이지 마세요.
 2) 사람 이름·직책·"연구원이" 같은 주어 금지.
    나쁜 예: "김위가 저울로 무게를 재고, 하철학이 pH를 측정하였다."
    좋은 예: "작업대에서 저울로 무게를 재고, 이어서 pH를 측정하였다."
