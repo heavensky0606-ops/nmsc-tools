@@ -288,6 +288,19 @@ display:flex;justify-content:space-between;align-items:center;gap:10px}
 .dbrs{font-size:11.5px;color:var(--mute);margin-top:3px}
 .dbrv{font-size:18px;font-weight:800;white-space:nowrap}
 .dbrv.up{color:#059669}.dbrv.dn{color:var(--red)}
+.e.sel{outline:3px solid var(--blue-d);outline-offset:-3px}
+.e.sel::after{content:"선택됨";position:absolute;right:7px;top:6px;font-size:10px;font-weight:800;
+color:#fff;background:rgba(0,0,0,.28);border-radius:20px;padding:2px 7px}
+.e{position:relative}
+.svb{border:1.5px solid var(--bbd);border-radius:12px;padding:12px;margin-top:12px;background:var(--bbg)}
+.svs{font-size:12px;font-weight:700;color:var(--blue-d);margin-bottom:9px;line-height:1.6}
+.svs .no{color:var(--mute);font-weight:700}
+.svbtn{width:100%;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:13px 0;
+font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+.svbtn.off{background:#c6cddb}
+.rchip{display:inline-flex;align-items:center;gap:7px;background:var(--bbg);border:1px solid var(--bbd);
+border-radius:20px;padding:5px 11px;font-size:12px;font-weight:800;color:var(--blue-d);margin-top:8px}
+.rchip b{cursor:pointer;color:var(--red)}
 </style>
 </head>
 <body>
@@ -592,6 +605,7 @@ function pfmtBlur(el){let d=el.value.replace(/\D/g,'');
   el.value=d.length===11?`${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`
     :d.length===10?`${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`:d}
 let PICK=null;
+let PDS={id:null,days:null},SREF=null;
 function sug(inId,outId){
   const el=document.getElementById(inId),o=document.getElementById(outId);
   const v=(el.value||'').trim();PICK=null;
@@ -904,9 +918,9 @@ ${(()=>{const gg=curExtG();return `<div class="exm">
 <div class="exb${gg==='연장복귀'?' on':''}" onclick="setExt('r')">연장복귀</div></div>
 ${isExp(b)?`<div class="exh">만료일이 지났습니다 · 연장복귀로 기록됩니다</div>`:''}`})()}
 <div class="eg">
-<div class="e e1" onclick="ext(30)" onmouseover="pw(30)" onmouseout="cw()"><div class="a">30일</div><div class="c">10만원</div></div>
-<div class="e e2" onclick="ext(60)" onmouseover="pw(60)" onmouseout="cw()"><div class="a">60일</div><div class="c">18만원</div></div>
-<div class="e e3" onclick="ext(90)" onmouseover="pw(90)" onmouseout="cw()"><div class="a">90일</div><div class="c">25만원</div></div>
+<div class="e e1${selD_on(30)}" onclick="selD(30)" onmouseover="pw(30)" onmouseout="cw()"><div class="a">30일</div><div class="c">10만원</div></div>
+<div class="e e2${selD_on(60)}" onclick="selD(60)" onmouseover="pw(60)" onmouseout="cw()"><div class="a">60일</div><div class="c">18만원</div></div>
+<div class="e e3${selD_on(90)}" onclick="selD(90)" onmouseover="pw(90)" onmouseout="cw()"><div class="a">90일</div><div class="c">25만원</div></div>
 </div>
 ${(()=>{const p=lastPause(b);const dz=p?pauseDays(p):null;
 return `<div class="eg2">
@@ -947,10 +961,9 @@ ${wn>0?`<span class="wcn" onclick="delWarn()">최근 1회 취소</span>`:''}
 <div class="dbc"><div class="dbl">지난달 대비</div>
 <div class="dbv ${dl>0?'up':(dl<0?'dn':'')}">${dl>0?'+':''}${dl.toLocaleString('ko-KR')}</div></div></div>
 <div class="dbr">
-<input class="fi" id="dbin" type="tel" placeholder="지금 보이는 DB 숫자" style="font-size:14px;padding:9px">
-<button class="b p" style="padding:0 15px;font-size:13px;white-space:nowrap" onclick="recDb()">기록</button></div>
+<input class="fi" id="dbin" type="tel" placeholder="지금 보이는 DB 숫자" style="font-size:14px;padding:9px;flex:1"></div>
 <div class="dbn">${cur===null?'아직 기록 없음':`마지막 기록 ${fk(dbLastD(b))}`} · 화면에 보이는 숫자를 그대로 넣으세요.
-DB가 줄어 안내했다면 경고를 눌러 올리세요.</div></div>`})()}
+DB가 줄어 안내했다면 경고를 눌러 올리세요. 숫자는 맨 아래 [정보 저장]에서 함께 저장됩니다.</div></div>`})()}
 <div class="pw" id="pwv"></div>
 <textarea class="mi" id="memo" rows="2" placeholder="비고 (선택)"></textarea>
 <div class="r2">
@@ -992,8 +1005,16 @@ ${out.map(e=>{const t=byId[e.t];return`<div class="ri" onclick="go(${e.t})">
 <div style="display:flex;gap:7px;margin-top:9px">
 <input class="fi" id="rin" placeholder="번호 뒷자리 · 상호명 · 소개자 이름" style="font-size:13px;padding:9px"
  autocomplete="off" oninput="sug('rin','rsug')">
-<button class="b p" style="padding:0 14px;font-size:13px" onclick="addRef()">추가</button></div>
-<div id="rsug"></div></div>
+<button class="b p" style="padding:0 14px;font-size:13px" onclick="addRef()">선택</button></div>
+<div id="rsug"></div>
+${(SREF&&SREF.id===CUR)?`<div class="rchip">소개자 ${esc(SREF.nm)} <b onclick="SREF=null;draw()">✕</b></div>`:''}</div>
+${(()=>{const d=(PDS.id===CUR)?PDS.days:null;const rf=(SREF&&SREF.id===CUR)?SREF.nm:'';
+const bits=[];
+bits.push(d?`<b>${curExtG()} ${d}일</b> → ${fk(nx(b.exp,d))} · ${AMT[d]}원`:`<span class="no">기간 선택 안 함</span>`);
+if(rf)bits.push(`소개자 <b>${esc(rf)}</b>`);
+return `<div class="svb"><div class="svs">${bits.join('<br>')}<br>
+<span class="no">DB 숫자와 비고를 채우면 같은 줄에 함께 저장됩니다.</span></div>
+<button class="svbtn${(d||rf)?'':' off'}" onclick="saveAll()">정보 저장</button></div>`})()}
 <div class="bx"><div class="lb" style="display:flex;justify-content:space-between">
 <span>입금 이력</span><span style="color:var(--mute)">${ev.length}건</span></div>
 <div class="hs">${ev.map(e=>`<div class="hi">
@@ -1019,6 +1040,8 @@ function formH(b){
   <div class="fl">업소 연락처</div>
   <input class="fi" id="f_ph" type="tel" value="${fp(b.cur)}" placeholder="뒷 8자리만 입력해도 됩니다"
    oninput="pfmtLive(this)" onblur="pfmtBlur(this)">
+  <div class="fl">변경일</div>
+  <input class="fi" id="f_dt" type="date" value="${TD()}">
   <div class="fl">비고</div>
   <input class="fi" id="f_mm" placeholder="메모 (선택)">
   <div style="display:flex;gap:7px;margin-top:11px">
@@ -1042,7 +1065,8 @@ function saveChg(){
   if(cp)parts.push('전 '+fp(b.cur));
   if(cn)parts.push('전 '+b.nm);
   if(mm)parts.push(mm);
-  const rec={bid:b.id,g:g,d:TD(),a:'',e:b.exp,n:nn,p:np,m:parts.join(' / ')};
+  const cd=(document.getElementById('f_dt').value||'').trim()||TD();
+  const rec={bid:b.id,g:g,d:cd,a:'',e:b.exp,n:nn,p:np,m:parts.join(' / ')};
   pl(rec);FORM=null;draw();toast(g+' 완료');
 }
 function pw(d){const b=byId[CUR];document.getElementById('pwv').textContent=
@@ -1050,12 +1074,39 @@ function pw(d){const b=byId[CUR];document.getElementById('pwv').textContent=
 function cw(){const p=document.getElementById('pwv');if(p)p.textContent=''}
 function go(id){CUR=id;CURP=(byId[id]||{}).cur||'';FORM=null;draw();document.getElementById('sheet').scrollTop=0}
 const AMT={30:'100,000',60:'180,000',90:'250,000'};
+function selD_on(d){return (PDS.id===CUR&&PDS.days===d)?' sel':''}
+function selD(d){ if(PDS.id!==CUR)PDS={id:CUR,days:null};
+  PDS.days=(PDS.days===d)?null:d; draw(); }
+function saveAll(){
+  const b=byId[CUR]; if(!b)return;
+  const days=(PDS.id===CUR)?PDS.days:null;
+  const rf=(SREF&&SREF.id===CUR)?SREF.nm:'';
+  const m=((document.getElementById('memo')||{}).value||'').trim();
+  const raw=(((document.getElementById('dbin')||{}).value)||'').trim();
+  let dbV=null;
+  if(raw!==''){ dbV=dbNum(raw); if(dbV===null)return toast('DB 수량은 숫자만 입력하세요'); }
+  if(days===null&&!rf&&dbV===null&&!m)return toast('선택하거나 입력한 내용이 없습니다');
+  const parts=[]; if(rf)parts.push(`${rf} 에서 소개`); if(m)parts.push(m);
+  const memo=parts.join(' / ');
+  let rec;
+  if(days!==null) rec={bid:b.id,g:curExtG(),d:TD(),a:AMT[days],e:nx(b.exp,days),n:b.nm,p:b.cur,m:memo};
+  else if(rf)     rec={bid:b.id,g:'소개등록',d:TD(),a:'',e:b.exp,n:b.nm,p:b.cur,m:memo};
+  else if(dbV!==null) rec={bid:b.id,g:'디비기록',d:TD(),a:'',e:'',n:b.nm,p:b.cur,m:memo};
+  else            rec={bid:b.id,g:'메모',d:TD(),a:'',e:'',n:b.nm,p:b.cur,m:memo};
+  if(dbV!==null) rec.nb=Object.assign({},rec.nb||{},{db:String(dbV)});
+  PDS={id:null,days:null}; SREF=null; PICK=null;
+  ap(rec);
+  toast(days!==null?`${rec.g} ${days}일 → ${fk(rec.e)} 저장됨`:'저장됨');
+}
 function ext(d){const b=byId[CUR],e=nx(b.exp,d),m=(document.getElementById('memo').value||'').trim();
   const gg=curExtG();ap({bid:b.id,g:gg,d:TD(),a:AMT[d],e:e,n:b.nm,p:b.cur,m:m});toast(`${gg} ${d}일 → ${fk(e)}`)}
 function bonus(){const b=byId[CUR],e=nx(b.exp,10);
   ap({bid:b.id,g:'소개서비스',d:TD(),a:'',e:e,n:b.nm,p:b.cur,m:'소개서비스 10일 추가',bn:'10'});
   toast(`소개 서비스 10일 → ${fk(e)}`)}
 function p2d(n){return('0'+n).slice(-2)}
+function addD(ds,n){const a=(ds||'').split('-').map(Number);
+  if(!a[0])return nx('',n);
+  const t=new Date(a[0],a[1]-1,a[2]+ (+n));return ymd(t)}
 function ymd(t){return t.getFullYear()+'-'+p2d(t.getMonth()+1)+'-'+p2d(t.getDate())}
 function pmEnd(){const t=new Date();return ymd(new Date(t.getFullYear(),t.getMonth(),0))}
 function dayBefore(ds){const a=ds.split('-').map(Number);
@@ -1162,17 +1213,20 @@ function addRef(){
   if(!PICK)return toast('목록에서 소개자를 선택하세요');
   if(PICK.t==='bz'&&PICK.id===b.id)return toast('자기 자신은 선택할 수 없습니다');
   const isAg=PICK.t==='ag';
-  const rec={bid:b.id,g:'소개등록',d:TD(),a:'',e:b.exp,n:b.nm,p:b.cur,m:`${PICK.nm} 에서 소개`};
-  PICK=null;pl(rec);draw();
-  toast(isAg?'외부 소개자 연결됨':'소개 연결됨');
+  SREF={id:b.id,nm:PICK.nm};
+  PICK=null;draw();
+  toast((isAg?'외부 소개자':'소개자')+' 선택됨 — 아래 [정보 저장]을 누르세요');
 }
-let NR='',NB='',NP=30;
+let NR='',NB='',NP=30,NPC=false;
 function openNew(pre){
-  CUR=null;NR='';NB='';NP=30;
+  CUR=null;NR='';NB='';NP=30;NPC=false;
   document.getElementById('sheet').innerHTML=`
   <div class="shd"><div><div class="n2">신규 업체 등록</div>
   <div class="s2">등록 후 바로 연장 처리됩니다</div></div><button class="x" onclick="close2()">✕</button></div>
   <div class="sb">
+  <div class="note" style="margin:0 0 10px;color:var(--red)">
+  이미 등록된 업체가 번호만 바꾼 경우에는 여기가 아니라,
+  기존 업체를 열어 <b>번호변경</b>으로 기록하세요. (여기서 넣으면 업체가 둘로 나뉩니다)</div>
   <div class="fl">업소 연락처 *</div><input class="fi" id="nph" type="tel" placeholder="뒷 8자리만 입력해도 됩니다"
    value="${pre?pre:''}" oninput="pfmtLive(this)" onblur="pfmtBlur(this)">
   <div class="fl">상호명 *</div><input class="fi" id="nnm" placeholder="상호명">
@@ -1183,27 +1237,49 @@ function openNew(pre){
   <input class="fi" id="nrf" placeholder="번호 뒷자리 · 상호명 · 소개자 이름" autocomplete="off" oninput="sug('nrf','nsug')">
   <div id="nsug"></div>
   <div class="fl">비고</div><textarea class="mi" id="nmm" rows="2" placeholder="메모"></textarea>
+  <div class="fl">등록일</div><input class="fi" id="ndt" type="date" value="${TD()}" onchange="pP(NP)">
   <div class="fl">시작 기간 *</div><div class="chips" id="cp">
   ${[30,60,90].map(d=>`<span class="ch${d===30?' on':''}" onclick="pP(${d})">${d}일 ${d===30?'10만':d===60?'18만':'25만'}</span>`).join('')}</div>
+  <div id="ncw" style="display:none">
+  <div class="fl">만료일 직접 지정 *</div>
+  <input class="fi" id="nex" type="date" value="${TD()}" onchange="pP('c')">
+  <div class="fl">금액 (선택)</div>
+  <input class="fi" id="nam" type="tel" placeholder="비워두면 매출에 잡히지 않습니다">
+  </div>
   <div class="pw" id="npv"></div>
   <div class="bfull" onclick="saveNew()">등록하기</div></div>`;
   pP(30);openMask();
 }
 function pR(v){NR=NR===v?'':v;document.getElementById('cr').innerHTML=REG.map(r=>`<span class="ch${r===NR?' on':''}" onclick="pR('${r}')">${r}</span>`).join('')}
 function pB(v){NB=NB===v?'':v;document.getElementById('cb').innerHTML=BZ.map(r=>`<span class="ch${r===NB?' on':''}" onclick="pB('${r}')">${r}</span>`).join('')}
-function pP(d){NP=d;document.getElementById('cp').innerHTML=[30,60,90].map(x=>`<span class="ch${x===NP?' on':''}" onclick="pP(${x})">${x}일 ${x===30?'10만':x===60?'18만':'25만'}</span>`).join('');
-  document.getElementById('npv').textContent=`오늘 기준 +${NP}일 → ${fk(nx('',NP))}`}
+function pP(d){
+  NPC=(d==='c');if(!NPC)NP=d;
+  document.getElementById('cp').innerHTML=
+    [30,60,90].map(x=>`<span class="ch${(!NPC&&x===NP)?' on':''}" onclick="pP(${x})">${x}일 ${x===30?'10만':x===60?'18만':'25만'}</span>`).join('')
+    +`<span class="ch${NPC?' on':''}" onclick="pP('c')">직접</span>`;
+  const w=document.getElementById('ncw');if(w)w.style.display=NPC?'block':'none';
+  const de=document.getElementById('ndt'),bd=(de&&de.value)||TD();
+  const ne=document.getElementById('nex'),ex=(ne&&ne.value)||TD();
+  document.getElementById('npv').textContent= NPC
+    ? `만료일 ${fk(ex)} 로 등록됩니다`
+    : `${bd===TD()?'오늘':fk(bd)} 기준 +${NP}일 → ${fk(addD(bd,NP))}`}
 function saveNew(){
   const g=i=>(document.getElementById(i).value||'').trim();
   const p=g('nph').replace(/\D/g,''),nm=g('nnm');
   if(p.length<10)return toast('연락처를 확인하세요');
   if(!nm)return toast('상호명을 입력하세요');
   if(BIZ.some(b=>b.ph.includes(p)))return toast('이미 등록된 번호입니다');
-  const e=nx('',NP),id=0;
+  const bd=g('ndt')||TD();
+  let e,amt;
+  if(NPC){e=g('nex');if(!e)return toast('만료일을 지정하세요');
+    const rawA=g('nam').replace(/[^0-9]/g,'');
+    amt=rawA?(+rawA).toLocaleString('ko-KR'):'';}
+  else{e=addD(bd,NP);amt=AMT[NP]}
+  const id=0;
   let rf='';
   if(PICK)rf=PICK.nm;
   const m=[g('nmm'),rf?`${rf} 에서 소개`:''].filter(Boolean).join(' / ');
-  const rec={bid:id,g:'신규',d:TD(),a:AMT[NP],e:e,n:nm,p:p,m:m,nb:{rg:NR,bz:NB,db:g('ndb')}};
+  const rec={bid:id,g:'신규',d:bd,a:amt,e:e,n:nm,p:p,m:m,nb:{rg:NR,bz:NB,db:g('ndb')}};
   CURP=p;pl(rec);
   const nb2=BIZ.find(x=>x.ph.indexOf(p)>=0);
   toast(`${nm} 등록 완료`);if(nb2)open2(nb2.id);else close2();
