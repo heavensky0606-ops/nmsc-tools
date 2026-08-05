@@ -1665,28 +1665,56 @@ function jCancelAdd(){ J._addNew=false; _jFiles=[]; render(); }
 /* 작성 단위 전환 — 분량 옵션·버튼·종료일 자동 갱신 */
 const JVOL={
   month:[['0.7','짧게 (약 4장)'],['1','표준 (약 5~6장 · 권장)'],['1.3','길게 (약 8장)']],
-  quarter:[['0.7','짧게 (약 10장)'],['1','표준 (약 15장 · 권장)'],['1.3','길게 (약 19장)']]
+  quarter:[['0.7','짧게 (약 10장)'],['1','표준 (약 15장 · 권장)'],['1.3','길게 (약 19장)']],
+  range:[['0.5','짧게'],['0.7','표준 (권장)'],['1','길게']]
 };
 function jCurKey(){
   const u=document.getElementById('j_unit')?.value||'month';
-  return u==='quarter' ? (document.getElementById('j_q')?.value||'') : (document.getElementById('j_ym')?.value||'');
+  if(u==='quarter') return document.getElementById('j_q')?.value||'';
+  if(u==='range'){
+    const a=document.getElementById('j_r1')?.value||'', b=document.getElementById('j_r2')?.value||'';
+    if(!a||!b) return '';
+    return jRangeParse(a+'~'+b) ? (a+'~'+b) : '';
+  }
+  return document.getElementById('j_ym')?.value||'';
+}
+function jSwitchUnit(u){
+  const e=document.getElementById('j_unit'); if(e){ e.value=u; }
+  jSyncUnit();
+  const t=document.getElementById(u==='month'?'jChkM':'jChkQ');
+  if(t) t.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function jSyncUnit(){
   const u=document.getElementById('j_unit')?.value||'month';
-  const isM=u==='month';
-  const w1=document.getElementById('j_ymWrap'), w2=document.getElementById('j_qWrap');
+  const isM=u==='month', isR=u==='range';
+  const w1=document.getElementById('j_ymWrap'), w2=document.getElementById('j_qWrap'), w3=document.getElementById('j_rWrap');
   if(w1) w1.style.display=isM?'':'none';
-  if(w2) w2.style.display=isM?'none':'';
+  if(w2) w2.style.display=(u==='quarter')?'':'none';
+  if(w3) w3.style.display=isR?'':'none';
+  const cm=document.getElementById('jChkM'), cq=document.getElementById('jChkQ');
+  if(cm) cm.style.display=isM?'':'none';
+  if(cq) cq.style.display=(u==='quarter')?'':'none';
   const sel=document.getElementById('j_vol');
   if(sel){
     const keep=sel.value||'1';
-    sel.innerHTML=JVOL[u].map(([v,t])=>`<option value="${v}" ${v===keep?'selected':''}>${t}</option>`).join('');
+    sel.innerHTML=(JVOL[u]||JVOL.quarter).map(([v,t])=>`<option value="${v}" ${v===keep?'selected':''}>${t}</option>`).join('');
     if(!sel.value) sel.value='1';
   }
+  const rk=isR?jCurKey():'';
+  const rn=rk?jPeriod(rk).months.length:0;
+  const rmsg=document.getElementById('j_rMsg');
+  if(rmsg) rmsg.style.display=isR?'block':'none';
+  if(rmsg && isR){
+    const a=document.getElementById('j_r1')?.value||'', b=document.getElementById('j_r2')?.value||'';
+    if(!a||!b) rmsg.innerHTML='시작 월과 끝 월을 모두 고르세요.';
+    else if(!rk) rmsg.innerHTML='<span style="color:var(--red)">끝 월이 시작 월보다 빠릅니다.</span>';
+    else rmsg.innerHTML='<b style="color:var(--blue-d)">'+jKeyLabel(rk)+'</b> ('+rn+'개월) 한 장으로 작성합니다.'
+      +(rn>1?' 본문에 <b>월별 진행 내용</b> 표가 들어갑니다.':'');
+  }
   const bd=document.getElementById('jUnitBadge');
-  if(bd) bd.textContent = isM?'A4 5~6장 분량':'A4 15장 분량';
+  if(bd) bd.textContent = isM?'A4 5~6장 분량':(isR?('A4 '+Math.max(5,rn*5)+'장 분량'):'A4 15장 분량');
   const btn=document.getElementById('jNoteBtn');
-  if(btn && !btn.disabled) btn.textContent = isM?'노트 생성 (약 3분)':'보고서 생성 (약 6분)';
+  if(btn && !btn.disabled) btn.textContent = isM?'노트 생성 (약 3분)':(isR?('보고서 생성 (약 '+Math.max(3,rn*3)+'분)'):'보고서 생성 (약 6분)');
   // 종료일 표시 + 시작일 저장
   const key=jCurKey();
   const sd=document.getElementById('j_startDate')?.value||'';
@@ -1768,37 +1796,99 @@ function jQuarterList(co){
   return out;
 }
 
+/* 인정일(또는 시작월)부터 이번 달까지의 월 키 목록 */
+function jMonthList(co){
+  const p=co.plan||{};
+  const sd = p.labApproved || p.startYm || p.startDate || (p.year? p.year+'-01-01':'');
+  if(!sd) return [];
+  let y=parseInt(sd.slice(0,4)); let m=parseInt(sd.slice(5,7))||1;
+  if(!y) return [];
+  const now=new Date(), ny=now.getFullYear(), nm=now.getMonth()+1;
+  const out=[]; let guard=0;
+  while((y<ny || (y===ny && m<=nm)) && guard++<60){
+    out.push(y+'-'+String(m).padStart(2,'0')); m++; if(m>12){m=1;y++;}
+  }
+  return out;
+}
+/* 체크리스트에서 회차를 고르면 작성 단위·기간을 맞춰 세팅하고 알맞은 화면으로 */
+function jSetPeriodFields(k){
+  if(!k) return;
+  const rg=jRangeParse(k);
+  const u=document.getElementById('j_unit');
+  if(rg){
+    if(u) u.value='range';
+    const a=document.getElementById('j_r1'), b=document.getElementById('j_r2');
+    const parts=k.split('~');
+    if(a) a.value=parts[0]; if(b) b.value=parts[1];
+    try{ jSyncUnit(); }catch(e){}
+    return;
+  }
+  const isQ=/-Q/.test(k);
+  if(u){ u.value=isQ?'quarter':'month'; }
+  if(isQ){
+    const e=document.getElementById('j_q');
+    if(e){
+      if(!Array.prototype.some.call(e.options,o=>o.value===k)){
+        const o=document.createElement('option');
+        o.value=k; o.textContent=jKeyLabel(k);
+        e.appendChild(o);
+      }
+      e.value=k;
+    }
+  }else{
+    const e=document.getElementById('j_ym'); if(e) e.value=k;
+  }
+  try{ jSyncUnit(); }catch(e){}
+}
+function jPickPeriod(k){
+  jSetPeriodFields(k);
+  const co=J.companies[J.cur]; const n=co&&co.notes&&co.notes[k];
+  if(n && n.content){ J._forceGuide=null; jViewNote(k); return; }
+  if(n && n.photoGuide && n.photoGuide.length){ J._forceGuide=k; jViewNote(k); return; }
+  jPreGuide(k);
+}
+
 function renderJNoteSection(co, ym){
   const noteKeys=Object.keys(co.notes||{}).sort();
-  const histLbl=k=>k.includes('Q')?k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기':k.replace('-','.');
+  const histLbl=k=>jKeyLabel(k);
   const hist=noteKeys.length?noteKeys.map(k=>`<span class="jh"><button class="jh-b" onclick="jViewNote('${k}')">${co.notes[k]&&!co.notes[k].content?'📷 ':''}${histLbl(k)}</button><button class="jh-x" title="이 이력 삭제" onclick="jDeleteNote('${k}')">✕</button></span>`).join(''):'<span style="font-size:12px;color:var(--gray);font-weight:600">아직 생성된 보고서가 없습니다</span>';
   const histClearBtn=noteKeys.length>1?`<button class="btn sec" style="padding:5px 9px;font-size:11px;color:var(--red);border-color:var(--red)" onclick="jDeleteAllNotes()">이력 전체 삭제</button>`:'';
   const curQ='Q'+(Math.floor((parseInt(ym.split('-')[1])-1)/3)+1);
   const curKeyGuess=ym;
 
-  // 작성 대상 분기 체크리스트
+  // 작성 대상 체크리스트 (월간 / 분기)
   const qList=jQuarterList(co);
-  const missing=qList.filter(k=>!(co.notes[k]&&co.notes[k].content));
+  const mList=jMonthList(co);
   const p=co.plan||{};
-  const chips=qList.map(k=>{
+  const missQ=qList.filter(k=>!(co.notes[k]&&co.notes[k].content));
+  const missM=mList.filter(k=>!(co.notes[k]&&co.notes[k].content));
+  const mkChips=(list,isQ)=>list.map(k=>{
     const done=!!(co.notes[k]&&co.notes[k].content);
     const waiting=!!(co.notes[k]&&!co.notes[k].content);
-    const lbl=k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기';
-    return `<button class="jq-chip ${done?'done':'todo'}" onclick="${(done||waiting)?`jViewNote('${k}')`:`jGenerateNote('${k}')`}">${done?'✅':(waiting?'📷':'⚪')} ${lbl}${done?'':(waiting?' — 사진 대기':' — 미작성')}</button>`;
+    const lbl=jKeyLabel(k);
+    return `<button class="jq-chip ${done?'done':'todo'}" onclick="jPickPeriod('${k}')">${done?'✅':(waiting?'📷':'⚪')} ${lbl}${done?'':(waiting?' — 사진 대기':' — 미작성')}</button>`;
   }).join('');
-  const checklist = qList.length?`
-    <div style="border:1.5px solid ${missing.length?'var(--red)':'var(--blue)'};border-radius:11px;padding:12px;background:${missing.length?'#fff6f6':'var(--blue-ll)'};margin:8px 0 12px">
-      <div style="font-size:13px;font-weight:900;color:${missing.length?'var(--red)':'var(--blue-d)'}">
-        작성해야 할 분기 ${missing.length?`— <b>${missing.length}개 미작성</b>`:'— 모두 작성 완료'}
+  const base=p.labApproved?`인정일 ${escapeHtml(p.labApproved)} 기준`:'보고서 시작월 기준';
+  const box=(id,show,list,miss,isQ)=>list.length?`
+    <div id="${id}" style="display:${show?'':'none'};border:1.5px solid ${miss.length?'var(--red)':'var(--blue)'};border-radius:11px;padding:12px;background:${miss.length?'#fff6f6':'var(--blue-ll)'};margin:8px 0 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:900;color:${miss.length?'var(--red)':'var(--blue-d)'}">
+          작성해야 할 ${isQ?'분기':'월'} ${miss.length?`— <b>${miss.length}개 미작성</b>`:'— 모두 작성 완료'}
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn sec" style="padding:5px 11px;font-size:11px;${isQ?'':'color:var(--blue);border-color:var(--blue)'}" onclick="jSwitchUnit('month')">월별</button>
+          <button class="btn sec" style="padding:5px 11px;font-size:11px;${isQ?'color:var(--blue);border-color:var(--blue)':''}" onclick="jSwitchUnit('quarter')">분기별</button>
+        </div>
       </div>
       <div style="font-size:11.5px;color:var(--gray);font-weight:700;margin-top:3px">
-        ${p.labApproved?`인정일 ${escapeHtml(p.labApproved)} 기준`:'보고서 시작월 기준'} · 분기 클릭 = 그 분기만 생성/보기
+        ${base} · 누르면 그 ${isQ?'분기':'달'}로 설정되고 <b>촬영 장면 뽑기</b>부터 시작합니다
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">${chips}</div>
-      ${missing.length?`<button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:13px;font-size:14px" onclick="jGenAllMissing()">미작성 분기 전부 생성 (${missing.length}개 · 약 ${missing.length*6}분)</button>
-      <div class="cr-hint" style="margin-top:6px">※ 앞 분기 → 뒤 분기 순서로 이어서 작성됩니다. 생성 중에는 창을 닫지 마세요.</div>`:''}
-      <div id="jBulkStatus" style="margin-top:8px;font-size:12.5px;font-weight:800;display:none"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">${mkChips(list,isQ)}</div>
+      ${miss.length?`<button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:13px;font-size:14px" onclick="jGenAllMissing('${isQ?'quarter':'month'}')">미작성 ${isQ?'분기':'월'} 전부 생성 (${miss.length}개 · 약 ${miss.length*(isQ?6:3)}분)</button>
+      <div class="cr-hint" style="margin-top:6px">※ 사진 없이 본문부터 만듭니다. <b>사진을 이미 받았다면</b> 위에서 해당 ${isQ?'분기':'달'}을 눌러 촬영 장면부터 맞추세요.</div>`:''}
+      <div id="jBulkStatus${isQ?'Q':'M'}" style="margin-top:8px;font-size:12.5px;font-weight:800;display:none"></div>
     </div>`:'';
+  const checklist = box('jChkM', true, mList, missM, false) + box('jChkQ', false, qList, missQ, true);
 
   const savedStart=(co.startDates&&(co.startDates[curKeyGuess]||''))||(co.plan&&co.plan.labApproved)||'';
   const tot=jTotalDefaults(co.plan||{});
@@ -1813,6 +1903,7 @@ function renderJNoteSection(co, ym){
         <select id="j_unit" onchange="jSyncUnit()">
           <option value="month" selected>월간 노트 (1개월 · 권장)</option>
           <option value="quarter">분기 보고서 (3개월)</option>
+          <option value="range">기간 직접 지정 (여러 달 묶기)</option>
         </select>
       </div>
       <div class="fld" id="j_qWrap" style="display:none"><label>작성 분기</label>
@@ -1821,7 +1912,15 @@ function renderJNoteSection(co, ym){
         </select>
       </div>
       <div class="fld" id="j_ymWrap"><label>작성 월</label><input type="month" id="j_ym" value="${ym}" onchange="jSyncUnit()"></div>
+      <div class="fld" id="j_rWrap" style="display:none"><label>기간 (시작 월 ~ 끝 월)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="month" id="j_r1" value="${ym}" onchange="jSyncUnit()" style="flex:1">
+          <span style="font-weight:900;color:var(--gray)">~</span>
+          <input type="month" id="j_r2" value="${ym}" onchange="jSyncUnit()" style="flex:1">
+        </div>
+      </div>
     </div>
+    <div id="j_rMsg" class="cr-hint" style="margin:-4px 0 10px;display:none"></div>
     <div class="fld"><label>연구원 이름 <span style="color:var(--gray);font-weight:600">— 쉼표로 구분 · <b>맨 앞 사람이 연구소장</b></span></label>
       <input id="j_people2" value="${escapeHtml((co.plan&&co.plan.people)||'')}" placeholder="예: 김위, 하철학" oninput="jSavePeople()">
     </div>
@@ -1881,9 +1980,50 @@ function renderJNoteSection(co, ym){
 }
 
 /* 기간 키 해석: '2026-07'(월간) 또는 '2026-Q3'(분기) */
+/* '2026-06~2026-07' 형태의 직접 지정 기간 */
+function jRangeParse(k){
+  const m=String(k||'').match(/^(\d{4})-(\d{2})~(\d{4})-(\d{2})$/);
+  if(!m) return null;
+  const r={y1:+m[1], m1:+m[2], y2:+m[3], m2:+m[4]};
+  if(r.y2<r.y1 || (r.y2===r.y1 && r.m2<r.m1)) return null;
+  return r;
+}
+/* 기간 키 → 사람이 읽는 이름 */
+function jKeyLabel(k){
+  const rg=jRangeParse(k);
+  if(rg) return rg.y1===rg.y2 ? (rg.y1+'년 '+rg.m1+'~'+rg.m2+'월')
+                              : (rg.y1+'년 '+rg.m1+'월~'+rg.y2+'년 '+rg.m2+'월');
+  if(/-Q/.test(k)) return k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기';
+  const pp=k.split('-');
+  return pp[0]+'년 '+parseInt(pp[1],10)+'월';
+}
+
 function jPeriod(key, startOverride){
-  const [yy,part]=key.split('-');
   const K=(y,m,d)=>`${y}년 ${String(m).padStart(2,'0')}월 ${String(d).padStart(2,'0')}일`;
+  const _rg=jRangeParse(key);
+  if(_rg){
+    const lastDay=new Date(_rg.y2,_rg.m2,0).getDate();
+    const months=[]; let ry=_rg.y1, rm=_rg.m1, guard=0;
+    while((ry<_rg.y2||(ry===_rg.y2&&rm<=_rg.m2)) && guard++<24){ months.push(rm); rm++; if(rm>12){rm=1;ry++;} }
+    const o0={quarter:months.length>1, custom:true, yy:String(_rg.y1), m1:_rg.m1, m2:_rg.m2,
+      label:jKeyLabel(key),
+      sy:_rg.y1, sm:_rg.m1, sd:1, ey:_rg.y2, em:_rg.m2, ed:lastDay,
+      endDate:`${String(_rg.y2).slice(2)}. ${String(_rg.m2).padStart(2,'0')}. ${lastDay}.`, months};
+    if(startOverride && /^\d{4}-\d{2}-\d{2}$/.test(startOverride)){
+      const sy=parseInt(startOverride.slice(0,4)), sm=parseInt(startOverride.slice(5,7)), sd=parseInt(startOverride.slice(8,10));
+      const _after=(sy>o0.sy)||(sy===o0.sy&&sm>=o0.sm);
+      const _before=(sy<o0.ey)||(sy===o0.ey&&(sm<o0.em||(sm===o0.em&&sd<=o0.ed)));
+      if(_after && _before){
+        o0.sy=sy; o0.sm=sm; o0.sd=sd; o0.customStart=true;
+        const f=o0.months.filter(m=>!(sy===o0.ey&&m<sm));
+        o0.months=f.length?f:[o0.em];
+      }
+    }
+    o0.range=`${K(o0.sy,o0.sm,o0.sd)} ~ ${K(o0.ey,o0.em,o0.ed)}`;
+    o0.startDate=`${o0.sy}-${String(o0.sm).padStart(2,'0')}-${String(o0.sd).padStart(2,'0')}`;
+    return o0;
+  }
+  const [yy,part]=key.split('-');
   let o;
   if(part.startsWith('Q')){
     const q=parseInt(part[1]); const m1=(q-1)*3+1, m2=q*3;
@@ -1900,7 +2040,8 @@ function jPeriod(key, startOverride){
   // 실제 연구 시작일이 지정되면 시작 지점만 교체 (기간 안에 있을 때만)
   if(startOverride && /^\d{4}-\d{2}-\d{2}$/.test(startOverride)){
     const sy=parseInt(startOverride.slice(0,4)), sm=parseInt(startOverride.slice(5,7)), sd=parseInt(startOverride.slice(8,10));
-    const inRange = (sy<o.ey) || (sy===o.ey && (sm<o.em || (sm===o.em && sd<=o.ed)));
+    const notBefore = (sy>o.sy) || (sy===o.sy && sm>=o.sm);
+    const inRange = notBefore && ((sy<o.ey) || (sy===o.ey && (sm<o.em || (sm===o.em && sd<=o.ed))));
     if(inRange){
       o.sy=sy; o.sm=sm; o.sd=sd; o.customStart=true;
       o.months = o.months.filter(m => !(sy===o.ey && m<sm));
@@ -2005,6 +2146,11 @@ function jStartOf(key){
   return (co && co.startDates && co.startDates[key]) || '';
 }
 function jPrevKey(key){
+  const rg=jRangeParse(key);
+  if(rg){
+    const d=new Date(rg.y1, rg.m1-2, 1);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
   const [yy,part]=key.split('-');
   if(part.startsWith('Q')){ const q=parseInt(part[1]); return q>1? yy+'-Q'+(q-1) : (parseInt(yy)-1)+'-Q4'; }
   const d=new Date(parseInt(yy),parseInt(part)-2,1);
@@ -2325,25 +2471,29 @@ ${GRAPH}` },
 }
 
 /* ---- 미작성 분기 일괄 생성 ---- */
-async function jGenAllMissing(){
+async function jGenAllMissing(unit){
   const co=J.companies[J.cur]; if(!co||!co.plan) return;
-  const missing=jQuarterList(co).filter(k=>!(co.notes[k]&&co.notes[k].content));
-  if(!missing.length){ alert('미작성 분기가 없습니다.'); return; }
+  const isQ=(unit||'quarter')==='quarter';
+  const unitName=isQ?'분기':'월';
+  const list=isQ?jQuarterList(co):jMonthList(co);
+  const missing=list.filter(k=>!(co.notes[k]&&co.notes[k].content));
+  if(!missing.length){ alert('미작성 '+unitName+'이 없습니다.'); return; }
   if(!jWorkerBase()){ alert('서버 주소가 없습니다.\n연구일지 첫 카드의 [⚙️ 서버 주소 설정]을 열어 주소를 저장하세요.'); return; }
-  if(!confirm(missing.length+'개 분기 보고서를 순서대로 만듭니다.\n분기당 8번씩 나눠 길게 작성하므로 약 '+(missing.length*6)+'분 걸립니다.\n진행할까요?')) return;
-  const bs=document.getElementById('jBulkStatus');
+  const lblOf=k=>jKeyLabel(k);
+  if(!confirm(missing.length+'개 '+unitName+' 노트를 순서대로 만듭니다.\n'
+    +missing.map(lblOf).join(', ')+'\n\n약 '+(missing.length*(isQ?6:3))+'분 걸립니다. 진행할까요?')) return;
+  const bs=document.getElementById('jBulkStatus'+(isQ?'Q':'M'));
   const put=(c,h)=>{ if(bs){bs.style.display='block';bs.style.color=c;bs.innerHTML=h;} };
   let ok=0;
   for(let i=0;i<missing.length;i++){
     const k=missing[i];
-    const lbl=k.split('-')[0]+'년 '+k.split('-Q')[1]+'분기';
-    put('var(--amber)','('+(i+1)+'/'+missing.length+') '+lbl+' 작성 중... 창을 닫지 마세요');
+    put('var(--amber)','('+(i+1)+'/'+missing.length+') '+lblOf(k)+' 작성 중... 창을 닫지 마세요');
     const r=await jGenerateNote(k, true);
-    if(r) ok++; else { put('var(--red)','('+(i+1)+'/'+missing.length+') '+lbl+' 실패 — 여기까지 '+ok+'개 저장됨. 잠시 후 다시 시도하세요.'); break; }
+    if(r) ok++; else { put('var(--red)','('+(i+1)+'/'+missing.length+') '+lblOf(k)+' 실패 — 여기까지 '+ok+'개 저장됨. 잠시 후 다시 시도하세요.'); break; }
   }
   const last=missing[ok-1];
-  if(ok===missing.length) alert('완료! '+ok+'개 분기 보고서를 만들었습니다.\n분기 버튼을 눌러 내용을 확인하고, 사진을 넣은 뒤 인쇄하세요.');
-  render(); if(last) setTimeout(()=>jViewNote(last),120);
+  if(ok===missing.length) alert('완료! '+ok+'개 '+unitName+' 노트를 만들었습니다.\n버튼을 눌러 내용을 확인하고, 사진을 넣은 뒤 인쇄하세요.');
+  render(); if(last) setTimeout(()=>{ jSetPeriodFields(last); jViewNote(last); },120);
 }
 
 /* ---- 그래프 블록 → SVG 막대그래프 ---- */
@@ -2830,7 +2980,8 @@ function jPreGuide(forceKey){
   J._forceGuide=key;
   jSave(); jCloudPush(J.cur);
   show('var(--blue)','촬영 장면 '+g.length+'개를 만들었습니다. 아래에서 카톡 문구와 그림을 받으세요.');
-  render(); setTimeout(()=>jViewNote(key),80);
+  J._lastKey=key;
+  render(); setTimeout(()=>{ jSetPeriodFields(key); jViewNote(key); },80);
 }
 
 /* ================= 촬영 장면 편집 ================= */
