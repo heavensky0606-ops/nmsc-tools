@@ -131,19 +131,20 @@ details.card[open] > summary::before{content:"▼ "}
 .jn-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px;page-break-inside:avoid}
 .jn-table th{border:1px solid #555;background:#f5f8ff;padding:7px 8px;font-weight:800;text-align:center}
 .jn-table td{border:1px solid #555;padding:7px 8px;text-align:center}
-.jn-photos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.jn-photo{position:relative;text-align:center}
+.jn-photos{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.jn-photo{position:relative;text-align:center;width:48%}
 .jn-photo img{width:100%;max-height:220px;object-fit:contain;border:1px solid #ccc;border-radius:4px}
+.jn-photos.one{max-width:none}
 .jn-cap{font-size:11px;font-weight:700;color:#333;margin-top:3px}
 .jn-phx{position:absolute;top:4px;right:4px;background:var(--red);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:900;cursor:pointer}
 /* 본문 섹션 하단에 들어가는 사진 블록 */
 .jn-photos{page-break-inside:avoid}
 .jn-inphotos{margin:9px 0 4px;page-break-inside:avoid}
-.jn-inphotos .jn-photos{grid-template-columns:1fr 1fr}
-.jn-photos.one{grid-template-columns:1fr;max-width:64%}
+.jn-inphotos .jn-photos{}
+
 .jn-phcap{font-size:11px;font-weight:800;color:#0060df;margin-bottom:4px}
 /* 사진 관리 리스트(화면 전용) */
-.jph-row{display:grid;grid-template-columns:66px 1fr 168px 54px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px;margin-top:6px;background:#fff}
+.jph-row{display:grid;grid-template-columns:66px 1fr 150px 84px 54px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px;margin-top:6px;background:#fff}
 .jph-row img{width:66px;height:50px;object-fit:cover;border-radius:5px;border:1px solid #ddd}
 .jph-row input,.jph-row select{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:7px 8px;font-size:11.5px;font-family:inherit;background:#fff}
 .jph-del{background:var(--red);color:#fff;border:none;border-radius:7px;padding:8px 0;font-size:11px;font-weight:900;cursor:pointer}
@@ -1743,7 +1744,19 @@ function jDeleteCompany(){
 /* ---- 계획서 요약 + 인쇄 ---- */
 function renderJPlanSummary(co){
   const p=co.plan;
-  const mp=(p.monthlyPlan||[]).map(m=>`<tr><td style="text-align:center">${m.month}월</td><td>${escapeHtml(m.sub||'')}</td></tr>`).join('');
+  if(!p._mpOrig && (p.monthlyPlan||[]).length){ try{ p._mpOrig=JSON.parse(JSON.stringify(p.monthlyPlan)); }catch(e){} }
+  const origOf=m=>{ const o=(p._mpOrig||[]).find(x=>+x.month===+m); return o?String(o.sub||''):''; };
+  const mpEdited=(p.monthlyPlan||[]).some(m=>String(m.sub||'')!==origOf(m.month));
+  const mp=(p.monthlyPlan||[]).map(m=>{
+    const chg=String(m.sub||'')!==origOf(m.month);
+    const ln=Math.min(6, Math.max(2, Math.ceil(String(m.sub||'').length/46)));
+    return `<tr>
+      <td style="text-align:center;vertical-align:top;padding-top:11px;font-weight:800;color:${chg?'var(--red)':'var(--text)'}">${m.month}월${chg?'<br><span style="font-size:10px;font-weight:900">수정됨</span>':''}</td>
+      <td style="padding:6px">
+        <textarea rows="${ln}" onchange="jSetMonthSub(${m.month},this.value)"
+          style="width:100%;border:1.5px solid ${chg?'var(--red)':'var(--line)'};border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;line-height:1.6;resize:vertical">${escapeHtml(m.sub||'')}</textarea>
+      </td></tr>`;
+  }).join('');
   return `
   <div class="card">
     <h2>연구개발계획서 — ${escapeHtml(p.company||'')} <span style="font-size:11px;color:var(--gray);font-weight:600">${p.year||''}년</span></h2>
@@ -1757,14 +1770,39 @@ function renderJPlanSummary(co){
       <tr><th>착수/부서</th><td>${escapeHtml(p.startDate||'')} · ${escapeHtml(p.dept||'')} · 인력 ${escapeHtml(p.manpower||'')}명 · 비용 ${escapeHtml(p.budget||'')}</td></tr>
     </table>
     <details>
-      <summary style="font-size:12px;font-weight:800;color:var(--blue-d);cursor:pointer">월별 배분표 보기</summary>
-      <table class="otable" style="margin-top:8px"><tr><th style="width:60px">월</th><th>세부주제</th></tr>${mp}</table>
+      <summary style="font-size:12px;font-weight:800;color:var(--blue-d);cursor:pointer">월별 배분표 보기 · 수정${mpEdited?' <span style="color:var(--red)">(수정됨)</span>':''}</summary>
+      <div class="cr-hint" style="margin:8px 0 6px">여기서 고친 세부주제가 <b>촬영 장면</b>과 <b>보고서 본문</b>에 그대로 쓰입니다.
+      한 과제를 두 달에 걸쳐 했다면 두 달의 칸을 같은 내용으로 맞추고, 그 두 달을 <b>기간 직접 지정</b>으로 묶어 한 장으로 만드세요.<br>
+      ※ 칸 밖을 클릭하면 저장됩니다. <b>이미 만들어 둔 노트에는 반영되지 않으니</b> 해당 회차를 다시 생성하세요.</div>
+      <table class="otable" style="margin-top:4px"><tr><th style="width:64px">월</th><th>세부주제</th></tr>${mp}</table>
+      ${mpEdited?`<button class="btn sec" style="width:100%;margin-top:8px;padding:8px;font-size:12px;color:var(--red);border-color:var(--red)" onclick="jResetMonthPlan()">처음 만들어진 배분표로 되돌리기</button>`:''}
     </details>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="jPrintPlan()">계획서 인쇄 / PDF</button>
       <button class="btn sec" style="flex:1" onclick="jEditPlanTasks()">계획서 다시 생성</button>
     </div>
   </div>`;
+}
+function jSetMonthSub(month, v){
+  const co=J.companies[J.cur]; if(!co||!co.plan) return;
+  const p=co.plan;
+  p.monthlyPlan=p.monthlyPlan||[];
+  if(!p._mpOrig){ try{ p._mpOrig=JSON.parse(JSON.stringify(p.monthlyPlan)); }catch(e){} }
+  const nv=String(v||'').trim();
+  const it=p.monthlyPlan.find(x=>+x.month===+month);
+  if(it) it.sub=nv; else p.monthlyPlan.push({month:+month, sub:nv});
+  p.monthlyPlan.sort((a,b)=>(+a.month)-(+b.month));
+  jSave(); try{ jCloudPush(J.cur); }catch(e){}
+  render();
+  setTimeout(()=>{ const d=document.querySelector('.card details'); if(d) d.open=true; },40);
+}
+function jResetMonthPlan(){
+  const co=J.companies[J.cur]; if(!co||!co.plan||!co.plan._mpOrig) return;
+  if(!confirm('직접 고친 세부주제가 모두 사라지고 처음 만들어진 배분표로 돌아갑니다. 계속할까요?')) return;
+  co.plan.monthlyPlan=JSON.parse(JSON.stringify(co.plan._mpOrig));
+  jSave(); try{ jCloudPush(J.cur); }catch(e){}
+  render();
+  setTimeout(()=>{ const d=document.querySelector('.card details'); if(d) d.open=true; },40);
 }
 function jEditField(field, label){
   const co=J.companies[J.cur]; if(!co||!co.plan) return;
@@ -2522,13 +2560,52 @@ function jSectionsOf(content){
   (content||'').split('\n').forEach(L=>{ const m=L.match(/^#{1,3}\s+(.+)$/); if(m) out.push(m[1].trim()); });
   return out;
 }
+/* ---- 사진 크기 ---- */
+const JPSZ={ s:{w:31,h:150,t:'작게'}, m:{w:48,h:220,t:'보통'}, l:{w:64,h:300,t:'크게'}, f:{w:100,h:430,t:'전체폭'} };
+function jSizeOf(ph){ return JPSZ[(ph&&ph.size)||'m']||JPSZ.m; }
 /* ---- 사진 블록 HTML (인쇄용, 버튼 없음) ---- */
 function jPhotoBlock(photos, label){
   if(!photos || !photos.length) return '';
   return '<div class="jn-inphotos">'+(label?'<div class="jn-phcap">'+escapeHtml(label)+'</div>':'')
-    +'<div class="jn-photos'+(photos.length===1?' one':'')+'">'
-    +photos.map(ph=>'<div class="jn-photo"><img src="'+ph.data+'"><div class="jn-cap">'+escapeHtml(ph.caption||'')+'</div></div>').join('')
+    +'<div class="jn-photos">'
+    +photos.map(ph=>{ const z=jSizeOf(ph);
+        return '<div class="jn-photo" style="width:'+z.w+'%"><img src="'+ph.data+'" style="max-height:'+z.h+'px"><div class="jn-cap">'+escapeHtml(ph.caption||'')+'</div></div>';
+      }).join('')
     +'</div></div>';
+}
+/* ---- 장면 설명 → 사진 캡션 채우기 ----
+   직접 고친 캡션(capManual)은 건드리지 않고, 비었거나 기본값인 것만 채운다. */
+function jSyncCaptions(n, force){
+  if(!n || !n.photos) return 0;
+  const g=n.photoGuide||[]; let k=0;
+  n.photos.forEach((ph,i)=>{
+    if(!force && ph.capManual) return;
+    const gi=(ph.gi!=null&&ph.gi>=0)?ph.gi:((ph.seq!=null)?ph.seq-1:i);
+    const e=g[gi]; if(!e) return;
+    const t=String(e.caption||e.scene||'').trim().slice(0,70);
+    if(!t) return;
+    const cur=String(ph.caption||'').trim();
+    if(force || !cur || cur==='연구활동'){ if(cur!==t){ ph.caption=t; k++; } }
+  });
+  return k;
+}
+function jResyncCaptions(ym){
+  const n=J.companies[J.cur]?.notes?.[ym]; if(!n) return;
+  if(!(n.photoGuide||[]).some(g=>String(g.caption||g.scene||'').trim())){
+    alert('촬영 장면에 적힌 설명이 없습니다.\n먼저 장면 문장을 채워주세요.'); return;
+  }
+  if(!confirm('사진 설명을 촬영 장면 문장으로 모두 덮어씁니다.\n직접 고쳐 둔 설명도 바뀝니다. 계속할까요?')) return;
+  const k=jSyncCaptions(n, true);
+  n.photos.forEach(ph=>{ ph.capManual=false; });
+  try{ jSave(); }catch(e){}
+  jViewNote(ym);
+  alert(k+'장의 설명을 장면 문장으로 바꿨습니다.');
+}
+function jSetAllSize(ym, sz){
+  const n=J.companies[J.cur]?.notes?.[ym]; if(!n||!n.photos) return;
+  n.photos.forEach(ph=>{ ph.size=sz; });
+  try{ jSave(); }catch(e){}
+  jViewNote(ym);
 }
 
 /* ---- 마크다운 표 → HTML (간단 렌더러) + 섹션별 사진 삽입 ---- */
@@ -2992,6 +3069,16 @@ function jSetGuide(ym,i,field,v){
   const n=jNoteOf(ym); if(!n||!n.photoGuide||!n.photoGuide[i]) return;
   n.photoGuide[i][field]=String(v||'').slice(0,220);
   n.guideEdited=true;
+  if(field==='scene'||field==='caption'){
+    const g=n.photoGuide[i];
+    const t=String(g.caption||g.scene||'').trim().slice(0,70);
+    if(t){
+      (n.photos||[]).forEach((ph,k)=>{
+        const gi=(ph.gi!=null&&ph.gi>=0)?ph.gi:((ph.seq!=null)?ph.seq-1:k);
+        if(gi===i && !ph.capManual) ph.caption=t;
+      });
+    }
+  }
   try{ jSave(); }catch(e){}
 }
 function jMoveGuide(ym,i,d){
@@ -3267,11 +3354,13 @@ function jViewNote(ym){
   const photos=(n.photos||[]);
   const secOptions=(cur)=>['<option value="0" '+((parseInt(cur)||0)===0?'selected':'')+'>맨 아래(항목 밖)</option>']
     .concat(secs.map((t,k)=>'<option value="'+(k+1)+'" '+((parseInt(cur)||0)===k+1?'selected':'')+'>'+escapeHtml(t.length>22?t.slice(0,22)+'…':t)+'</option>')).join('');
+  try{ if(jSyncCaptions(n,false)) jSave(); }catch(e){}
   const photoRows=photos.map((ph,i)=>`
     <div class="jph-row">
       <img src="${ph.data}">
       <input value="${escapeHtml(ph.caption||'')}" placeholder="사진 설명 (예: 시료 무게 측정 장면)" onchange="jSetPhoto('${ym}',${i},'caption',this.value)">
       <select onchange="jSetPhoto('${ym}',${i},'sec',this.value)">${secOptions(ph.sec)}</select>
+      <select onchange="jSetPhoto('${ym}',${i},'size',this.value)">${Object.keys(JPSZ).map(k=>`<option value="${k}" ${((ph.size||'m')===k)?'selected':''}>${JPSZ[k].t}</option>`).join('')}</select>
       <button class="jph-del" onclick="jRemovePhoto('${ym}',${i})">삭제</button>
     </div>`).join('');
   const restPhotos=photos.filter(ph=>!(parseInt(ph.sec)>0 && parseInt(ph.sec)<=secs.length));
@@ -3316,7 +3405,12 @@ function jViewNote(ym){
     <div id="jPhotoMsg" style="display:none;font-size:12px;font-weight:800;margin-top:6px"></div>
     ${photos.length?`
     <div style="margin-top:10px">
-      <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">사진 위치 확인 <span style="font-weight:700;color:var(--gray);font-size:11.5px">— 자동 배치된 결과입니다. 바꾸고 싶을 때만 오른쪽에서 고르세요</span></div>
+      <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">사진 위치·설명·크기 <span style="font-weight:700;color:var(--gray);font-size:11.5px">— 설명은 촬영 장면에서 자동으로 들어옵니다. 여기서 고치면 그 값이 우선됩니다</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center">
+        <span style="font-size:11.5px;font-weight:800;color:var(--gray)">전체 크기</span>
+        ${Object.keys(JPSZ).map(k=>`<button class="btn sec" style="padding:5px 11px;font-size:11px" onclick="jSetAllSize('${ym}','${k}')">${JPSZ[k].t}</button>`).join('')}
+        <button class="btn sec" style="padding:5px 11px;font-size:11px;color:var(--blue);border-color:var(--blue);margin-left:auto" onclick="jResyncCaptions('${ym}')">장면 문장으로 설명 다시 채우기</button>
+      </div>
       ${photoRows}
     </div>`:'<div class="cr-hint" style="margin-top:6px">사진을 올리면 어느 항목 아래에 넣을지 고를 수 있습니다.</div>'}
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -3478,8 +3572,8 @@ function jAddPhotos(ym, files){
       const gi = (x.seq!==null) ? (x.seq-1) : (cursor++);
       if(x.seq!==null) matched++;
       const g=guide[gi];
-      const cap=(g&&(g.caption||g.scene))?String(g.caption||g.scene).slice(0,70):'연구활동';
-      n.photos.push({data:x.data, caption:cap, sec:jDefaultSec(n, gi), seq:(x.seq||null), gi:gi});
+      const cap=(g&&(g.caption||g.scene))?String(g.caption||g.scene).slice(0,70):'';
+      n.photos.push({data:x.data, caption:cap, size:'m', sec:jDefaultSec(n, gi), seq:(x.seq||null), gi:gi});
     });
     // 장면 번호 순서대로 정렬해 보관
     n.photos.sort((a,b)=>{
@@ -3502,6 +3596,7 @@ function jSetPhoto(ym,i,field,val){
   const n=J.companies[J.cur]?.notes?.[ym]; if(!n||!n.photos||!n.photos[i]) return;
   n.photos[i][field] = (field==='sec') ? (parseInt(val)||0) : val;
   if(field==='sec') n.photos[i].manual=true;   // 수동 배치는 이후 자동 재배치에서 보호
+  if(field==='caption') n.photos[i].capManual=true;  // 직접 고친 설명은 자동 갱신에서 보호
   try{ jSave(); }catch(e){}
   jViewNote(ym);
 }
