@@ -601,6 +601,123 @@ function saveWorkerUrl(){
   alert('서버 주소를 저장했습니다.');
 }
 
+/* ---------- 공용: 업로드 이미지 축소 + 분할 전송 (413 방지) ---------- */
+const NMSC_IMG_MAX = 1568;        // Claude가 실제로 보는 최대 변 길이
+const NMSC_BATCH_BYTES = 3.2*1024*1024;  // 요청 1건당 base64 상한
+const NMSC_BATCH_FILES = 4;       // 요청 1건당 최대 파일 수
+
+function nmscBytes(b64){ return Math.round((b64||'').length*0.75); }
+function nmscKB(n){ return n>=1024*1024 ? (n/1024/1024).toFixed(1)+'MB' : Math.max(1,Math.round(n/1024))+'KB'; }
+
+function nmscReadDataUrl(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('읽기 실패')); r.readAsDataURL(file); });
+}
+
+/* 이미지를 캔버스로 줄여 JPEG base64로 반환. PDF 등은 원본 그대로 */
+async function nmscShrink(file, maxEdge, quality){
+  maxEdge = maxEdge || NMSC_IMG_MAX; quality = quality || 0.82;
+  const dataUrl = await nmscReadDataUrl(file);
+  const base = {name:file.name, media_type:file.type||'application/octet-stream', data:dataUrl.split(',')[1], orig:file.size};
+  if(!/^image\//.test(file.type||'')) return base;
+  try{
+    const img = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('이미지 해석 실패')); im.src=dataUrl; });
+    let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+    if(!w||!h) return base;
+    const sc=Math.min(1, maxEdge/Math.max(w,h));
+    w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    const cx=cv.getContext('2d');
+    cx.fillStyle='#fff'; cx.fillRect(0,0,w,h);
+    cx.drawImage(img,0,0,w,h);
+    let q=quality, out=cv.toDataURL('image/jpeg',q);
+    while(out.length > 1.5*1024*1024 && q > 0.4){ q-=0.12; out=cv.toDataURL('image/jpeg',q); }
+    const b64=out.split(',')[1];
+    if(b64.length < base.data.length) return {name:file.name, media_type:'image/jpeg', data:b64, orig:file.size};
+    return base;
+  }catch(e){ return base; }
+}
+
+/* 이미지 축소 후 dataURL 그대로 반환 (노트 사진 저장용) */
+async function nmscShrinkDataUrl(file, maxEdge, quality){
+  const o = await nmscShrink(file, maxEdge||1400, quality||0.78);
+  return 'data:'+o.media_type+';base64,'+o.data;
+}
+
+/* 파일 배열을 요청 단위로 쪼갬 */
+function nmscMakeBatches(files){
+  const out=[]; let cur=[], size=0;
+  files.forEach(f=>{
+    const len=(f.data||'').length;
+    if(cur.length && (cur.length>=NMSC_BATCH_FILES || size+len > NMSC_BATCH_BYTES)){ out.push(cur); cur=[]; size=0; }
+    cur.push(f); size+=len;
+  });
+  if(cur.length) out.push(cur);
+  return out;
+}
+
+/* 파싱 결과 병합 — 먼저 읽은 값 우선, 빈 값만 뒤 결과로 채움 */
+function nmscMergeParsed(a,b){
+  if(!a) return b||{}; if(!b) return a;
+  const out=Object.assign({},a);
+  Object.keys(b).forEach(k=>{
+    const bv=b[k];
+    if(bv===undefined||bv===null||bv==='') return;
+    if(k==='coverage'){ out.coverage=nmscMergeCoverage(out.coverage,bv); return; }
+    if(Array.isArray(bv)){
+      const av=Array.isArray(out[k])?out[k].slice():[];
+      const key=x=>(k==='people')?((x.name||'')+'|'+(x.rrn||'')):(k==='equip'?String(x.name||''):JSON.stringify(x));
+      const seen=new Set(av.map(key));
+      bv.forEach(x=>{ const kk=key(x); if(!seen.has(kk)){ seen.add(kk); av.push(x); } });
+      out[k]=av; return;
+    }
+    if(typeof bv==='object'){ out[k]=nmscMergeParsed(out[k]||{},bv); return; }
+    if(out[k]===undefined||out[k]===null||out[k]==='') out[k]=bv;
+  });
+  return out;
+}
+function nmscMergeCoverage(a,b){
+  a=a||{}; b=b||{};
+  const rank={missing:0, weak:1, ok:2};
+  const items=[]; const idx={};
+  (a.items||[]).concat(b.items||[]).forEach(it=>{
+    const k=it.key||it.label||it.name||JSON.stringify(it);
+    if(idx[k]===undefined){ idx[k]=items.length; items.push(Object.assign({},it)); }
+    else{
+      const cur=items[idx[k]];
+      if((rank[it.status]||0) > (rank[cur.status]||0)) items[idx[k]]=Object.assign({},it);
+    }
+  });
+  const docs=[];
+  (a.detectedDocs||[]).concat(b.detectedDocs||[]).forEach(d=>{ if(docs.indexOf(d)<0) docs.push(d); });
+  const out=Object.assign({},a,b);
+  out.items=items; out.detectedDocs=docs;
+  return out;
+}
+
+/* 여러 묶음으로 나눠 /parse-docs 호출 후 결과 병합 */
+async function nmscParseDocsBatched(url, files, note, onProgress){
+  const batches=nmscMakeBatches(files);
+  let data=null, notes=[], errs=[];
+  for(let i=0;i<batches.length;i++){
+    if(onProgress) onProgress(i+1, batches.length);
+    const body={files:batches[i], note:note+(batches.length>1?('\n\n(전체 '+files.length+'개 서류 중 '+(i+1)+'번째 묶음입니다. 이 묶음에서 읽히는 항목만 채우고, 없는 항목은 빈 값으로 두세요.)'):'')};
+    let resp, r;
+    try{
+      resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }catch(e){ throw new Error('통신 실패: '+e.message); }
+    if(resp.status===413){
+      throw new Error('용량초과(413) — 서류 용량이 여전히 큽니다. 사진 대신 PDF를 줄이거나, 서류를 몇 개씩 나눠 올려주세요.');
+    }
+    try{ r=await resp.json(); }
+    catch(e){ throw new Error('서버 응답을 읽지 못했습니다 (HTTP '+resp.status+')'); }
+    if(r.error && !r.data){ errs.push(r.error); if(r.raw) errs.push(String(r.raw).slice(0,300)); continue; }
+    data=nmscMergeParsed(data, r.data||{});
+    if(r.notes) notes.push(r.notes);
+  }
+  if(!data && errs.length) throw new Error(errs.join(' / '));
+  return {data:data||{}, notes:notes.join('\n'), batches:batches.length};
+}
+
 /* ---------- 자동 서류 파싱 ---------- */
 let _uploadedFiles = []; // {name, media_type, data(base64)}
 let _lastCoverage = null; // AI 서류 점검표 결과 (폼 재렌더 후 복원용)
@@ -616,18 +733,19 @@ function bindDropzone(){
   dz.ondrop=(e)=>{e.preventDefault();dz.style.background='';handleFiles(e.dataTransfer.files);};
   fi.onchange=()=>handleFiles(fi.files);
 }
-function handleFiles(fileList){
-  const arr=Array.from(fileList);
-  arr.forEach(file=>{
-    if(file.size > 20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return; }
-    const reader=new FileReader();
-    reader.onload=()=>{
-      const b64=reader.result.split(',')[1];
-      _uploadedFiles.push({name:file.name, media_type:file.type||'application/octet-stream', data:b64});
-      renderFileList();
-    };
-    reader.readAsDataURL(file);
+async function handleFiles(fileList){
+  const arr=Array.from(fileList).filter(file=>{
+    if(file.size > 20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return false; }
+    if(/pdf/.test(file.type||'') && file.size > 5*1024*1024){ alert(file.name+' : PDF가 커서(5MB 초과) 분석에 실패할 수 있습니다. 필요한 쪽만 캡처해 이미지로 올리면 확실합니다.'); }
+    return true;
   });
+  for(const file of arr){
+    try{
+      const o=await nmscShrink(file);
+      _uploadedFiles.push(o);
+    }catch(e){ alert(file.name+' : 읽지 못해 제외합니다'); }
+    renderFileList();
+  }
 }
 function renderFileList(){
   const el=document.getElementById('fileList');
@@ -636,7 +754,7 @@ function renderFileList(){
   el.innerHTML = _uploadedFiles.map((f,i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:5px">
       <span style="font-size:16px">${f.media_type.includes('pdf')?'📄':'🖼️'}</span>
-      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}</span>
+      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}<span style="font-weight:600;color:var(--gray);margin-left:6px;font-size:11px">${nmscKB(nmscBytes(f.data))}${(f.orig&&f.orig>nmscBytes(f.data)*1.25)?' (축소됨)':''}</span></span>
       <button onclick="removeFile(${i})" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:900;cursor:pointer">삭제</button>
     </div>`).join('');
 }
@@ -674,19 +792,12 @@ async function runAutoParse(){
   const note=document.getElementById('companyNote')?.value||'';
 
   try{
-    const resp=await fetch(workerUrl,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({files:_uploadedFiles, note})
+    const result=await nmscParseDocsBatched(workerUrl, _uploadedFiles, note, (i,n)=>{
+      status.style.color='var(--amber)';
+      status.innerHTML = n>1
+        ? '⏳ 서류가 많아 '+n+'번에 나눠 보냅니다 — '+i+'/'+n+' 묶음 분석 중... (묶음당 10~30초)'
+        : '⏳ AI가 서류를 읽는 중입니다... (10~30초)';
     });
-    const result=await resp.json();
-
-    if(result.error && !result.data){
-      status.style.color='var(--red)';
-      status.innerHTML='❌ 오류: '+escapeHtml(result.error||'')+(result.raw?'<br><br><b>AI 응답 원문:</b><br><textarea style="width:100%;min-height:120px;font-size:11px;font-family:monospace">'+escapeHtml(result.raw)+'</textarea>':'')+(result.detail?'<br><small>'+escapeHtml(result.detail)+'</small>':'');
-      btn.disabled=false; btn.style.opacity='1';
-      return;
-    }
 
     // 성공 - 폼 채우기
     applyData(result.data);
@@ -702,7 +813,7 @@ async function runAutoParse(){
 
   }catch(e){
     status.style.color='var(--red)';
-    status.innerHTML='❌ 통신 실패: '+escapeHtml(e.message)+'<br><small>서버 주소가 맞는지, Worker가 배포됐는지 확인하세요.</small>';
+    status.innerHTML='❌ '+escapeHtml(e.message)+'<br><small>서버 주소가 맞는지, Worker가 배포됐는지 확인하세요.</small>';
     btn.disabled=false; btn.style.opacity='1';
   }
 }
@@ -1333,13 +1444,27 @@ function bindJournalDropzone(){
   fi.onchange=()=>jHandleFiles(fi.files);
   jRenderFileList();
 }
-function jHandleFiles(fileList){
-  Array.from(fileList).forEach(file=>{
-    if(file.size>20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return; }
-    const rd=new FileReader();
-    rd.onload=()=>{ _jFiles.push({name:file.name, media_type:file.type||'application/octet-stream', data:rd.result.split(',')[1]}); jRenderFileList(); };
-    rd.readAsDataURL(file);
+async function jHandleFiles(fileList){
+  const arr=Array.from(fileList).filter(file=>{
+    if(file.size>20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return false; }
+    if(/pdf/.test(file.type||'') && file.size > 5*1024*1024){ alert(file.name+' : PDF가 커서(5MB 초과) 분석에 실패할 수 있습니다. 필요한 쪽만 캡처해 이미지로 올리면 확실합니다.'); }
+    return true;
   });
+  const st=document.getElementById('jParseStatus');
+  if(st && arr.length>1){ st.style.display='block'; st.style.color='var(--gray)'; st.innerHTML='⏳ 사진 용량을 줄이는 중... (0/'+arr.length+')'; }
+  let k=0;
+  for(const file of arr){
+    try{ _jFiles.push(await nmscShrink(file)); }
+    catch(e){ alert(file.name+' : 읽지 못해 제외합니다'); }
+    k++;
+    if(st && arr.length>1) st.innerHTML='⏳ 사진 용량을 줄이는 중... ('+k+'/'+arr.length+')';
+    jRenderFileList();
+  }
+  if(st && arr.length>1){
+    const tot=_jFiles.reduce((a,f)=>a+nmscBytes(f.data),0);
+    st.style.color='var(--blue)';
+    st.innerHTML='📎 서류 '+_jFiles.length+'개 준비 완료 (합계 '+nmscKB(tot)+'). 아래 빨간 버튼을 누르세요.';
+  }
 }
 function jRenderFileList(){
   const el=document.getElementById('jFileList'); if(!el) return;
@@ -1347,7 +1472,7 @@ function jRenderFileList(){
   el.innerHTML=_jFiles.map((f,i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:5px">
       <span style="font-size:16px">${f.media_type.includes('pdf')?'📄':'🖼️'}</span>
-      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}</span>
+      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}<span style="font-weight:600;color:var(--gray);margin-left:6px;font-size:11px">${nmscKB(nmscBytes(f.data))}${(f.orig&&f.orig>nmscBytes(f.data)*1.25)?' (축소됨)':''}</span></span>
       <button onclick="jRemoveFile(${i})" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:900;cursor:pointer">삭제</button>
     </div>`).join('');
 }
@@ -1363,12 +1488,11 @@ async function jParseDocs(){
   show('var(--amber)','⏳ AI가 서류를 읽는 중입니다... (10~30초)');
   const note='이 회사는 이미 기업부설연구소 또는 연구개발전담부서 인정을 받은 업체입니다(설립 완료). 연구소인정서에서 인정일(foundLabDate)·부서명(labName)·구분(labType)을, 사업자등록증에서 회사명·대표자·업종·주요제품을, 연구계획서나 KOITA 개요서가 있으면 연구과제(overview.tasks)를, 장비 목록이 있으면 equip을 정확히 읽어주세요. 연구원 명단은 people로 주세요.';
   try{
-    const resp=await fetch(base+'/parse-docs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:_jFiles, note})});
-    const r=await resp.json();
-    if(r.error && !r.data){
-      show('var(--red)','❌ 오류: '+escapeHtml(r.error||'')+(r.raw?'<br><textarea style="width:100%;min-height:100px;font-size:11px">'+escapeHtml(r.raw)+'</textarea>':''));
-      if(btn){btn.disabled=false;btn.style.opacity='1';} return;
-    }
+    const r=await nmscParseDocsBatched(base+'/parse-docs', _jFiles, note, (i,n)=>{
+      show('var(--amber)', n>1
+        ? '⏳ 서류가 많아 '+n+'번에 나눠 보냅니다 — '+i+'/'+n+' 묶음 분석 중... (묶음당 10~30초)'
+        : '⏳ AI가 서류를 읽는 중입니다... (10~30초)');
+    });
     const d=r.data||{};
     const el=(id,v)=>{ const e=document.getElementById(id); if(e && v) e.value=v; };
     const filled=[];
@@ -1403,7 +1527,7 @@ async function jParseDocs(){
       +(miss.length?'<div style="color:var(--red);margin-top:5px">⚠️ 못 읽은 항목: <b>'+miss.join(', ')+'</b> — 아래 칸에 직접 채워주세요</div>':'')
       +'<div style="color:#234;margin-top:5px;font-weight:700">아래 내용을 확인·수정한 뒤 [업체 등록하기]를 누르세요.</div>');
   }catch(e){
-    show('var(--red)','❌ 통신 실패: '+escapeHtml(e.message));
+    show('var(--red)','❌ '+escapeHtml(e.message));
   }
   if(btn){btn.disabled=false;btn.style.opacity='1';}
 }
@@ -2971,12 +3095,10 @@ function jAddPhotos(ym, files){
   });
 
   let cursor=n.photos.length;   // 번호 없는 사진용 순번
-  Promise.all(parsed.map(x=>new Promise(res=>{
-    const rd=new FileReader();
-    rd.onload=()=>res(Object.assign({},x,{data:rd.result}));
-    rd.onerror=()=>res(null);
-    rd.readAsDataURL(x.file);
-  }))).then(list=>{
+  Promise.all(parsed.map(x=>nmscShrinkDataUrl(x.file,1400,0.78)
+      .then(du=>Object.assign({},x,{data:du}))
+      .catch(()=>null)
+  )).then(list=>{
     let matched=0;
     list.filter(Boolean).forEach(x=>{
       const gi = (x.seq!==null) ? (x.seq-1) : (cursor++);
