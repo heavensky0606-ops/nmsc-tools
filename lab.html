@@ -2300,6 +2300,7 @@ ${GRAPH}` },
     content:content,
     participants:jPeopleLine(p)||'',
     photoGuide:_preG||guides.slice(0, per.quarter?6:4),
+    guideEdited:!!_prev.guideEdited,
     ym:key, photos:(_prev.photos||[])
   };
   note.realMemo=_prev.realMemo||'';
@@ -2545,6 +2546,7 @@ const JGUIDE_FILL=[
 /* n.photoGuide 를 정리(중복 제거+보충)해 그대로 저장. 가이드 그림·사진 자동배치가 같은 목록을 쓰게 함 */
 function jGuideList(n, want){
   const src=(n&&n.photoGuide)||[];
+  if(n && n.guideEdited){ return src.filter(g=>String(g.scene||'').trim()); }
   const out=[], used=new Set();
   src.forEach(g=>{
     const scene=String(g.scene||g.caption||'').trim();
@@ -2817,10 +2819,11 @@ function jPreGuide(forceKey){
   co.notes=co.notes||{};
   const prev=co.notes[key]||{};
   if(prev.content && !confirm(per.label+' 노트가 이미 있습니다.\n본문은 그대로 두고 촬영 장면만 새로 뽑을까요?')) return;
+  if(prev.guideEdited && !confirm('직접 고쳐 놓은 촬영 장면이 있습니다.\n자동 장면으로 덮어쓸까요?')) return;
   const g=jLocalGuide(p, per, want);
   if(!g.length){ show('var(--red)','촬영 장면을 만들지 못했습니다. 계획서의 월별 배분표를 확인하세요.'); return; }
   co.notes[key]=Object.assign({}, prev, {
-    ym:key, photoGuide:g, photos:prev.photos||[],
+    ym:key, photoGuide:g, guideEdited:false, photos:prev.photos||[],
     content:prev.content||'', taskTitle:prev.taskTitle||p.projectTitle||'',
     subTitle:prev.subTitle||'', participants:prev.participants||jPeopleLine(p)||''
   });
@@ -2828,6 +2831,173 @@ function jPreGuide(forceKey){
   jSave(); jCloudPush(J.cur);
   show('var(--blue)','촬영 장면 '+g.length+'개를 만들었습니다. 아래에서 카톡 문구와 그림을 받으세요.');
   render(); setTimeout(()=>jViewNote(key),80);
+}
+
+/* ================= 촬영 장면 편집 ================= */
+function jNoteOf(ym){ return J.companies[J.cur]?.notes?.[ym]; }
+function jGuideRefresh(ym){ try{ jSave(); }catch(e){} jViewGuideStage(ym); }
+
+function jSetGuide(ym,i,field,v){
+  const n=jNoteOf(ym); if(!n||!n.photoGuide||!n.photoGuide[i]) return;
+  n.photoGuide[i][field]=String(v||'').slice(0,220);
+  n.guideEdited=true;
+  try{ jSave(); }catch(e){}
+}
+function jMoveGuide(ym,i,d){
+  const n=jNoteOf(ym); if(!n) return;
+  const g=n.photoGuide||[]; const j=i+d;
+  if(j<0||j>=g.length) return;
+  const t=g[i]; g[i]=g[j]; g[j]=t;
+  (n.photos||[]).forEach(ph=>{ const gi=(ph.gi==null?-1:parseInt(ph.gi));
+    if(gi===i) ph.gi=j; else if(gi===j) ph.gi=i; });
+  n.guideEdited=true; jGuideRefresh(ym);
+}
+function jAddGuide(ym){
+  const n=jNoteOf(ym); if(!n) return;
+  n.photoGuide=n.photoGuide||[];
+  if(n.photoGuide.length>=12){ alert('장면은 최대 12개까지입니다.'); return; }
+  n.photoGuide.push({scene:'', caption:''});
+  n.guideEdited=true; jGuideRefresh(ym);
+}
+function jDelGuide(ym,i){
+  const n=jNoteOf(ym); if(!n||!n.photoGuide) return;
+  if(!confirm((i+1)+'번 장면을 지울까요? (사진은 남습니다)')) return;
+  n.photoGuide.splice(i,1);
+  (n.photos||[]).forEach(ph=>{ const gi=(ph.gi==null?-1:parseInt(ph.gi));
+    if(gi===i) ph.gi=null; else if(gi>i) ph.gi=gi-1; });
+  n.guideEdited=true; jGuideRefresh(ym);
+}
+function jResetGuide(ym){
+  const co=J.companies[J.cur]; const n=co?.notes?.[ym]; if(!n||!co.plan) return;
+  if(!confirm('직접 고친 내용이 사라지고 자동 장면으로 돌아갑니다. 계속할까요?')) return;
+  const per=jPeriod(ym, jStartOf(ym));
+  n.photoGuide=jLocalGuide(co.plan, per, per.quarter?6:4);
+  n.guideEdited=false;
+  (n.photos||[]).forEach((ph,k)=>{ ph.gi=k; });
+  jGuideRefresh(ym);
+}
+/* 받은 사진 장수에 맞춰 빈 장면 칸을 새로 짬 */
+function jGuideFromPhotos(ym){
+  const n=jNoteOf(ym); if(!n) return;
+  const ph=n.photos||[];
+  if(!ph.length){ alert('먼저 받은 사진을 올려주세요.'); return; }
+  if(!confirm('사진 '+ph.length+'장에 맞춰 빈 장면 칸 '+ph.length+'개를 만듭니다.\n지금 장면 목록은 지워집니다. 계속할까요?')) return;
+  n.photoGuide=ph.map(x=>({scene:'', caption:String(x.caption||'').slice(0,40)}));
+  ph.forEach((x,k)=>{ x.gi=k; x.sec=jDefaultSec(n,k); });
+  n.guideEdited=true; jGuideRefresh(ym);
+}
+/* 실측값을 메모칸으로 확정 이동 */
+function jConfirmRead(ym,i){
+  const n=jNoteOf(ym); if(!n||!n.photoGuide||!n.photoGuide[i]) return;
+  const g=n.photoGuide[i];
+  const v=String(g.read||'').trim();
+  if(!v){ alert('옮길 값이 없습니다.'); return; }
+  const line=(i+1)+'번 장면: '+v;
+  const cur=String(n.realMemo||'').trim();
+  if(cur.indexOf(line)<0) n.realMemo=(cur?cur+'\n':'')+line;
+  g.readOk=true; jGuideRefresh(ym);
+}
+
+/* ---- AI가 사진을 직접 읽고 장면 초안 작성 ---- */
+async function jAiGuide(ym){
+  const co=J.companies[J.cur]; const n=co?.notes?.[ym]; if(!n) return;
+  const base=jWorkerBase();
+  const st=document.getElementById('jAiGuideMsg');
+  const show=(c,h)=>{ if(st){st.style.display='block';st.style.color=c;st.innerHTML=h;} };
+  if(!base){ show('var(--red)','서버 주소를 먼저 저장하세요.'); return; }
+  const ph=(n.photos||[]).slice(0,8);
+  if(!ph.length){ show('var(--red)','먼저 받은 사진을 올려주세요.'); return; }
+  const btn=document.getElementById('jAiGuideBtn');
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
+  show('var(--amber)','⏳ AI가 사진 '+ph.length+'장을 읽는 중입니다... (10~30초)');
+
+  const images=ph.map(x=>{
+    const d=String(x.data||'');
+    const m=d.match(/^data:([^;]+);base64,(.*)$/);
+    return m?{media_type:m[1], data:m[2]}:null;
+  }).filter(Boolean);
+
+  const p=co.plan||{};
+  const per=jPeriod(ym, jStartOf(ym));
+  const prompt=`첨부한 사진 ${images.length}장은 어느 중소기업 연구개발전담부서에서 실제로 촬영한 연구활동 사진입니다.
+회사 업종·주요제품: ${p.bizDesc||'(미기재)'}
+연구과제: ${p.projectTitle||'(미기재)'}
+작성 기간: ${per.label}
+
+사진을 순서대로 하나씩 보고, 각 사진이 무슨 작업 장면인지 한 문장으로 적으세요.
+
+[장면 문장 규칙]
+- 사진에 실제로 보이는 것만 적으세요. 보이지 않는 장비·조건·작업을 지어내지 마세요.
+- 사람 이름과 날짜를 넣지 마세요.
+- 쉬운 우리말 한 문장. 예: "작업대에서 디지털 저울에 시료를 올려 무게를 재는 장면"
+- caption은 사진 아래 들어갈 짧은 제목(15자 이내).
+
+[숫자 읽기 규칙 — 매우 중요]
+- 계기판·저울·측정기 화면에 숫자가 또렷하게 보이면 단위까지 그대로 적으세요.
+- 흐리거나 가려져서 확신이 없으면 절대 추측하지 말고 빈칸으로 두세요.
+- 숫자가 없는 사진은 빈칸입니다.
+
+[응답 형식]
+photoGuide 배열에 사진 순서대로 ${images.length}개를 넣으세요: [{"scene":"장면 문장","caption":"짧은 제목"}, ...]
+content 에는 사진별로 읽은 숫자를 한 줄씩 적으세요. 형식은 "번호|값" 이며, 없으면 값을 비웁니다.
+예:
+1|저울 표시값 57.0 g
+2|
+3|온습도계 4℃ 62%
+
+taskTitle 과 subTitle 은 빈 문자열로 두세요.
+사진이 하나도 보이지 않으면 photoGuide를 빈 배열 []로 두고 content 를 정확히 NOIMAGE 라고만 쓰세요. 사진 없이 지어내면 안 됩니다.`;
+
+  try{
+    const resp=await fetch(base+'/generate-note',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt, images})});
+    const r=await resp.json();
+    const d=(r&&r.data)||{};
+    const body=String(d.content||r.content||'');
+    const gl=Array.isArray(d.photoGuide)?d.photoGuide.filter(g=>g&&String(g.scene||'').trim()):[];
+    if(/NOIMAGE/i.test(body) || !gl.length){
+      localStorage.setItem('nmsc_vision','0');
+      show('var(--red)','❌ 서버가 사진을 AI에게 넘기지 못했습니다. <b>[받은 사진 기준으로 장면 다시 짜기]</b>로 직접 적어주세요.<br><span style="font-weight:700;font-size:11.5px">워커에 이미지 전달 기능을 추가하면 이 버튼이 동작합니다.</span>');
+      if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+      return;
+    }
+    localStorage.setItem('nmsc_vision','1');
+    const reads={};
+    body.split('\n').forEach(ln=>{
+      const m=ln.match(/^\s*(\d{1,2})\s*[|:.]\s*(.*)$/);
+      if(m) reads[parseInt(m[1])-1]=String(m[2]||'').trim();
+    });
+    n.photoGuide=ph.map((x,k)=>({
+      scene:String((gl[k]&&gl[k].scene)||'').slice(0,220),
+      caption:String((gl[k]&&gl[k].caption)||'').slice(0,40),
+      read:reads[k]||'', readOk:false
+    })).filter(g=>g.scene);
+    ph.forEach((x,k)=>{ x.gi=k; x.sec=jDefaultSec(n,k);
+      const c=n.photoGuide[k]&&n.photoGuide[k].caption; if(c) x.caption=c; });
+    n.guideEdited=true;
+    const nRead=Object.keys(reads).filter(k=>reads[k]).length;
+    J._aiGuideMsg='✅ 장면 '+n.photoGuide.length+'개를 사진에서 읽어 적었습니다.'
+      +(nRead?' 숫자 '+nRead+'건은 <b>눈으로 대조한 뒤</b> [확정]을 누르세요.':' 읽힌 숫자는 없습니다.');
+    jGuideRefresh(ym);
+  }catch(e){
+    show('var(--red)','❌ 통신 실패: '+escapeHtml(e.message||''));
+    if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+  }
+}
+
+/* 빈 장면·사진 없는 장면을 알린 뒤 본문 생성 */
+function jGenGuarded(ym){
+  const n=jNoteOf(ym); const g=(n&&n.photoGuide)||[]; const ps=(n&&n.photos)||[];
+  const cnt={}; ps.forEach(x=>{ const k=(x.gi==null?-1:parseInt(x.gi)); cnt[k]=(cnt[k]||0)+1; });
+  const empty=g.filter(x=>!String(x.scene||'').trim()).length;
+  const noPh=g.filter((x,i)=>String(x.scene||'').trim() && !cnt[i]).length;
+  const unread=g.filter(x=>String(x.read||'').trim() && !x.readOk).length;
+  let msg='';
+  if(empty) msg+='· 내용이 비어 있는 장면 '+empty+'개 — 본문에 반영되지 않습니다\n';
+  if(noPh)  msg+='· 사진이 없는 장면 '+noPh+'개 — 사진 없는 활동이 본문에 서술됩니다\n';
+  if(unread) msg+='· 확정하지 않은 숫자 '+unread+'건 — 본문에 쓰이지 않습니다\n';
+  if(msg && !confirm(msg+'\n이대로 생성할까요?')) return;
+  J._forceGuide=null; jGenerateNote(ym);
 }
 
 /* 사진 대기 단계 화면 (본문 없음) */
@@ -2840,20 +3010,68 @@ function jViewGuideStage(ym){
   const photos=(n.photos||[]);
   const lines=list.map((g,i)=>`${i+1}. ${g.scene}`).join('\n');
   const kakao=`대표님, ${per.label} ${docName}에 넣을 사진을 부탁드립니다.\n\n아래 장면을 휴대폰으로 찍어서 보내주세요. 연출하지 마시고 실제 작업 모습 그대로면 됩니다.\n\n${lines}\n\n■ 부탁드리는 점\n· 사진 파일 이름을 1, 2, 3 … 번호로 저장해 주시면 알맞은 자리에 자동으로 들어갑니다.\n· 얼굴이 나오지 않아도 됩니다. 손·작업대·장비가 보이면 충분합니다.\n· 이번 기간에 실제로 진행하신 작업을 찍어 주세요.`;
-  const rows=list.map((g,i)=>`
-    <div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)">
-      <div style="flex:0 0 26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-weight:900;font-size:12.5px;display:flex;align-items:center;justify-content:center">${i+1}</div>
-      <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text)">${escapeHtml(g.scene)}</div>
-      ${g.caption?`<div style="font-size:11.5px;color:var(--gray);font-weight:700;margin-top:2px">캡션: ${escapeHtml(g.caption)}</div>`:''}</div>
-    </div>`).join('');
+  const byGi={};
+  photos.forEach((ph,pi)=>{ const gi=(ph.gi==null?-1:parseInt(ph.gi)); (byGi[gi]=byGi[gi]||[]).push(ph); });
+  const noPhotoN=list.filter((g,i)=>!(byGi[i]&&byGi[i].length)).length;
+  const mvBtn=(i,d,ic,lb)=>`<button onclick="jMoveGuide('${ym}',${i},${d})" title="${lb}" style="width:27px;height:19px;padding:0;border:1px solid var(--line);background:#fff;color:var(--gray);border-radius:5px;font-size:11px;font-weight:900;cursor:pointer;line-height:1">${ic}</button>`;
+  const rows=list.map((g,i)=>{
+    const ps=byGi[i]||[];
+    const thumb = ps.length
+      ? `<img src="${ps[0].data}" style="flex:0 0 54px;width:54px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">`
+        + (ps.length>1?`<span style="position:absolute;margin-left:-18px;margin-top:26px;background:var(--blue);color:#fff;font-size:10px;font-weight:900;border-radius:8px;padding:0 5px">+${ps.length-1}</span>`:'')
+      : `<div style="flex:0 0 54px;height:42px;border-radius:6px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--gray)">사진<br>없음</div>`;
+    const readRow = String(g.read||'').trim() ? `
+      <div style="display:flex;gap:6px;align-items:center;margin-top:5px">
+        <span style="font-size:10.5px;font-weight:900;color:var(--amber);flex:0 0 auto">사진에서 읽힌 값</span>
+        <input value="${escapeHtml(g.read||'')}" onchange="jSetGuide('${ym}',${i},'read',this.value)"
+          style="flex:1;min-width:0;border:1.5px solid ${g.readOk?'var(--line)':'var(--amber)'};background:${g.readOk?'#fff':'var(--amber-l)'};border-radius:6px;padding:5px 8px;font-size:11.5px;font-family:inherit">
+        ${g.readOk
+          ? `<span style="font-size:11px;font-weight:900;color:var(--blue);flex:0 0 auto">확정됨</span>`
+          : `<button onclick="jConfirmRead('${ym}',${i})" style="flex:0 0 auto;border:none;background:var(--blue);color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:900;cursor:pointer">확정</button>`}
+      </div>` : '';
+    return `
+    <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)">
+      <div style="flex:0 0 26px;height:26px;border-radius:50%;background:${String(g.scene||'').trim()?'var(--blue)':'#eef1f5'};color:${String(g.scene||'').trim()?'#fff':'var(--gray)'};font-weight:900;font-size:12.5px;display:flex;align-items:center;justify-content:center">${i+1}</div>
+      ${thumb}
+      <div style="flex:1;min-width:0">
+        <input value="${escapeHtml(g.scene||'')}" placeholder="이 사진이 무슨 작업 장면인지 한 문장으로 적으세요"
+          onchange="jSetGuide('${ym}',${i},'scene',this.value)"
+          style="width:100%;border:1.5px solid ${String(g.scene||'').trim()?'var(--line)':'var(--red)'};border-radius:6px;padding:7px 9px;font-size:12px;font-family:inherit">
+        <input value="${escapeHtml(g.caption||'')}" placeholder="사진 아래 들어갈 짧은 제목 (15자 이내)"
+          onchange="jSetGuide('${ym}',${i},'caption',this.value)"
+          style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 9px;font-size:11px;font-family:inherit;margin-top:5px;color:var(--gray)">
+        ${readRow}
+      </div>
+      <div style="flex:0 0 auto;display:flex;flex-direction:column;gap:3px">
+        ${mvBtn(i,-1,'▲','위로')}${mvBtn(i,1,'▼','아래로')}
+        <button onclick="jDelGuide('${ym}',${i})" title="삭제" style="width:27px;height:19px;padding:0;border:1px solid var(--red-l);background:#fff;color:var(--red);border-radius:5px;font-size:11px;font-weight:900;cursor:pointer;line-height:1">✕</button>
+      </div>
+    </div>`;
+  }).join('');
   const el=document.getElementById('jNoteView');
   el.innerHTML=`
   <div class="card no-print">
     <h2>${per.label} — 촬영 요청 <span style="font-size:11px;background:var(--blue-ll);color:var(--blue-d);padding:3px 10px;border-radius:20px;font-weight:800">사진 대기</span></h2>
     <div class="cr-hint" style="margin-bottom:10px">사진을 받아서 올린 뒤 위 <b>[노트 생성]</b>을 누르면, 이 장면 목록과 사진이 그대로 반영된 ${docName}가 만들어집니다.</div>
     <div style="border:1.5px solid var(--line);border-radius:10px;padding:11px;margin-bottom:10px;background:#f7f9fc">
-      <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">요청할 촬영 장면 ${list.length}개</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">촬영 장면 ${list.length}개 <span style="font-weight:700;font-size:11px;color:var(--gray)">— 문장을 눌러 바로 고칠 수 있습니다</span></div>
+        <div style="font-size:11.5px;font-weight:800;color:${noPhotoN?'var(--red)':'var(--gray)'}">사진 ${photos.length}장 올림${noPhotoN?' · 사진 없는 장면 '+noPhotoN+'개':''}</div>
+      </div>
       ${rows}
+      <div style="display:flex;gap:8px;margin-top:11px">
+        <button class="btn sec" style="flex:1;padding:9px;font-size:12px;color:var(--blue);border-color:var(--blue)" onclick="jAddGuide('${ym}')">+ 장면 추가</button>
+        <button class="btn sec" style="flex:1;padding:9px;font-size:12px" onclick="jResetGuide('${ym}')">기본 장면으로 되돌리기</button>
+      </div>
+    </div>
+
+    <div style="border:1.5px solid var(--red);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:900;color:var(--red)">받은 사진이 위 장면과 다른가요?</div>
+      <div class="cr-hint" style="margin-top:4px">사진을 먼저 올린 뒤 아래 버튼을 누르면 <b>사진 장수만큼 빈 장면 칸</b>이 만들어집니다. 사진을 보면서 한 줄씩 적으세요. 이 순서가 실제 활동과 보고서를 맞추는 가장 정확한 방법입니다.</div>
+      <button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:9px;padding:11px;font-size:13px" onclick="jGuideFromPhotos('${ym}')">받은 사진 기준으로 장면 다시 짜기</button>
+      <button class="btn sec" style="width:100%;margin-top:7px;padding:10px;font-size:12.5px;color:var(--blue);border-color:var(--blue)" id="jAiGuideBtn" onclick="jAiGuide('${ym}')">AI가 사진을 읽고 장면 초안 쓰기 (서버 필요 · 10~30초)</button>
+      <div id="jAiGuideMsg" style="margin-top:7px;font-size:12px;font-weight:800;display:none"></div>
+      <div class="cr-hint" style="margin-top:5px">※ AI가 읽은 숫자는 <b>확정을 눌러야</b> 본문에 쓰입니다. 반드시 사진과 눈으로 대조하세요.</div>
     </div>
     <div style="border:1.5px solid var(--blue);border-radius:10px;padding:12px;background:var(--blue-ll);margin-bottom:10px">
       <div style="font-size:13px;font-weight:800;color:var(--blue-d)">사진 요청 메시지 (대표님께 그대로 전송)</div>
@@ -2876,8 +3094,13 @@ function jViewGuideStage(ym){
     </div>
     ${n.content
       ?`<button class="btn" style="background:var(--blue);color:#fff;width:100%;margin-top:10px;padding:11px" onclick="J._forceGuide=null;jViewNote('${ym}')">작성된 ${docName} 화면으로 돌아가기</button>`
-      :`<button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:11px" onclick="J._forceGuide=null;jGenerateNote('${ym}')">사진 다 받았습니다 — ${docName} 생성</button>`}
+      :`<button class="btn" style="background:var(--red);color:#fff;width:100%;margin-top:10px;padding:11px" onclick="jGenGuarded('${ym}')">사진 다 받았습니다 — ${docName} 생성</button>`}
   </div>`;
+  if(J._aiGuideMsg){
+    const m=document.getElementById('jAiGuideMsg');
+    if(m){ m.style.display='block'; m.style.color='var(--blue)'; m.innerHTML=J._aiGuideMsg; }
+    J._aiGuideMsg=null;
+  }
 }
 
 /* 노트 보기 + 사진 + 인쇄 */
