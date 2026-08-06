@@ -144,8 +144,12 @@ details.card[open] > summary::before{content:"▼ "}
 
 .jn-phcap{font-size:11px;font-weight:800;color:#0060df;margin-bottom:4px}
 /* 사진 관리 리스트(화면 전용) */
-.jph-row{display:grid;grid-template-columns:66px 1fr 150px 84px 54px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px;margin-top:6px;background:#fff}
-.jph-row img{width:66px;height:50px;object-fit:cover;border-radius:5px;border:1px solid #ddd}
+.jph-row{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px;margin-top:6px;background:#fff}
+.jph-row img{grid-row:span 2;width:72px;height:64px;object-fit:cover;border-radius:5px;border:1px solid #ddd;align-self:start}
+.jph-ctl{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.jph-ctl select{flex:0 1 auto;min-width:0}
+.jph-mv{width:30px;height:31px;padding:0;border:1px solid var(--line);background:#fff;color:var(--gray);border-radius:6px;font-size:11px;font-weight:900;cursor:pointer}
+.jph-no{flex:0 0 auto;font-size:11px;font-weight:900;color:var(--blue);background:var(--blue-ll);border-radius:6px;padding:6px 8px}
 .jph-row input,.jph-row select{width:100%;border:1.5px solid var(--line);border-radius:7px;padding:7px 8px;font-size:11.5px;font-family:inherit;background:#fff}
 .jph-del{background:var(--red);color:#fff;border:none;border-radius:7px;padding:8px 0;font-size:11px;font-weight:900;cursor:pointer}
 .jq-chip{display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;color:#111}
@@ -156,7 +160,7 @@ details.card[open] > summary::before{content:"▼ "}
 .jh-b:hover{background:var(--blue-ll);color:var(--blue-d)}
 .jh-x{border:0;border-left:1.5px solid var(--line);background:#fff;color:#9aa7b4;padding:0 8px;font-size:12px;font-weight:900;cursor:pointer;line-height:1;font-family:inherit}
 .jh-x:hover{background:var(--red);color:#fff;border-left-color:var(--red)}
-@media(max-width:560px){.jph-row{grid-template-columns:56px 1fr;grid-auto-rows:auto}.jph-row img{grid-row:span 2}}
+@media(max-width:560px){.jph-row{grid-template-columns:56px 1fr;grid-auto-rows:auto}.jph-row img{grid-row:span 2;height:56px}}
 @media print{
   body *{visibility:hidden}
   .jn-sheet,.jn-sheet *{visibility:visible}
@@ -2560,6 +2564,17 @@ function jSectionsOf(content){
   (content||'').split('\n').forEach(L=>{ const m=L.match(/^#{1,3}\s+(.+)$/); if(m) out.push(m[1].trim()); });
   return out;
 }
+/* 파일 이름에서 장면 번호 읽기.
+   맨 앞 번호(1.jpg, 3_저울.jpg) 또는 확장자 바로 앞 번호(사진-2.jpg)만 인정한다.
+   KakaoTalk_20260731_1234.jpg 처럼 날짜가 섞인 이름은 번호 없음으로 본다. */
+function jSeqFromName(name){
+  const s=String(name||'').replace(/\.[a-z0-9]+$/i,'');
+  let m=s.match(/^\D{0,3}(\d{1,2})(?!\d)/);           // 맨 앞 (앞에 기호 몇 개는 허용)
+  if(!m) m=s.match(/(?:^|[^\d])(\d{1,2})$/);           // 맨 뒤
+  if(!m) return null;
+  const v=parseInt(m[1]);
+  return (v>=1 && v<=20) ? v : null;
+}
 /* ---- 사진 크기 ---- */
 const JPSZ={ s:{w:31,h:150,t:'작게'}, m:{w:48,h:220,t:'보통'}, l:{w:64,h:300,t:'크게'}, f:{w:100,h:430,t:'전체폭'} };
 function jSizeOf(ph){ return JPSZ[(ph&&ph.size)||'m']||JPSZ.m; }
@@ -2580,7 +2595,10 @@ function jSyncCaptions(n, force){
   const g=n.photoGuide||[]; let k=0;
   n.photos.forEach((ph,i)=>{
     if(!force && ph.capManual) return;
-    const gi=(ph.gi!=null&&ph.gi>=0)?ph.gi:((ph.seq!=null)?ph.seq-1:i);
+    let gi;
+    if(ph.gi!=null && ph.gi>=0) gi=ph.gi;
+    else if(ph.gi===null) return;                 // [장면 지정 안 함]은 건드리지 않음
+    else gi=(ph.seq!=null)?ph.seq-1:i;            // 예전 자료 보정
     const e=g[gi]; if(!e) return;
     const t=String(e.caption||e.scene||'').trim().slice(0,70);
     if(!t) return;
@@ -2600,6 +2618,44 @@ function jResyncCaptions(ym){
   try{ jSave(); }catch(e){}
   jViewNote(ym);
   alert(k+'장의 설명을 장면 문장으로 바꿨습니다.');
+}
+/* 장면 번호(gi) → 순서 정렬. 장면이 없는 사진은 뒤로. */
+function jSortPhotos(n){
+  if(!n||!n.photos) return;
+  n.photos.forEach((ph,k)=>{ ph._o=k; });
+  n.photos.sort((a,b)=>{
+    const av=(a.gi!=null&&a.gi>=0)?a.gi:((a.seq!=null)?a.seq-1:999);
+    const bv=(b.gi!=null&&b.gi>=0)?b.gi:((b.seq!=null)?b.seq-1:999);
+    return (av-bv) || (a._o-b._o);
+  });
+  n.photos.forEach(ph=>{ delete ph._o; });
+}
+function jSortPhotosBtn(ym){
+  const n=J.companies[J.cur]?.notes?.[ym]; if(!n) return;
+  jSortPhotos(n); try{ jSave(); }catch(e){} jViewNote(ym);
+}
+/* 사진 순서 바꾸기 (같은 항목 안에서의 앞뒤 순서가 이 배열 순서를 따름) */
+function jMovePhoto(ym,i,d){
+  const n=J.companies[J.cur]?.notes?.[ym]; if(!n||!n.photos) return;
+  const a=n.photos, j=i+d;
+  if(j<0||j>=a.length) return;
+  const t=a[i]; a[i]=a[j]; a[j]=t;
+  try{ jSave(); }catch(e){} jViewNote(ym);
+}
+/* 이 사진이 몇 번 장면인지 직접 지정 → 설명과 순서가 따라옴 */
+function jSetPhotoScene(ym,i,v){
+  const n=J.companies[J.cur]?.notes?.[ym]; if(!n||!n.photos||!n.photos[i]) return;
+  const ph=n.photos[i];
+  if(v===''||v==null){ ph.gi=null; ph.seq=null; }
+  else{
+    const gi=parseInt(v);
+    ph.gi=gi; ph.seq=gi+1;
+    if(!ph.capManual){
+      const g=(n.photoGuide||[])[gi];
+      ph.caption=g?String(g.caption||g.scene||'').slice(0,70):'';
+    }
+  }
+  try{ jSave(); }catch(e){} jViewNote(ym);
 }
 function jSetAllSize(ym, sz){
   const n=J.companies[J.cur]?.notes?.[ym]; if(!n||!n.photos) return;
@@ -3355,13 +3411,37 @@ function jViewNote(ym){
   const secOptions=(cur)=>['<option value="0" '+((parseInt(cur)||0)===0?'selected':'')+'>맨 아래(항목 밖)</option>']
     .concat(secs.map((t,k)=>'<option value="'+(k+1)+'" '+((parseInt(cur)||0)===k+1?'selected':'')+'>'+escapeHtml(t.length>22?t.slice(0,22)+'…':t)+'</option>')).join('');
   try{ if(jSyncCaptions(n,false)) jSave(); }catch(e){}
+  const gArr=n.photoGuide||[];
+  const sceneOptions=(cur)=>['<option value="" '+((cur==null||cur<0)?'selected':'')+'>장면 지정 안 함</option>']
+    .concat(gArr.map((g,k)=>{
+      const t=String(g.caption||g.scene||('장면 '+(k+1)));
+      return '<option value="'+k+'" '+((parseInt(cur)===k)?'selected':'')+'>'+(k+1)+'. '+escapeHtml(t.length>16?t.slice(0,16)+'…':t)+'</option>';
+    })).join('');
+  const useCnt={};
+  photos.forEach(ph=>{ const g=(ph.gi!=null&&ph.gi>=0)?ph.gi:null; if(g!=null) useCnt[g]=(useCnt[g]||0)+1; });
+  const dupList=Object.keys(useCnt).filter(k=>useCnt[k]>1).map(k=>(parseInt(k)+1)+'번');
+  const noneCnt=photos.filter(ph=>!(ph.gi!=null&&ph.gi>=0)).length;
+  const emptyScenes=gArr.map((g,k)=>k).filter(k=>!useCnt[k]).map(k=>(k+1)+'번');
+  const warnHtml=(dupList.length||noneCnt||emptyScenes.length)?`
+      <div style="border:1.5px solid var(--red);border-radius:9px;padding:9px 11px;margin-top:8px;background:#fff6f6;font-size:11.5px;font-weight:800;color:var(--red);line-height:1.7">
+        ${dupList.length?`· 같은 장면에 사진이 2장 이상 붙었습니다 — ${dupList.join(', ')} 장면<br>`:''}
+        ${noneCnt?`· 장면이 지정되지 않은 사진 ${noneCnt}장 — 설명이 비거나 순서가 뒤로 밀립니다<br>`:''}
+        ${emptyScenes.length?`· 사진이 없는 장면 — ${emptyScenes.join(', ')}<br>`:''}
+        <span style="font-weight:700;color:var(--gray)">아래 [장면] 칸에서 사진마다 몇 번 장면인지 골라 주세요.</span>
+      </div>`:'';
   const photoRows=photos.map((ph,i)=>`
     <div class="jph-row">
       <img src="${ph.data}">
       <input value="${escapeHtml(ph.caption||'')}" placeholder="사진 설명 (예: 시료 무게 측정 장면)" onchange="jSetPhoto('${ym}',${i},'caption',this.value)">
-      <select onchange="jSetPhoto('${ym}',${i},'sec',this.value)">${secOptions(ph.sec)}</select>
-      <select onchange="jSetPhoto('${ym}',${i},'size',this.value)">${Object.keys(JPSZ).map(k=>`<option value="${k}" ${((ph.size||'m')===k)?'selected':''}>${JPSZ[k].t}</option>`).join('')}</select>
-      <button class="jph-del" onclick="jRemovePhoto('${ym}',${i})">삭제</button>
+      <div class="jph-ctl">
+        <span class="jph-no">${i+1}</span>
+        <select style="flex:2 1 150px" title="장면" onchange="jSetPhotoScene('${ym}',${i},this.value)">${sceneOptions(ph.gi)}</select>
+        <select style="flex:2 1 140px" title="들어갈 항목" onchange="jSetPhoto('${ym}',${i},'sec',this.value)">${secOptions(ph.sec)}</select>
+        <select style="flex:0 1 78px" title="크기" onchange="jSetPhoto('${ym}',${i},'size',this.value)">${Object.keys(JPSZ).map(k=>`<option value="${k}" ${((ph.size||'m')===k)?'selected':''}>${JPSZ[k].t}</option>`).join('')}</select>
+        <button class="jph-mv" title="앞으로" onclick="jMovePhoto('${ym}',${i},-1)">▲</button>
+        <button class="jph-mv" title="뒤로" onclick="jMovePhoto('${ym}',${i},1)">▼</button>
+        <button class="jph-del" style="padding:8px 10px" onclick="jRemovePhoto('${ym}',${i})">삭제</button>
+      </div>
     </div>`).join('');
   const restPhotos=photos.filter(ph=>!(parseInt(ph.sec)>0 && parseInt(ph.sec)<=secs.length));
   const restHtml=jPhotoBlock(restPhotos);
@@ -3409,8 +3489,10 @@ function jViewNote(ym){
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center">
         <span style="font-size:11.5px;font-weight:800;color:var(--gray)">전체 크기</span>
         ${Object.keys(JPSZ).map(k=>`<button class="btn sec" style="padding:5px 11px;font-size:11px" onclick="jSetAllSize('${ym}','${k}')">${JPSZ[k].t}</button>`).join('')}
+        <button class="btn sec" style="padding:5px 11px;font-size:11px" onclick="jSortPhotosBtn('${ym}')">장면 번호대로 줄 세우기</button>
         <button class="btn sec" style="padding:5px 11px;font-size:11px;color:var(--blue);border-color:var(--blue);margin-left:auto" onclick="jResyncCaptions('${ym}')">장면 문장으로 설명 다시 채우기</button>
       </div>
+      ${warnHtml}
       ${photoRows}
     </div>`:'<div class="cr-hint" style="margin-top:6px">사진을 올리면 어느 항목 아래에 넣을지 고를 수 있습니다.</div>'}
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -3551,9 +3633,8 @@ function jAddPhotos(ym, files){
 
   // 파일명 맨 앞(또는 처음 나오는) 숫자 = 장면 번호
   const parsed=arr.map((f,i)=>{
-    const m=String(f.name||'').match(/(\d{1,2})/);
-    const seq=m?parseInt(m[1]):null;
-    return {file:f, seq:(seq>=1&&seq<=20)?seq:null, i};
+    const seq=jSeqFromName(f.name);
+    return {file:f, seq, i};
   });
   parsed.sort((a,b)=>{
     if(a.seq!==null&&b.seq!==null) return a.seq-b.seq;
@@ -3576,10 +3657,7 @@ function jAddPhotos(ym, files){
       n.photos.push({data:x.data, caption:cap, size:'m', sec:jDefaultSec(n, gi), seq:(x.seq||null), gi:gi});
     });
     // 장면 번호 순서대로 정렬해 보관
-    n.photos.sort((a,b)=>{
-      const av=(a.seq||99), bv=(b.seq||99);
-      return av-bv;
-    });
+    jSortPhotos(n);
     try{ jSave(); }catch(e){ alert('브라우저 저장공간 부족 — 사진은 화면에만 유지됩니다. 인쇄 후 새로고침하면 사라질 수 있습니다.'); }
     jViewNote(ym);
     const el=document.getElementById('jPhotoMsg');
