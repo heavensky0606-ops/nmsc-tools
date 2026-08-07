@@ -2307,13 +2307,16 @@ ${SCENES}${REAL}
 
 [출력 형식]
 - 마크다운. 큰 항목은 "# 번호. 제목", 표 앞의 소제목은 "## 소제목".
-- 지정된 번호 항목만 쓰고, 범위를 벗어난 다른 번호는 절대 쓰지 마세요.`;
+- 지정된 번호 항목만 쓰고, 범위를 벗어난 다른 번호는 절대 쓰지 마세요.
+- 구분선(---, ***, ___)은 절대 쓰지 마세요. 문단은 빈 줄로만 나눕니다.`;
 
   const GRAPH=`[그래프 블록 형식]
 [그래프|그래프 제목|단위]
 항목이름1: 숫자
 항목이름2: 숫자
-(항목 3~6개, 실제 측정한 것처럼 자연스러운 값. 블록 앞뒤로 빈 줄)`;
+(항목 3~6개, 실제 측정한 것처럼 자연스러운 값. 블록 앞뒤로 빈 줄)
+- 항목이름은 그래프 왼쪽에 한 줄로 들어가므로 반드시 16자 이내로 짧게 쓰세요. 예: "실내·차량 내부", "냉동실 저온"
+- 조건과 측정항목을 한 이름에 다 넣지 말고, 조건 이름만 쓰고 측정항목은 그래프 제목에 넣으세요.`;
 
   /* 분량 배율 (표준=1.0) */
   const volSel=parseFloat(document.getElementById('j_vol')?.value||'1')||1;
@@ -2540,14 +2543,29 @@ async function jGenAllMissing(unit){
 
 /* ---- 그래프 블록 → SVG 막대그래프 ---- */
 function jGraphSvg(title, unit, items){
-  const W=560, barH=26, gap=12, padL=150, padR=70, padT=34, padB=10;
+  const barH=26, gap=12, padR=74, padT=34, padB=10;
+  // 항목 이름이 길면 왼쪽이 잘리므로, 글자 폭을 재어 여백을 넓히고 필요하면 글씨를 줄인다
+  const est=(t,f)=>Array.from(String(t||'')).reduce((a,c)=>a+(/[\u0020-\u00FF]/.test(c)?f*0.55:f*1.0),0);
+  let fs=12;
+  let maxL=Math.max(0,...items.map(x=>est(x.k,fs)));
+  if(maxL>250){ fs=10.5; maxL=Math.max(0,...items.map(x=>est(x.k,fs))); }
+  if(maxL>300){ fs=9.5;  maxL=Math.max(0,...items.map(x=>est(x.k,fs))); }
+  const padL=Math.min(360, Math.max(90, Math.ceil(maxL)+14));
+  const W=Math.min(760, Math.max(560, padL+240+padR));
+  // 여백 상한을 넘는 아주 긴 이름은 말줄임 처리 (왼쪽 잘림 방지)
+  const fit=(t)=>{
+    let x=String(t||'');
+    if(est(x,fs)<=padL-14) return x;
+    while(x.length>3 && est(x+'…',fs)>padL-14) x=x.slice(0,-1);
+    return x+'…';
+  };
   const H=padT+items.length*(barH+gap)-gap+padB;
   const maxV=Math.max(...items.map(x=>x.v),1);
   let bars='';
   items.forEach((it,i)=>{
     const y=padT+i*(barH+gap);
     const w=Math.max(4,(W-padL-padR)*(it.v/maxV));
-    bars+=`<text x="${padL-8}" y="${y+barH/2+4}" text-anchor="end" font-size="12" font-weight="600" fill="#222">${escapeHtml(it.k)}</text>`
+    bars+=`<text x="${padL-8}" y="${y+barH/2+4}" text-anchor="end" font-size="${fs}" font-weight="600" fill="#222">${escapeHtml(fit(it.k))}<title>${escapeHtml(it.k)}</title></text>`
         +`<rect x="${padL}" y="${y}" width="${w}" height="${barH}" rx="4" fill="#0A84FF"/>`
         +`<text x="${padL+w+6}" y="${y+barH/2+4}" font-size="12" font-weight="800" fill="#0060df">${it.v}${escapeHtml(unit||'')}</text>`;
   });
@@ -2684,6 +2702,8 @@ function mdToHtml(md, photos){
       html+='<div class="jn-h">'+escapeHtml(L.replace(/^#{1,3}\s/,'')).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>';
       i++; continue;
     }
+    // 구분선(---, ***, ___)은 인쇄물에 찍지 않는다
+    if(/^\s*([-*_])\s*(?:\1\s*){2,}$/.test(L)){ i++; continue; }
     // [그래프|제목|단위] 블록
     const gm=L.match(/^\s*\[그래프\|([^|\]]*)\|?([^|\]]*)\]\s*$/);
     if(gm){
