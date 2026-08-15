@@ -301,6 +301,14 @@ font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
 .rchip{display:inline-flex;align-items:center;gap:7px;background:var(--bbg);border:1px solid var(--bbd);
 border-radius:20px;padding:5px 11px;font-size:12px;font-weight:800;color:var(--blue-d);margin-top:8px}
 .rchip b{cursor:pointer;color:var(--red)}
+.rev4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rvc4{background:var(--soft);border:1.5px solid transparent;border-radius:10px;padding:10px 6px;
+text-align:center;cursor:pointer}
+.rvc4.on{border-color:var(--bbd);background:var(--bbg)}
+.rvc4.dg.on{border-color:var(--rbd);background:var(--rbg)}
+.rvh{font-size:11px;color:var(--mute);text-align:center;margin-top:8px;font-weight:700}
+.pzh{cursor:pointer;user-select:none}
+.pzc{font-size:11px;color:var(--mute);font-weight:700}
 </style>
 </head>
 <body>
@@ -359,8 +367,8 @@ var PIN_CODE = "1440";
 <div class="hr"><h1>제휴 연장 관리</h1><div class="st" id="st"></div></div>
 <div class="tabs">
 <div class="tab on" id="T1" onclick="setTab(1)">업체 검색</div>
-<div class="tab" id="T2" onclick="setTab(2)">소개자 관리</div>
 <div class="tab" id="T3" onclick="setTab(3)">매출</div>
+<div class="tab" id="T2" onclick="setTab(2)">소개자 관리</div>
 </div>
 <div class="sr" id="srow">
 <input id="q" type="tel" inputmode="numeric" maxlength="4" placeholder="핸드폰 뒤 4자리">
@@ -605,6 +613,9 @@ function pfmtBlur(el){let d=el.value.replace(/\D/g,'');
   el.value=d.length===11?`${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`
     :d.length===10?`${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`:d}
 let PICK=null;
+let PZO=false;
+function togPzList(){PZO=!PZO;render()}
+function pickRev(k){window.RK=(window.RK===k)?'':k;render()}
 let PDS={id:null,days:null},SREF=null;
 function sug(inId,outId){
   const el=document.getElementById(inId),o=document.getElementById(outId);
@@ -746,7 +757,48 @@ function renderRev(){
     const g0=String(r[0]||'기타');
     if(!isWarn(g0)&&!isDbRec(g0)){const g=g0.slice(0,4);byG[g]=(byG[g]||0)+1}
     const ym=d.slice(0,7);byM[ym]=(byM[ym]||0)+a});
-  const gs=Object.keys(byG).sort((x,y)=>byG[y]-byG[x]).slice(0,3);
+  const L={ext:[],new:[],ret:[],chr:[]};
+  BIZ.forEach(b=>{(b.ev||[]).forEach(e=>{
+    if(!e.d||e.d<from||e.d>to)return;
+    const g=String(e.g||'');
+    if(/^연장복귀/.test(g))L.ret.push({b,e});
+    else if(/^연장/.test(g))L.ext.push({b,e});
+    else if(/^신규/.test(g))L.new.push({b,e});
+  })});
+  ['ext','new','ret'].forEach(k=>L[k].sort((x,y)=>(y.e.d||'').localeCompare(x.e.d||'')));
+  BIZ.forEach(b=>{
+    if(lastPause(b))return;
+    if(!b.exp)return;
+    if(b.exp>=from&&b.exp<=to&&b.exp<TD())L.chr.push({b});
+  });
+  L.chr.sort((x,y)=>(y.b.exp||'').localeCompare(x.b.exp||''));
+  const lastAmt=b=>{const z=(b.ev||[]).filter(e=>e.a&&String(e.a).trim())
+    .sort((x,y)=>(x.d||'').localeCompare(y.d||''));return z.length?z[z.length-1].a:''};
+  const RK=window.RK||'';
+  const meta={ext:['연장','var(--txt)','건'],new:['신규','var(--blue)','건'],
+    ret:['연장복귀','var(--txt)','건'],chr:['연장 안 함','var(--red)','곳']};
+  const card=(k)=>`<div class="rvc4${k==='chr'?' dg':''}${RK===k?' on':''}" onclick="pickRev('${k}')">
+    <div class="rvl"${k==='chr'?' style="color:var(--red)"':''}>${meta[k][0]}</div>
+    <div class="rvv"${k==='chr'?' style="color:var(--red)"':(k==='new'?' style="color:var(--blue)"':'')}>${L[k].length}${meta[k][2]}</div></div>`;
+  const det=!RK?'':(()=>{
+    const arr=L[RK],o=meta[RK];
+    if(!arr.length)return `<div class="emp" style="padding:16px 4px">해당 내역이 없습니다.</div>`;
+    const rows=arr.slice(0,50).map(x=>{const b=x.b,e=x.e;
+      if(RK==='chr'){const gone=dd(b.exp,TD());const la=lastAmt(b);
+        return `<div class="exr" onclick="open2(${b.id})">
+        <div style="min-width:0"><span class="en">${esc(b.nm)}</span>
+        <span class="em">${b.cur.slice(-4)}${b.rg?' · '+esc(b.rg):''}</span></div>
+        <div style="text-align:right;white-space:nowrap">
+        <div style="font-size:12.5px;font-weight:700;color:var(--red)">만료 ${fk(b.exp)}</div>
+        <div style="font-size:10.5px;color:var(--mute)">${gone}일 지남${la?' · 마지막 '+la+'원':''}</div></div></div>`}
+      return `<div class="exr" onclick="open2(${b.id})">
+        <div style="min-width:0"><span class="en">${esc(b.nm)}</span>
+        <span class="em">${b.cur.slice(-4)}${b.rg?' · '+esc(b.rg):''}</span></div>
+        <div style="text-align:right;white-space:nowrap">
+        <div style="font-size:12.5px;font-weight:700">${e.a?e.a+'원':'-'}</div>
+        <div style="font-size:10.5px;color:var(--mute)">${fk(e.d)}${e.e?' → '+fk(e.e):''}</div></div></div>`}).join('');
+    return `<div class="lb" style="margin-top:15px;color:${o[1]}">${o[0]} ${arr.length}${o[2]}</div>${rows}
+    ${arr.length>50?`<div style="font-size:11.5px;color:var(--mute);padding:8px 2px">최근 50개만 표시</div>`:''}`})();
   const allM=Object.keys(byM).sort();
   const mk=(P==='all'||P==='custom')?allM:allM.slice(-12);
   const mx=Math.max(1,...mk.map(k=>byM[k]));
@@ -761,8 +813,9 @@ function renderRev(){
   </div>`:''}
   <div class="eb"><div class="l">${label} 매출</div><div class="v">${won(s)}</div>
   <div class="r">${n}건${n?' · 건당 평균 '+won(Math.round(s/n)):''}</div></div>
-  <div class="rev3">${gs.map(g=>`<div class="rvc"><div class="rvl">${esc(g)}</div>
-  <div class="rvv">${byG[g]}건</div></div>`).join('')}</div>
+  <div class="rev4">${card('ext')}${card('new')}${card('ret')}${card('chr')}</div>
+  <div class="rvh">카드를 누르면 아래에 명단이 열립니다</div>
+  ${det}
   ${(()=>{const dT=dbTotalAsOf(to),dF=(from==='0000-01-01')?0:dbTotalAsOf(dayBefore(from));
   const dl=dT-dF;return `<div class="dbrev"><div><div class="dbrl">DB 순증</div>
   <div class="dbrs">${dF.toLocaleString('ko-KR')} → ${dT.toLocaleString('ko-KR')}</div></div>
@@ -787,16 +840,16 @@ function renderHome(){
     ${soon.map(x=>`<div class="exr" onclick="open2(${x.b.id})">
     <div><span class="en">${esc(x.b.nm)}</span><span class="em">${x.b.cur.slice(-4)}${x.b.rg?' · '+esc(x.b.rg):''}${x.b.bz?' · '+esc(x.b.bz):''}</span></div>
     <div><div class="ed">${fk(x.b.exp)}</div><div class="es">${remT(x.n)}</div></div></div>`).join('')}</div>`;
-  const pz=!paused.length?'':`<div class="pan"><div class="ph"><span>일시정지 중</span>
-  <span style="color:var(--mute);font-weight:400">${paused.length}곳</span></div>
-  ${paused.map(x=>`<div class="exr" onclick="open2(${x.b.id})">
+  const pz=!paused.length?'':`<div class="pan"><div class="ph pzh" onclick="togPzList()"><span>일시정지 중</span>
+  <span style="color:var(--mute);font-weight:400">${paused.length}곳 <span class="pzc">${PZO?'▲':'▼'}</span></span></div>
+  ${!PZO?'':`${paused.map(x=>`<div class="exr" onclick="open2(${x.b.id})">
   <div style="min-width:0"><span class="en">${esc(x.b.nm)}</span>
   <span class="em">${x.b.cur.slice(-4)}${x.b.rg?' · '+esc(x.b.rg):''}</span></div>
   <div style="text-align:right;white-space:nowrap">
   <div style="font-size:12.5px;font-weight:700;color:var(--blue3)">잔여 ${x.b.exp?Math.max(0,dd(x.p.d,x.b.exp)):'-'}일</div>
   <div style="font-size:10.5px;color:var(--mute)">${fk(x.p.d)}부터 · ${pauseDays(x.p)}일 경과</div></div></div>`).join('')}
   ${oldPz?`<div style="font-size:11.5px;color:var(--mute);padding-top:9px;margin-top:4px;border-top:1px dashed var(--line)">
-  180일 넘게 정지 상태인 곳 ${oldPz}곳은 숨김 (사실상 종료된 업체)</div>`:''}</div>`;
+  180일 넘게 정지 상태인 곳 ${oldPz}곳은 숨김 (사실상 종료된 업체)</div>`:''}`}</div>`;
   document.getElementById('res').innerHTML=top+pz+calHTML();
 }
 function cardH(b,q){
