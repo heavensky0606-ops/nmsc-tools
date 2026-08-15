@@ -309,6 +309,18 @@ text-align:center;cursor:pointer}
 .rvh{font-size:11px;color:var(--mute);text-align:center;margin-top:8px;font-weight:700}
 .pzh{cursor:pointer;user-select:none}
 .pzc{font-size:11px;color:var(--mute);font-weight:700}
+.sg{display:flex;gap:6px;margin:10px 0 11px}
+.sgb{flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:8px 0;border-radius:8px;
+border:1.5px solid var(--line2);color:var(--sub);cursor:pointer;background:#fff}
+.sgb.on{background:var(--bbg);color:var(--blue-d);border-color:var(--bbd)}
+.gr{display:flex;align-items:center;gap:8px;padding:7px 4px;cursor:pointer;border-radius:7px}
+.gr.on{background:var(--bbg)}
+.gn{font-size:12.5px;font-weight:700;width:52px;flex:none;color:var(--txt)}
+.gb{flex:1;height:9px;background:var(--soft);border-radius:5px;overflow:hidden}
+.gf{height:100%;background:var(--blue);display:block}
+.gv{font-size:12.5px;font-weight:800;width:70px;text-align:right;flex:none;color:var(--txt)}
+.gv span{font-weight:600;color:var(--mute);font-size:11px}
+.gp{font-size:11px;font-weight:800;width:30px;text-align:right;flex:none;color:#059669}
 </style>
 </head>
 <body>
@@ -616,6 +628,9 @@ let PICK=null;
 let PZO=false;
 function togPzList(){PZO=!PZO;render()}
 function pickRev(k){window.RK=(window.RK===k)?'':k;render()}
+function setRgm(m){window.RGM=m;window.RGS='';render()}
+function pickRg(k){window.RGS=(window.RGS===k)?'':k;render()}
+function isLive(b){const p=lastPause(b);if(p)return pauseDays(p)<=180;return !!(b.exp&&b.exp>=TD())}
 let PDS={id:null,days:null},SREF=null;
 function sug(inId,outId){
   const el=document.getElementById(inId),o=document.getElementById(outId);
@@ -824,6 +839,46 @@ function renderRev(){
   ${mk.length?mk.map(k=>`<div class="mrow"><span class="ml">${k}</span>
   <div class="mb"><div class="mf" style="width:${Math.round(byM[k]/mx*100)}%;${k===ty+'-'+p2(tm)?'background:var(--blue)':''}"></div></div>
   <span class="mv"${k===ty+'-'+p2(tm)?' style="color:var(--blue);font-weight:800"':''}>${byM[k].toLocaleString('ko-KR')}</span></div>`).join(''):`<div class="emp" style="padding:16px 4px">해당 기간 매출 내역이 없습니다.</div>`}
+  ${(()=>{
+    const M=window.RGM||'rg',SEL=window.RGS||'';
+    const keyOf=b=>((M==='rg'?b.rg:b.bz)||'').trim()||'미지정';
+    const G={};
+    BIZ.forEach(b=>{const k=keyOf(b);
+      if(!G[k])G[k]={k,live:0,all:0,nw:0,list:[]};
+      G[k].all++; if(isLive(b))G[k].live++; G[k].list.push(b)});
+    BIZ.forEach(b=>{const k=keyOf(b);
+      (b.ev||[]).forEach(e=>{if(e.d&&e.d>=from&&e.d<=to&&/^신규/.test(String(e.g||'')))G[k].nw++})});
+    const arr=Object.values(G).sort((x,y)=>y.live-x.live||y.all-x.all);
+    if(!arr.length)return '';
+    const mx=Math.max(1,...arr.map(x=>x.live));
+    const tl=arr.reduce((a,x)=>a+x.live,0),ta=arr.reduce((a,x)=>a+x.all,0);
+    const rows=arr.map(x=>`<div class="gr${SEL===x.k?' on':''}" onclick="pickRg('${esc(x.k)}')">
+      <span class="gn">${esc(x.k)}</span>
+      <span class="gb"><span class="gf" style="width:${Math.round(x.live/mx*100)}%"></span></span>
+      <span class="gv">${x.live}<span> / ${x.all}</span></span>
+      <span class="gp">${x.nw?'+'+x.nw:''}</span></div>`).join('');
+    const sd=!SEL||!G[SEL]?'':(()=>{
+      const li=G[SEL].list.slice().sort((a,b)=>(isLive(b)?1:0)-(isLive(a)?1:0)||(b.exp||'').localeCompare(a.exp||''));
+      return `<div class="lb" style="margin-top:13px">${esc(SEL)} · ${G[SEL].live}곳 유지 / ${G[SEL].all}곳 등록</div>
+      ${li.slice(0,50).map(b=>{const p=lastPause(b);const r=b.exp?dd(TD(),b.exp):null;
+        const st=p?`일시정지 중`:(r===null?'만료일 없음':(r<0?`만료 ${-r}일 지남`:`${fk(b.exp)}`));
+        const cl=p?'var(--blue3)':(r!==null&&r<0?'var(--red)':'var(--txt)');
+        return `<div class="exr" onclick="open2(${b.id})">
+        <div style="min-width:0"><span class="en">${esc(b.nm)}</span>
+        <span class="em">${b.cur.slice(-4)}${(M==='rg'?b.bz:b.rg)?' · '+esc(M==='rg'?b.bz:b.rg):''}</span></div>
+        <div style="text-align:right;white-space:nowrap">
+        <div style="font-size:12.5px;font-weight:700;color:${cl}">${st}</div></div></div>`}).join('')}
+      ${G[SEL].all>50?`<div style="font-size:11.5px;color:var(--mute);padding:8px 2px">50곳만 표시</div>`:''}`})();
+    return `<div class="lb" style="margin-top:18px;display:flex;justify-content:space-between">
+      <span>${M==='rg'?'지역별':'업종별'} 현황</span>
+      <span style="color:var(--mute);font-weight:600;font-size:11.5px">유지 ${tl} / 등록 ${ta}곳</span></div>
+    <div class="sg">
+      <div class="sgb${M==='rg'?' on':''}" onclick="setRgm('rg')">지역별</div>
+      <div class="sgb${M==='bz'?' on':''}" onclick="setRgm('bz')">업종별</div></div>
+    ${rows}
+    <div style="font-size:11px;color:var(--mute);font-weight:700;text-align:center;margin-top:7px">
+      숫자는 유지 / 등록 · 초록은 ${label} 신규 · 눌러서 명단 보기</div>
+    ${sd}`})()}
   </div>`;
 }
 function renderHome(){
