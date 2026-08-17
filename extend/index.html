@@ -328,6 +328,13 @@ border:1.5px solid var(--line2);color:var(--sub);cursor:pointer;background:#fff}
 .lnkm{font-size:11.5px;color:var(--sub);margin-top:3px;word-break:break-all}
 .lnkw{font-size:11.5px;color:var(--blue-d);font-weight:700;margin-top:3px}
 .lnkh{font-size:11px;color:var(--mute);font-weight:700;line-height:1.6}
+.cutb{font-size:11px;font-weight:800;color:var(--sub);background:#fff;
+border:1px solid var(--line2);border-radius:7px;padding:3px 9px;cursor:pointer}
+.cutn{font-size:11px;font-weight:800;color:var(--blue-d);background:var(--bbg);
+border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.6}
+.vrb{font-size:10.5px;font-weight:800;color:var(--mute);background:var(--soft);
+border-radius:6px;padding:2px 7px;white-space:nowrap;flex:none}
+#pinGate .pgv{margin-top:26px;font-size:11px;font-weight:800;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -355,6 +362,7 @@ border:1.5px solid var(--line2);color:var(--sub);cursor:pointer;background:#fff}
     <div class="pgKey" data-k="0">0</div>
     <div class="pgKey t" data-k="back">←</div>
   </div>
+  <div class="pgv">v2026-08-17</div>
 </div>
 <script>
 /* ▼ 여기 4자리를 원하는 비밀번호로 바꾸세요 ▼ */
@@ -400,7 +408,8 @@ var PIN_CODE = "1440";
 </div>
 <div class="msk" id="msk"><div class="sh" id="sheet"></div></div>
 <div class="tst" id="tst"></div>
-<div class="lg"><span class="t2" id="lgt">기록 0건</span><div style="display:flex;gap:7px"><button class="b" onclick="pullSheet()">새로고침</button><button class="b p" onclick="openCfg()">시트 연결</button></div></div>
+<div class="lg"><span style="display:flex;align-items:baseline;gap:7px;min-width:0">
+<span class="t2" id="lgt">기록 0건</span><span class="vrb">v2026-08-17</span></span><div style="display:flex;gap:7px"><button class="b" onclick="pullSheet()">새로고침</button><button class="b p" onclick="openCfg()">시트 연결</button></div></div>
 
 <script>
 const CFGK='nm_cfg_v1';
@@ -467,19 +476,24 @@ function buildFromRows(rows){
     n:String(r[6]||'').trim(),e:kd(r[7]),rg:String(r[8]||'').trim(),
     bz:String(r[9]||'').trim(),m:String(r[10]||''),db:String(r[11]||''),sr:r[12]||0}))
     .filter(r=>r.d&&(r.p||r.n));
-  recs.forEach(r=>{if(r.p)find(r.p)});
+  const CUTS={};
+  recs.forEach(r=>{if(r.p&&/^번호분리/.test(r.g)){if(!CUTS[r.p]||r.d<CUTS[r.p])CUTS[r.p]=r.d}});
+  window.CUTS=CUTS;
+  const live=recs.filter(r=>!/^번호분리/.test(r.g));
+  live.forEach(r=>{r.k=(r.p&&CUTS[r.p]&&r.d>=CUTS[r.p])?(r.p+'#2'):r.p});
+  live.forEach(r=>{if(r.k)find(r.k)});
   const LINKS=[];
-  recs.forEach(r=>{
+  live.forEach(r=>{
     if(!r.p)return;const f={};let mm;
     const re1=/(?:전|前)\s*[:\s]?\s*(01[016789][-\s]?\d{3,4}[-\s]?\d{4})/g;
     while((mm=re1.exec(r.m))!==null)f[nrm(mm[1])]=1;
     const re2=/(01[016789][-\s]?\d{3,4}[-\s]?\d{4})[^\/]{0,20}?에서\s*(?:변경|바꿈)/g;
     while((mm=re2.exec(r.m))!==null)f[nrm(mm[1])]=1;
     Object.keys(f).forEach(o=>{if(o&&o!==r.p&&o.length>=10){
-      LINKS.push({o:o,p:r.p,d:r.d,m:r.m,sr:r.sr,g:r.g});uni(o,r.p)}});
+      LINKS.push({o:o,p:r.p,d:r.d,m:r.m,sr:r.sr,g:r.g});uni(o,r.k)}});
   });
   const grp={};
-  recs.forEach(r=>{if(!r.p)return;const k=find(r.p);(grp[k]=grp[k]||[]).push(r)});
+  live.forEach(r=>{if(!r.k)return;const k=find(r.k);(grp[k]=grp[k]||[]).push(r)});
   const biz=[],ids={};let id=0;
   Object.keys(grp).sort().forEach(k=>{
     const g=grp[k].slice().sort((x,y)=>(x.d||'0').localeCompare(y.d||'0'));
@@ -492,7 +506,7 @@ function buildFromRows(rows){
       exp:exp,rg:rg,bz:bz,db:db,
       ev:g.map(r=>{const pr=pref(r.m);
         return{g:r.g,d:r.d,a:r.a,e:r.e,n:r.n,p:r.p,m:r.m,ref:pr.ref,bn:pr.bn,sr:r.sr,db:r.db}})};
-    b.lnk=LINKS.filter(x=>find(x.p)===k||find(x.o)===k);
+    b.lnk=LINKS.filter(x=>find(x.p+((CUTS[x.p]&&x.d>=CUTS[x.p])?'#2':''))===k||find(x.o)===k);
     biz.push(b);ph.forEach(p=>ids[p]=b.id);
   });
   const byN={},byL4={};
@@ -638,6 +652,12 @@ let PICK=null;
 let PZO=false;
 function togPzList(){PZO=!PZO;render()}
 function pickRev(k){window.RK=(window.RK===k)?'':k;render()}
+function cutPh(ph){
+  const b=byId[CUR];if(!b)return;
+  if(!confirm(fp(ph)+' 번호를 이 업체에서 떼어낼까요?\n\n오늘 이후 이 번호로 들어오는 기록은 별개 업체가 됩니다.\n지난 기록은 그대로 이 업체에 남습니다.'))return;
+  pl({bid:b.id,g:'번호분리',d:TD(),a:'',e:'',n:b.nm,p:ph,m:'분리 '+fp(ph)});
+  draw();toast('분리했습니다. 이제 이 번호로 신규 등록할 수 있습니다.');
+}
 function setRgm(m){window.RGM=m;window.RGS='';render()}
 function pickRg(k){window.RGS=(window.RGS===k)?'':k;render()}
 function isLive(b){const p=lastPause(b);if(p)return pauseDays(p)<=180;return !!(b.exp&&b.exp>=TD())}
@@ -1098,7 +1118,11 @@ ${b.ph.length>1?`<div class="bx"><div class="lb">번호 이력 · ${b.ph.length}
 ${(()=>{const f=firstSeen(b,'p');return b.ph.map((p,i)=>{const cur=i===b.ph.length-1;
 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13.5px">
 <span style="${cur?'font-weight:700;color:var(--blue)':'color:var(--sub)'}">${fp(p)}${cur?' <span class="bd bl">현재</span>':''}</span>
-<span style="font-size:12px;color:var(--mute)">${f[p]?fk(f[p])+' 부터':'—'}</span></div>`}).join('')})()}
+<span style="display:flex;align-items:center;gap:8px">
+<span style="font-size:12px;color:var(--mute)">${f[p]?fk(f[p])+' 부터':'—'}</span>
+${cur?'':`<span class="cutb" onclick="event.stopPropagation();cutPh('${p}')">분리</span>`}</span></div>`}).join('')})()}
+${(()=>{const c=window.CUTS||{};const mine=b.ph.filter(x=>c[x]);
+  return mine.length?`<div class="cutn">${mine.map(x=>`${fp(x)} 는 ${fk(c[x])}부터 다른 업체로 분리됨`).join('<br>')}</div>`:''})()}
 ${(b.lnk&&b.lnk.length)?`<div class="lnkb"><div class="lnkt">이 번호들이 묶인 이유</div>
 ${b.lnk.slice().sort((x,y)=>(x.d||'').localeCompare(y.d||'')).map(x=>`
 <div class="lnkr">
@@ -1392,7 +1416,7 @@ function saveNew(){
   const p=g('nph').replace(/\D/g,''),nm=g('nnm');
   if(p.length<10)return toast('연락처를 확인하세요');
   if(!nm)return toast('상호명을 입력하세요');
-  if(BIZ.some(b=>b.ph.includes(p)))return toast('이미 등록된 번호입니다');
+  if(BIZ.some(b=>b.ph.includes(p))&&!(window.CUTS&&window.CUTS[p]))return toast('이미 등록된 번호입니다');
   const bd=g('ndt')||TD();
   let e,amt;
   if(NPC){e=g('nex');if(!e)return toast('만료일을 지정하세요');
