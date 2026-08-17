@@ -321,6 +321,13 @@ border:1.5px solid var(--line2);color:var(--sub);cursor:pointer;background:#fff}
 .gv{font-size:12.5px;font-weight:800;width:70px;text-align:right;flex:none;color:var(--txt)}
 .gv span{font-weight:600;color:var(--mute);font-size:11px}
 .gp{font-size:11px;font-weight:800;width:30px;text-align:right;flex:none;color:#059669}
+.lnkb{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.lnkt{font-size:11.5px;font-weight:800;color:var(--sub);margin-bottom:7px}
+.lnkr{background:var(--soft);border-radius:9px;padding:9px 10px;margin-bottom:7px}
+.lnkd{font-size:12px;font-weight:700;color:var(--txt)}
+.lnkm{font-size:11.5px;color:var(--sub);margin-top:3px;word-break:break-all}
+.lnkw{font-size:11.5px;color:var(--blue-d);font-weight:700;margin-top:3px}
+.lnkh{font-size:11px;color:var(--mute);font-weight:700;line-height:1.6}
 </style>
 </head>
 <body>
@@ -461,13 +468,15 @@ function buildFromRows(rows){
     bz:String(r[9]||'').trim(),m:String(r[10]||''),db:String(r[11]||''),sr:r[12]||0}))
     .filter(r=>r.d&&(r.p||r.n));
   recs.forEach(r=>{if(r.p)find(r.p)});
+  const LINKS=[];
   recs.forEach(r=>{
     if(!r.p)return;const f={};let mm;
     const re1=/(?:전|前)\s*[:\s]?\s*(01[016789][-\s]?\d{3,4}[-\s]?\d{4})/g;
     while((mm=re1.exec(r.m))!==null)f[nrm(mm[1])]=1;
     const re2=/(01[016789][-\s]?\d{3,4}[-\s]?\d{4})[^\/]{0,20}?에서\s*(?:변경|바꿈)/g;
     while((mm=re2.exec(r.m))!==null)f[nrm(mm[1])]=1;
-    Object.keys(f).forEach(o=>{if(o&&o!==r.p&&o.length>=10)uni(o,r.p)});
+    Object.keys(f).forEach(o=>{if(o&&o!==r.p&&o.length>=10){
+      LINKS.push({o:o,p:r.p,d:r.d,m:r.m,sr:r.sr,g:r.g});uni(o,r.p)}});
   });
   const grp={};
   recs.forEach(r=>{if(!r.p)return;const k=find(r.p);(grp[k]=grp[k]||[]).push(r)});
@@ -483,6 +492,7 @@ function buildFromRows(rows){
       exp:exp,rg:rg,bz:bz,db:db,
       ev:g.map(r=>{const pr=pref(r.m);
         return{g:r.g,d:r.d,a:r.a,e:r.e,n:r.n,p:r.p,m:r.m,ref:pr.ref,bn:pr.bn,sr:r.sr,db:r.db}})};
+    b.lnk=LINKS.filter(x=>find(x.p)===k||find(x.o)===k);
     biz.push(b);ph.forEach(p=>ids[p]=b.id);
   });
   const byN={},byL4={};
@@ -1089,7 +1099,14 @@ ${(()=>{const f=firstSeen(b,'p');return b.ph.map((p,i)=>{const cur=i===b.ph.leng
 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13.5px">
 <span style="${cur?'font-weight:700;color:var(--blue)':'color:var(--sub)'}">${fp(p)}${cur?' <span class="bd bl">현재</span>':''}</span>
 <span style="font-size:12px;color:var(--mute)">${f[p]?fk(f[p])+' 부터':'—'}</span></div>`}).join('')})()}
-<div class="warn">비고의 '전 010-…' 메모로 자동 연결했습니다.</div></div>`:''}
+${(b.lnk&&b.lnk.length)?`<div class="lnkb"><div class="lnkt">이 번호들이 묶인 이유</div>
+${b.lnk.slice().sort((x,y)=>(x.d||'').localeCompare(y.d||'')).map(x=>`
+<div class="lnkr">
+<div class="lnkd">${fk(x.d)} · <b>${fp(x.p)}</b> 기록${x.g?` <span class="bd">${esc(String(x.g).slice(0,6))}</span>`:''}</div>
+<div class="lnkm">비고: ${esc(String(x.m||'').trim()||'(비어 있음)')}</div>
+<div class="lnkw">→ <b>${fp(x.o)}</b> 와(과) 같은 업체로 연결됨</div>
+</div>`).join('')}
+<div class="lnkh">잘못 묶였다면 위 <b>비고</b>에서 '전 010-…' 부분만 지운 뒤 하단 [새로고침]을 누르세요. 금액·만료일은 그대로 두셔야 합니다.</div></div>`:`<div class="warn">비고의 '전 010-…' 메모로 자동 연결했습니다.</div>`}</div>`:''}
 <div class="bx"><div class="lb">소개 관계</div>
 <div class="rsum">
 <div class="rs${(inn.length+ags.length)?' on':''}"><div class="rsl">소개받은 곳</div>
