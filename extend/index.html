@@ -369,7 +369,7 @@ border:1.5px solid var(--line2);border-radius:11px;padding:11px 13px;cursor:poin
     <div class="pgKey" data-k="0">0</div>
     <div class="pgKey t" data-k="back">←</div>
   </div>
-  <div class="pgv">v2026-08-17b</div>
+  <div class="pgv">v2026-08-17c</div>
 </div>
 <script>
 /* ▼ 여기 4자리를 원하는 비밀번호로 바꾸세요 ▼ */
@@ -416,7 +416,7 @@ var PIN_CODE = "1440";
 <div class="msk" id="msk"><div class="sh" id="sheet"></div></div>
 <div class="tst" id="tst"></div>
 <div class="lg"><span style="display:flex;align-items:baseline;gap:7px;min-width:0">
-<span class="t2" id="lgt">기록 0건</span><span class="vrb">v2026-08-17b</span></span><div style="display:flex;gap:7px"><button class="b" onclick="pullSheet()">새로고침</button><button class="b p" onclick="openCfg()">시트 연결</button></div></div>
+<span class="t2" id="lgt">기록 0건</span><span class="vrb">v2026-08-17c</span></span><div style="display:flex;gap:7px"><button class="b" onclick="pullSheet()">새로고침</button><button class="b p" onclick="openCfg()">시트 연결</button></div></div>
 
 <script>
 const CFGK='nm_cfg_v1';
@@ -1069,7 +1069,7 @@ ${isExp(b)?`<div class="exh">만료일이 지났습니다 · 연장복귀로 기
 </div>
 <div class="vwb${vw_on()}" onclick="selVw()">
 <span class="vwt">조회수 10회 추가</span>
-<span class="vwc">월 5만원</span></div>
+<span class="vwc">${vwDays()}일 · ${vwAmt()}원${((PDS.id===CUR)&&PDS.days)?'':' <span style="font-weight:600">(기간 미선택 · 30일 기준)</span>'}</span></div>
 ${(()=>{const p=lastPause(b);const dz=p?pauseDays(p):null;
 return `<div class="eg2">
 <div class="e2b${p?' off':''}" onclick="pause()"><div class="a2">일시정지</div>
@@ -1171,7 +1171,7 @@ ${(()=>{const d=(PDS.id===CUR)?PDS.days:null;const rf=(SREF&&SREF.id===CUR)?SREF
 const bits=[];
 bits.push(d?`<b>${curExtG()} ${d}일</b> → ${fk(nx(b.exp,d))} · ${AMT[d]}원`:`<span class="no">기간 선택 안 함</span>`);
 if(rf)bits.push(`소개자 <b>${esc(rf)}</b>`);
-if(PDS.id===CUR&&PDS.vw)bits.push(`<b>조회수 10회 추가</b> · 50,000원 <span class="no">(별도 줄로 저장)</span>`);
+if(PDS.id===CUR&&PDS.vw)bits.push(`<b>조회수 10회 추가</b> · ${vwDays()}일 ${vwAmt()}원 <span class="no">(별도 줄로 저장)</span>`);
 return `<div class="svb"><div class="svs">${bits.join('<br>')}<br>
 <span class="no">DB 숫자와 비고를 채우면 같은 줄에 함께 저장됩니다.</span></div>
 <button class="svbtn${(d||rf||(PDS.id===CUR&&PDS.vw))?'':' off'}" onclick="saveAll()">정보 저장</button></div>`})()}
@@ -1240,6 +1240,9 @@ function selD(d){ if(PDS.id!==CUR)PDS={id:CUR,days:null,vw:false};
 function selVw(){ if(PDS.id!==CUR)PDS={id:CUR,days:null,vw:false};
   PDS.vw=!PDS.vw; draw(); }
 function vw_on(){return (PDS.id===CUR&&PDS.vw)?' sel':''}
+const VWA={30:'50,000',60:'100,000',90:'150,000'};
+function vwDays(){const d=(PDS.id===CUR)?PDS.days:null;return d||30}
+function vwAmt(){return VWA[vwDays()]}
 function saveAll(){
   const b=byId[CUR]; if(!b)return;
   const days=(PDS.id===CUR)?PDS.days:null;
@@ -1260,13 +1263,14 @@ function saveAll(){
   if(rec&&dbV!==null) rec.nb=Object.assign({},rec.nb||{},{db:String(dbV)});
   const list=[];
   if(rec)list.push(rec);
-  if(vw){const vr={bid:b.id,g:'조회수',d:TD(),a:'50,000',e:b.exp,n:b.nm,p:b.cur,m:'조회수 10회 추가'};
+  if(vw){const vd=days||30;
+    const vr={bid:b.id,g:'조회수',d:TD(),a:VWA[vd],e:b.exp,n:b.nm,p:b.cur,m:`조회수 10회 추가 (${vd}일)`};
     if(!rec&&dbV!==null)vr.nb={db:String(dbV)};
     list.push(vr)}
   PDS={id:null,days:null,vw:false}; SREF=null; PICK=null;
   list.forEach(x=>pl(x)); draw();
   toast(days!==null?`${list[0].g} ${days}일 → ${fk(list[0].e)} 저장됨${vw?' · 조회수 추가':''}`
-    :(vw?'조회수 10회 추가 저장됨':'저장됨'));
+    :(vw?`조회수 10회 ${VWA[days||30]}원 저장됨`:'저장됨'));
 }
 function ext(d){const b=byId[CUR],e=nx(b.exp,d),m=(document.getElementById('memo').value||'').trim();
   const gg=curExtG();ap({bid:b.id,g:gg,d:TD(),a:AMT[d],e:e,n:b.nm,p:b.cur,m:m});toast(`${gg} ${d}일 → ${fk(e)}`)}
