@@ -335,6 +335,13 @@ border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.6}
 .vrb{font-size:10.5px;font-weight:800;color:var(--mute);background:var(--soft);
 border-radius:6px;padding:2px 7px;white-space:nowrap;flex:none}
 #pinGate .pgv{margin-top:26px;font-size:11px;font-weight:800;color:var(--mute)}
+.vwb{display:flex;justify-content:space-between;align-items:center;margin-top:9px;
+border:1.5px solid var(--line2);border-radius:11px;padding:11px 13px;cursor:pointer;background:#fff}
+.vwb.sel{border-color:var(--blue);background:var(--bbg)}
+.vwt{font-size:14px;font-weight:800;color:var(--txt)}
+.vwb.sel .vwt{color:var(--blue-d)}
+.vwc{font-size:12.5px;font-weight:800;color:var(--mute)}
+.vwb.sel .vwc{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -362,7 +369,7 @@ border-radius:6px;padding:2px 7px;white-space:nowrap;flex:none}
     <div class="pgKey" data-k="0">0</div>
     <div class="pgKey t" data-k="back">←</div>
   </div>
-  <div class="pgv">v2026-08-17</div>
+  <div class="pgv">v2026-08-17b</div>
 </div>
 <script>
 /* ▼ 여기 4자리를 원하는 비밀번호로 바꾸세요 ▼ */
@@ -409,7 +416,7 @@ var PIN_CODE = "1440";
 <div class="msk" id="msk"><div class="sh" id="sheet"></div></div>
 <div class="tst" id="tst"></div>
 <div class="lg"><span style="display:flex;align-items:baseline;gap:7px;min-width:0">
-<span class="t2" id="lgt">기록 0건</span><span class="vrb">v2026-08-17</span></span><div style="display:flex;gap:7px"><button class="b" onclick="pullSheet()">새로고침</button><button class="b p" onclick="openCfg()">시트 연결</button></div></div>
+<span class="t2" id="lgt">기록 0건</span><span class="vrb">v2026-08-17b</span></span><div style="display:flex;gap:7px"><button class="b" onclick="pullSheet()">새로고침</button><button class="b p" onclick="openCfg()">시트 연결</button></div></div>
 
 <script>
 const CFGK='nm_cfg_v1';
@@ -661,7 +668,7 @@ function cutPh(ph){
 function setRgm(m){window.RGM=m;window.RGS='';render()}
 function pickRg(k){window.RGS=(window.RGS===k)?'':k;render()}
 function isLive(b){const p=lastPause(b);if(p)return pauseDays(p)<=180;return !!(b.exp&&b.exp>=TD())}
-let PDS={id:null,days:null},SREF=null;
+let PDS={id:null,days:null,vw:false},SREF=null;
 function sug(inId,outId){
   const el=document.getElementById(inId),o=document.getElementById(outId);
   const v=(el.value||'').trim();PICK=null;
@@ -1060,6 +1067,9 @@ ${isExp(b)?`<div class="exh">만료일이 지났습니다 · 연장복귀로 기
 <div class="e e2${selD_on(60)}" onclick="selD(60)" onmouseover="pw(60)" onmouseout="cw()"><div class="a">60일</div><div class="c">18만원</div></div>
 <div class="e e3${selD_on(90)}" onclick="selD(90)" onmouseover="pw(90)" onmouseout="cw()"><div class="a">90일</div><div class="c">25만원</div></div>
 </div>
+<div class="vwb${vw_on()}" onclick="selVw()">
+<span class="vwt">조회수 10회 추가</span>
+<span class="vwc">월 5만원</span></div>
 ${(()=>{const p=lastPause(b);const dz=p?pauseDays(p):null;
 return `<div class="eg2">
 <div class="e2b${p?' off':''}" onclick="pause()"><div class="a2">일시정지</div>
@@ -1161,9 +1171,10 @@ ${(()=>{const d=(PDS.id===CUR)?PDS.days:null;const rf=(SREF&&SREF.id===CUR)?SREF
 const bits=[];
 bits.push(d?`<b>${curExtG()} ${d}일</b> → ${fk(nx(b.exp,d))} · ${AMT[d]}원`:`<span class="no">기간 선택 안 함</span>`);
 if(rf)bits.push(`소개자 <b>${esc(rf)}</b>`);
+if(PDS.id===CUR&&PDS.vw)bits.push(`<b>조회수 10회 추가</b> · 50,000원 <span class="no">(별도 줄로 저장)</span>`);
 return `<div class="svb"><div class="svs">${bits.join('<br>')}<br>
 <span class="no">DB 숫자와 비고를 채우면 같은 줄에 함께 저장됩니다.</span></div>
-<button class="svbtn${(d||rf)?'':' off'}" onclick="saveAll()">정보 저장</button></div>`})()}
+<button class="svbtn${(d||rf||(PDS.id===CUR&&PDS.vw))?'':' off'}" onclick="saveAll()">정보 저장</button></div>`})()}
 <div class="bx"><div class="lb" style="display:flex;justify-content:space-between">
 <span>입금 이력</span><span style="color:var(--mute)">${ev.length}건</span></div>
 <div class="hs">${ev.map(e=>`<div class="hi">
@@ -1224,8 +1235,11 @@ function cw(){const p=document.getElementById('pwv');if(p)p.textContent=''}
 function go(id){CUR=id;CURP=(byId[id]||{}).cur||'';FORM=null;draw();document.getElementById('sheet').scrollTop=0}
 const AMT={30:'100,000',60:'180,000',90:'250,000'};
 function selD_on(d){return (PDS.id===CUR&&PDS.days===d)?' sel':''}
-function selD(d){ if(PDS.id!==CUR)PDS={id:CUR,days:null};
+function selD(d){ if(PDS.id!==CUR)PDS={id:CUR,days:null,vw:false};
   PDS.days=(PDS.days===d)?null:d; draw(); }
+function selVw(){ if(PDS.id!==CUR)PDS={id:CUR,days:null,vw:false};
+  PDS.vw=!PDS.vw; draw(); }
+function vw_on(){return (PDS.id===CUR&&PDS.vw)?' sel':''}
 function saveAll(){
   const b=byId[CUR]; if(!b)return;
   const days=(PDS.id===CUR)?PDS.days:null;
@@ -1234,18 +1248,25 @@ function saveAll(){
   const raw=(((document.getElementById('dbin')||{}).value)||'').trim();
   let dbV=null;
   if(raw!==''){ dbV=dbNum(raw); if(dbV===null)return toast('DB 수량은 숫자만 입력하세요'); }
-  if(days===null&&!rf&&dbV===null&&!m)return toast('선택하거나 입력한 내용이 없습니다');
+  const vw=(PDS.id===CUR&&PDS.vw);
+  if(days===null&&!rf&&dbV===null&&!m&&!vw)return toast('선택하거나 입력한 내용이 없습니다');
   const parts=[]; if(rf)parts.push(`${rf} 에서 소개`); if(m)parts.push(m);
   const memo=parts.join(' / ');
-  let rec;
+  let rec=null;
   if(days!==null) rec={bid:b.id,g:curExtG(),d:TD(),a:AMT[days],e:nx(b.exp,days),n:b.nm,p:b.cur,m:memo};
   else if(rf)     rec={bid:b.id,g:'소개등록',d:TD(),a:'',e:b.exp,n:b.nm,p:b.cur,m:memo};
   else if(dbV!==null) rec={bid:b.id,g:'디비기록',d:TD(),a:'',e:'',n:b.nm,p:b.cur,m:memo};
-  else            rec={bid:b.id,g:'메모',d:TD(),a:'',e:'',n:b.nm,p:b.cur,m:memo};
-  if(dbV!==null) rec.nb=Object.assign({},rec.nb||{},{db:String(dbV)});
-  PDS={id:null,days:null}; SREF=null; PICK=null;
-  ap(rec);
-  toast(days!==null?`${rec.g} ${days}일 → ${fk(rec.e)} 저장됨`:'저장됨');
+  else if(m)      rec={bid:b.id,g:'메모',d:TD(),a:'',e:'',n:b.nm,p:b.cur,m:memo};
+  if(rec&&dbV!==null) rec.nb=Object.assign({},rec.nb||{},{db:String(dbV)});
+  const list=[];
+  if(rec)list.push(rec);
+  if(vw){const vr={bid:b.id,g:'조회수',d:TD(),a:'50,000',e:b.exp,n:b.nm,p:b.cur,m:'조회수 10회 추가'};
+    if(!rec&&dbV!==null)vr.nb={db:String(dbV)};
+    list.push(vr)}
+  PDS={id:null,days:null,vw:false}; SREF=null; PICK=null;
+  list.forEach(x=>pl(x)); draw();
+  toast(days!==null?`${list[0].g} ${days}일 → ${fk(list[0].e)} 저장됨${vw?' · 조회수 추가':''}`
+    :(vw?'조회수 10회 추가 저장됨':'저장됨'));
 }
 function ext(d){const b=byId[CUR],e=nx(b.exp,d),m=(document.getElementById('memo').value||'').trim();
   const gg=curExtG();ap({bid:b.id,g:gg,d:TD(),a:AMT[d],e:e,n:b.nm,p:b.cur,m:m});toast(`${gg} ${d}일 → ${fk(e)}`)}
