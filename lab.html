@@ -593,7 +593,9 @@ function collectForm(){
 function generate(){
   collectForm();
   if(!D.bizName){alert('기업명을 입력하세요');return;}
-  S.generated=true; render();
+  S.generated=true;
+  try{ jSaveHandoff(); }catch(e){}   // 연구일지 탭에 자동 반영
+  render();
 }
 function editForm(){S.generated=false;render()}
 
@@ -1020,6 +1022,8 @@ function renderOutput(data, isSample){
 
   ${!isSample?`<div style="display:flex;gap:8px;margin-bottom:14px"><button class="btn sec" onclick="editForm()" style="flex:1">← 입력 수정</button><button class="btn sec" onclick="exportJSON()" style="flex:1">💾 이 내용 JSON 백업</button></div>`:''}
 
+  ${!isSample?renderJournalCta(data):''}
+
   <div class="card">
     <div class="out-tab-title"><span class="ktab">KOITA 탭 ①</span> 종합정보</div>
     ${copyRow('기업체명', data.bizName)}
@@ -1106,6 +1110,23 @@ function renderOutput(data, isSample){
   `;
 }
 function miniCopy(v){const id='m'+Math.random().toString(36).slice(2,9);return `<button class="mini-copy" data-copy-text="${escapeHtml(v)}">복사</button>`}
+
+/* KOITA 결과 → 연구일지 연결 안내 카드 */
+function renderJournalCta(data){
+  const name=(data.bizName||'').trim();
+  const reg=name?jFindCompanyLike(name):'';
+  if(reg){
+    return `<div style="border:2px solid var(--blue);border-radius:12px;padding:12px 14px;background:var(--blue-ll);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:12.5px;font-weight:800;color:var(--blue-d)">📓 <b>${escapeHtml(reg)}</b>는 연구일지에 이미 등록되어 있습니다</div>
+      <button class="btn sec" style="width:auto;padding:8px 14px;font-size:12px" onclick="jGoJournalRegistered()">연구일지로 이동</button>
+    </div>`;
+  }
+  return `<div style="border:2px solid var(--blue);border-radius:12px;padding:14px;background:var(--blue-ll);margin-bottom:14px">
+    <div style="font-size:13px;font-weight:900;color:var(--blue-d)">📓 이 업체 정보가 [연구일지] 탭에 자동으로 넘어갑니다</div>
+    <div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:4px;line-height:1.7">회사명·대표·업종·연구원·연구과제가 등록 화면에 미리 채워집니다. 인정일(인정서 날짜)만 확인하고 [업체 등록하기]를 누르면 분기 보고서를 바로 만들 수 있습니다.</div>
+    <button class="btn" style="background:var(--blue);color:#fff;margin-top:10px;padding:11px" onclick="jGoJournalFromD()">연구일지에 등록하러 가기 →</button>
+  </div>`;
+}
 
 /* ---------- copy binding ---------- */
 function bindCopy(){
@@ -1299,6 +1320,11 @@ function renderJournal(){
   const cur=J.cur && J.companies[J.cur] ? J.cur : (names[0]||'');
   J.cur=cur;
   const co=cur?J.companies[cur]:null;
+  // [신규 업체 입력]에서 넘어온 미등록 업체가 있으면 등록 화면을 자동으로 연다 (업체당 1회, 취소하면 다시 열지 않음)
+  const ho=jGetHandoff();
+  if(ho && !ho.registered && co && co.plan && !J._addNew && !(J._hoDismissed||{})[ho.bizName]){
+    J._addNew=true; _jFiles=[]; _jParsedExtra=null;
+  }
   const now=new Date();
   const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   return `
@@ -1322,6 +1348,10 @@ function renderJournal(){
       <div style="margin-top:6px;text-align:right">
         <button class="btn sec" style="padding:7px 12px;font-size:11.5px" onclick="jDeleteCompany()">선택 회사 삭제</button>
       </div>
+      ${(ho && !ho.registered && !J._addNew && co && co.plan)?`<div style="margin-top:10px;border:2px solid var(--blue);border-radius:10px;padding:10px 12px;background:var(--blue-ll);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:12px;font-weight:800;color:var(--blue-d)">🆕 [신규 업체 입력]에서 작성한 <b>${escapeHtml(ho.bizName)}</b>가 아직 등록되지 않았습니다</div>
+        <button class="btn" style="background:var(--blue);color:#fff;width:auto;padding:8px 14px;font-size:12px" onclick="jAddNewCompany()">지금 등록하기 →</button>
+      </div>`:''}
 
       <details style="margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden">
         <summary style="cursor:pointer;padding:11px 14px;font-size:12.5px;font-weight:800;color:var(--blue-d);list-style:none">팀 공유·백업 설정 <span id="jSyncStatus" style="font-weight:700;color:var(--gray);font-size:11.5px;margin-left:6px">${jKey()?'':'미설정'}</span></summary>
@@ -1363,6 +1393,17 @@ function renderJournal(){
 /* ---- STEP1: 회사 등록 (설립 완료 업체 간편 등록) ---- */
 function renderJRegister(hasOthers){
   const ty=new Date().getFullYear();
+  const ho=jGetHandoff();
+  const hoBar = (ho && !ho.registered && !(J._hoSkip||{})[ho.bizName])
+    ? `<div id="jHoBar" style="border:2px solid var(--blue);border-radius:10px;padding:11px 13px;background:var(--blue-ll);margin-bottom:12px">
+        <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">✅ [신규 업체 입력] 탭의 <b>${escapeHtml(ho.bizName)}</b> 정보를 자동으로 채웠습니다</div>
+        <div style="font-size:11.5px;font-weight:700;color:#234;margin-top:3px;line-height:1.7">회사명·대표·업종·연구원·연구과제가 아래 칸에 들어가 있습니다. <b>인정일(인정서에 적힌 날짜)</b>만 확인·입력하고 맨 아래 <b>[업체 등록하기]</b>를 누르세요.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn sec" style="width:auto;padding:6px 12px;font-size:11.5px" onclick="jImportFromD(true)">다시 가져오기</button>
+          <button class="btn sec" style="width:auto;padding:6px 12px;font-size:11.5px" onclick="jSkipHandoff()">다른 업체를 직접 입력</button>
+        </div>
+      </div>`
+    : (ho && ho.registered && hasOthers ? `<div class="cr-hint" style="margin-bottom:10px">※ [신규 업체 입력] 탭의 <b>${escapeHtml(ho.bizName)}</b>는 이미 등록되어 있습니다. 새로운 업체를 입력하세요. <a href="javascript:void(0)" onclick="jImportFromD(false)" style="color:var(--blue);font-weight:800">그래도 다시 가져오기</a></div>` : '');
   return `
   <div class="card" style="${hasOthers?'border:2px solid var(--blue)':''}">
     ${hasOthers?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1371,6 +1412,7 @@ function renderJRegister(hasOthers){
     </div>`:''}
     <h2>STEP 1 — 업체 등록 <span style="font-size:11px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px">1분</span></h2>
     <p class="desc"><b>이미 설립(인정)이 끝난 업체</b>도 여기서 바로 시작합니다. 아래 칸만 채우고 아래쪽 파란 버튼을 누르면 등록이 끝나고, 곧바로 분기 보고서를 만들 수 있습니다.</p>
+    ${hoBar}
 
     <div style="border:1.5px solid var(--blue);border-radius:10px;padding:11px 12px;background:var(--blue-ll);margin-bottom:12px">
       <div style="font-size:12.5px;font-weight:900;color:var(--blue-d)">진행 순서</div>
@@ -1396,10 +1438,11 @@ function renderJRegister(hasOthers){
       <div class="cr-hint" style="margin-top:6px">※ 서버 주소가 설정돼 있어야 합니다(위 ⚙️). 서류가 없으면 아래 칸에 직접 입력해도 됩니다.</div>
     </div>
 
-    <details style="margin-bottom:10px">
-      <summary style="font-size:11.5px;font-weight:800;color:var(--blue-d);cursor:pointer">이미 [신규 업체 입력] 탭에서 작업 중이라면 → 자동으로 가져오기</summary>
-      <button class="btn sec" style="width:100%;margin-top:7px;padding:10px" onclick="jImportFromD()">현재 입력된 업체 정보 가져오기</button>
-    </details>
+    ${(ho && !ho.registered)?'':`<details style="margin-bottom:10px">
+      <summary style="font-size:11.5px;font-weight:800;color:var(--blue-d);cursor:pointer">[신규 업체 입력] 탭에서 만든 업체 정보 가져오기</summary>
+      <button class="btn sec" style="width:100%;margin-top:7px;padding:10px" onclick="jImportFromD(false)">현재 입력된 업체 정보 가져오기</button>
+      <div class="cr-hint" style="margin-top:4px">※ [신규 업체 입력] 탭에서 [KOITA 입력값 만들기]까지 끝내면 이 화면에 자동으로 채워집니다.</div>
+    </details>`}
 
     <div class="frow">
       <div class="fld"><label>회사명 <span style="color:var(--red)">*</span></label><input id="j_bizName" placeholder="㈜펌킨푸드"></div>
@@ -1605,29 +1648,116 @@ function jQuickRegister(){
   };
   J.companies[f.bizName]={ plan, notes:(J.companies[f.bizName]?.notes)||{} };
   J.cur=f.bizName; J._addNew=false; _jFiles=[]; jSave(); jCloudPush(f.bizName);
+  try{ jClearHandoff(f.bizName); }catch(e){}
   alert('['+f.bizName+'] 등록 완료!\n아래 [연구개발보고서·노트 생성]에서 분기를 선택해 만드세요.');
   render();
 }
 
-function jImportFromD(){
-  // 신규 업체 입력 탭의 D 객체에서 가져오기
+/* ===== [신규 업체 입력] → [연구일지] 자동 연동 (핸드오프) =====
+   - generate() 시점에 주민번호 등 민감정보를 뺀 스냅샷을 localStorage에 저장 → 새로고침 후에도 유지
+   - 연구일지 등록 화면이 열릴 때 미등록 업체면 칸을 자동으로 채움 */
+const JHO_KEY='nmsc_journal_handoff';
+function jNormName(n){ return String(n||'').replace(/\s+/g,'').replace(/[㈜()\[\]]/g,'').replace(/주식회사|유한회사|유한책임회사|합자회사|합명회사/g,'').toLowerCase(); }
+function jFindCompanyLike(name){
+  if(!name) return '';
+  if(J.companies[name]) return name;
+  const k=jNormName(name); if(!k) return '';
+  return Object.keys(J.companies).find(n=>jNormName(n)===k)||'';
+}
+function jHandoffFromD(){
   const name=(D.bizName||'').trim();
-  if(!name){ alert('[신규 업체 입력] 탭에 회사명이 없습니다. 먼저 그 탭에서 업체 정보를 입력(또는 서류 분석)하세요.'); return; }
+  if(!name) return null;
+  let tasks=[];
+  try{ tasks=(buildOverview(D).tasks||[]).map(t=>({n:t.n||'',c:t.c||''})).filter(t=>t.n); }catch(e){}
+  return {
+    bizName:name, ceo:(D.ceo||'').trim(),
+    biz:[D.mainProduct||'', D.researchTopic||''].map(x=>String(x).trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' / '),
+    ksicBiz:D.ksicBiz||'',
+    people:(D.people||[]).filter(p=>p&&p.name&&p.role!=='manage').map(p=>String(p.name).trim()).filter(Boolean),
+    dept:(D.labType==='lab'?'기업부설연구소':'연구개발전담부서'),
+    approve:D.foundLabDate||'',
+    tasks,
+    equip:(D.equip||[]).filter(e=>e&&e.name).map(e=>({name:e.name,qty:e.qty||'1',loc:e.loc||''})),
+    ts:Date.now()
+  };
+}
+function jSaveHandoff(){
+  const h=jHandoffFromD(); if(!h) return;
+  localStorage_set(JHO_KEY, JSON.stringify(h));
+}
+function jClearHandoff(name){
+  try{
+    const r=JSON.parse(localStorage_get(JHO_KEY)||'null');
+    if(!name || !r || jNormName(r.bizName)===jNormName(name)) localStorage.removeItem(JHO_KEY);
+  }catch(e){ try{localStorage.removeItem(JHO_KEY);}catch(_){} }
+}
+function jGetHandoff(){
+  // 메모리의 D(가장 최신)가 우선, 없으면 저장된 스냅샷(새로고침 후)
+  let h=null;
+  try{ h=jHandoffFromD(); }catch(e){}
+  if(!h){ try{ h=JSON.parse(localStorage_get(JHO_KEY)||'null'); }catch(e){ h=null; } }
+  if(!h || !h.bizName) return null;
+  const like=jFindCompanyLike(h.bizName);
+  h.registered=!!like; h.registeredAs=like;
+  return h;
+}
+function jTasksText(tasks){
+  return (tasks||[]).map((t,i)=>{ const n=(t.n||'').trim(), c=(t.c||'').trim(); return `${i+1}. ${n}${c?': '+c:''}`; }).join('\n');
+}
+/* 등록 화면 칸 채우기. silent=true면 alert 없이 조용히 */
+function jApplyHandoff(h, silent){
+  if(!h) return false;
   const el=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v;};
-  el('j_bizName', name);
-  el('j_biz', [D.mainProduct||'', D.researchTopic||''].filter(Boolean).join(' / '));
-  el('j_ceo', D.ceo||'');
-  el('j_people', (D.people||[]).map(p=>p.name).filter(Boolean).join(', '));
-  el('j_approve', D.foundLabDate||'');
-  if(D.foundLabDate) el('j_start', D.foundLabDate.slice(0,7));
-  const dept=document.getElementById('j_dept'); if(dept) dept.value = (D.labType==='lab'?'기업부설연구소':'연구개발전담부서');
-  // 개요서 과제 3개
-  let tasks='';
-  if(D._overviewOverride && Array.isArray(D._overviewOverride.tasks)){
-    tasks=D._overviewOverride.tasks.map((t,i)=>`${i+1}. ${t.n}: ${t.c}`).join('\n');
-  }
-  const ta=document.getElementById('j_tasks'); if(ta) ta.value=tasks;
-  alert('가져왔습니다. 내용 확인 후 [연구계획서 생성]을 누르세요.');
+  if(!document.getElementById('j_bizName')) return false;
+  el('j_bizName', h.bizName||'');
+  el('j_biz', h.biz||h.ksicBiz||'');
+  el('j_ceo', h.ceo||'');
+  el('j_people', (h.people||[]).join(', '));
+  el('j_approve', h.approve||'');
+  if(h.approve) el('j_start', String(h.approve).slice(0,7));
+  const dept=document.getElementById('j_dept'); if(dept) dept.value=h.dept||'연구개발전담부서';
+  el('j_tasks', jTasksText(h.tasks));
+  if(h.equip && h.equip.length){ _jParsedExtra=Object.assign({}, _jParsedExtra||{}, {equip:h.equip}); }
+  if(!silent) alert('가져왔습니다. 인정일을 확인한 뒤 [업체 등록하기]를 누르세요.');
+  return true;
+}
+function jImportFromD(silent){
+  const h=jGetHandoff();
+  if(!h){ alert('[신규 업체 입력] 탭에 회사명이 없습니다. 먼저 그 탭에서 업체 정보를 입력(또는 서류 분석)하고 [KOITA 입력값 만들기]를 누르세요.'); return; }
+  if(J._hoSkip){ delete J._hoSkip[h.bizName]; }
+  jApplyHandoff(h, !!silent);
+}
+function jSkipHandoff(){
+  const h=jGetHandoff(); if(!h) return;
+  J._hoSkip=J._hoSkip||{}; J._hoSkip[h.bizName]=true;
+  ['j_bizName','j_ceo','j_biz','j_people','j_approve','j_tasks','j_planPaste'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  const bar=document.getElementById('jHoBar'); if(bar) bar.style.display='none';
+  document.getElementById('j_bizName')?.focus();
+}
+/* 등록 화면이 열릴 때 자동으로 채움 (칸이 비어 있을 때만) */
+function jAutoApplyHandoff(){
+  const h=jGetHandoff();
+  if(!h || h.registered) return;
+  if((J._hoSkip||{})[h.bizName]) return;
+  const nameEl=document.getElementById('j_bizName'); if(!nameEl) return;
+  if(nameEl.value.trim() && nameEl.value.trim()!==h.bizName) return;  // 사용자가 다른 회사를 입력 중이면 건드리지 않음
+  jApplyHandoff(h, true);
+}
+/* KOITA 결과 화면 버튼 → 연구일지 등록 화면으로 */
+function jGoJournalFromD(){
+  try{ collectFormIfEditing(); }catch(e){}
+  try{ jSaveHandoff(); }catch(e){}
+  const h=jGetHandoff();
+  if(h){ J._hoDismissed=J._hoDismissed||{}; delete J._hoDismissed[h.bizName]; if(J._hoSkip) delete J._hoSkip[h.bizName]; }
+  J._addNew=true; _jFiles=[]; _jParsedExtra=null;
+  switchTab('journal');
+  setTimeout(()=>{ document.getElementById('jHoBar')?.scrollIntoView({behavior:'smooth',block:'center'}); },120);
+}
+function collectFormIfEditing(){ if(S.view==='gen' && !S.generated && document.getElementById('f_bizName')) collectForm(); }
+function jGoJournalRegistered(){
+  const h=jGetHandoff();
+  if(h && h.registeredAs && J.companies[h.registeredAs]){ J.cur=h.registeredAs; J._addNew=false; jSave(); }
+  switchTab('journal');
 }
 
 async function jGeneratePlan(){
@@ -1653,6 +1783,7 @@ async function jGeneratePlan(){
     plan.equipList=(_jParsedExtra&&_jParsedExtra.equip&&_jParsedExtra.equip.length)?_jParsedExtra.equip:((D.equip||[]).filter(e=>e&&e.name));
     J.companies[bizName]={ plan, notes:(J.companies[bizName]?.notes)||{} };
     J.cur=bizName; J._addNew=false; _jFiles=[]; jSave(); jCloudPush(bizName);
+    try{ jClearHandoff(bizName); }catch(e){}
     show('var(--blue)','연구계획서 생성 완료. 아래에서 확인하세요.');
     setTimeout(()=>{render();},400);
   }catch(e){
@@ -1665,7 +1796,11 @@ function jAddNewCompany(){
   J._addNew=true; _jFiles=[]; _jParsedExtra=null; render();
   setTimeout(()=>{ document.getElementById('jDropzone')?.scrollIntoView({behavior:'smooth',block:'center'}); },120);
 }
-function jCancelAdd(){ J._addNew=false; _jFiles=[]; render(); }
+function jCancelAdd(){
+  const h=jGetHandoff();
+  if(h){ J._hoDismissed=J._hoDismissed||{}; J._hoDismissed[h.bizName]=true; }  // 이 업체는 다시 자동으로 열지 않음
+  J._addNew=false; _jFiles=[]; render();
+}
 
 /* 작성 단위 전환 — 분량 옵션·버튼·종료일 자동 갱신 */
 const JVOL={
@@ -3766,6 +3901,7 @@ function jPrintPlan(){
 }
 function bindJournal(){
   bindJournalDropzone();
+  try{ jAutoApplyHandoff(); }catch(e){}
   setTimeout(()=>{ if(document.getElementById('j_unit')) jSyncUnit(); },30);
   // 탭 열 때 클라우드 자동 동기화 (세션당 1회)
   if(!J._pulled && jKey() && jWorkerBase()){
