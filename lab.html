@@ -217,6 +217,184 @@ const D = {
   _overviewOverride:null
 };
 
+/* ================= 입력 자동 저장 · 복원 · 적용 이력 =================
+   - 현재 입력값(D)은 이 브라우저에 자동 저장되어 새로고침·뒤로가기·허브 이동 후에도 그대로 복원됩니다
+   - 서류분석 적용 / KOITA 생성 시점마다 스냅샷을 이력으로 남겨 언제든 불러올 수 있습니다 (최근 20건) */
+const DRAFT_KEY='nmsc_lab_draft';
+const HIST_KEY='nmsc_lab_history';
+const HIST_MAX=20;
+const D_INIT=JSON.parse(JSON.stringify(D));   // 초기값 (비우기용)
+let _draftTimer=null;
+
+function dSnapshot(){
+  const snap={};
+  Object.keys(D).forEach(k=>{ if(k==='_overviewOverride') return; snap[k]=JSON.parse(JSON.stringify(D[k])); });
+  snap.overview = D._overviewOverride ? JSON.parse(JSON.stringify(D._overviewOverride)) : null;
+  snap.coverage = (typeof _lastCoverage!=='undefined' && _lastCoverage) ? _lastCoverage : null;
+  snap.notes = (typeof _lastNotes!=='undefined' && _lastNotes) ? _lastNotes : '';
+  snap.generated = !!S.generated;
+  snap.ts = Date.now();
+  return snap;
+}
+function dHasContent(snap){
+  if(!snap) return false;
+  const has=v=>String(v||'').trim()!=='';
+  return has(snap.bizName)||has(snap.bizNo)||has(snap.ceo)
+    ||(snap.people||[]).some(p=>p&&has(p.name))
+    ||(snap.equip||[]).some(e=>e&&has(e.name))
+    ||!!(snap.overview&&snap.overview.main);
+}
+function dSig(snap){ // 내용 비교용 서명 (시각·화면상태·점검표 제외)
+  const o=Object.assign({},snap); delete o.ts; delete o.generated; delete o.coverage; delete o.notes;
+  return JSON.stringify(o);
+}
+function dApplySnapshot(snap){
+  if(!snap) return;
+  Object.assign(D, JSON.parse(JSON.stringify(D_INIT)));
+  Object.keys(D_INIT).forEach(k=>{
+    if(k==='_overviewOverride'||k==='people'||k==='equip') return;
+    if(snap[k]!==undefined && snap[k]!==null) D[k]=String(snap[k]);
+  });
+  D.people=(Array.isArray(snap.people)?snap.people:[]).map(p=>Object.assign(newPerson(), p||{}));
+  D.equip=(Array.isArray(snap.equip)?snap.equip:[]).map(e=>({name:(e&&e.name)||'',qty:String((e&&e.qty)||'1'),loc:(e&&e.loc)||''}));
+  const o=snap.overview;
+  D._overviewOverride = (o && o.main) ? {main:o.main||'', field:o.field||'', tasks:Array.isArray(o.tasks)?o.tasks.map(t=>({n:t.n||'',c:t.c||'',b:t.b||0})):null} : null;
+  try{ _lastCoverage = snap.coverage||null; _lastNotes = snap.notes||''; }catch(e){}
+}
+function dSaveDraft(){
+  try{
+    const snap=dSnapshot();
+    if(!dHasContent(snap)){ localStorage.removeItem(DRAFT_KEY); return; }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(snap));
+  }catch(e){}
+}
+function dSaveDraftSoon(){
+  clearTimeout(_draftTimer);
+  _draftTimer=setTimeout(()=>{
+    try{ if(S.view==='gen' && !S.generated && document.getElementById('f_bizName')) collectForm(); }catch(e){}
+    dSaveDraft();
+  },400);
+}
+function dRestoreDraft(){
+  try{
+    const snap=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
+    if(!snap || !dHasContent(snap)) return false;
+    dApplySnapshot(snap);
+    S.generated=!!snap.generated;
+    S._restored={bizName:snap.bizName||'', ts:snap.ts||0};
+    return true;
+  }catch(e){ return false; }
+}
+/* ---- 이력 ---- */
+function dHistory(){ try{ const a=JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function dHistorySave(a){
+  try{ localStorage.setItem(HIST_KEY, JSON.stringify(a)); }
+  catch(e){ try{ localStorage.setItem(HIST_KEY, JSON.stringify(a.slice(0,5))); }catch(_){} }  // 용량 초과 시 최근 5건만
+}
+function dPushHistory(source){
+  const snap=dSnapshot(); if(!dHasContent(snap)) return;
+  const sig=dSig(snap);
+  let a=dHistory();
+  const same=a.findIndex(h=>h.sig===sig);
+  if(same>=0){ // 같은 내용이 이미 있으면 맨 위로 올리고 시각만 갱신
+    const h=a.splice(same,1)[0]; h.ts=snap.ts; h.source=source; h.snap=snap; a.unshift(h); dHistorySave(a); return;
+  }
+  a.unshift({ id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), ts:snap.ts, source:source||'',
+    bizName:(snap.bizName||'').trim()||'(회사명 없음)',
+    people:(snap.people||[]).filter(p=>p&&String(p.name||'').trim()).length,
+    equip:(snap.equip||[]).filter(e=>e&&String(e.name||'').trim()).length,
+    sig, snap });
+  dHistorySave(a.slice(0,HIST_MAX));
+}
+function dFmtTime(ts){
+  const d=new Date(ts||0); if(!ts) return '';
+  return `${d.getMonth()+1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function dLoadHistory(id){
+  const h=dHistory().find(x=>x.id===id); if(!h){ alert('이력을 찾을 수 없습니다.'); return; }
+  try{ if(S.view==='gen' && !S.generated && document.getElementById('f_bizName')) collectForm(); }catch(e){}
+  const cur=dSnapshot();
+  if(dHasContent(cur) && dSig(cur)!==h.sig){
+    if(!confirm('지금 입력 중인 내용을 ['+h.bizName+' · '+dFmtTime(h.ts)+'] 이력으로 바꿀까요?\n(현재 내용은 이력에 따로 저장해 둡니다)')) return;
+    dPushHistory('바꾸기 전 저장');
+  }
+  dApplySnapshot(h.snap);
+  S.generated=false; S._restored={bizName:h.bizName, ts:h.ts, fromHistory:true};
+  _uploadedFiles=[];
+  dSaveDraft(); render();
+  setTimeout(()=>{ try{ showParseExtras(); }catch(e){} },50);
+}
+function dDeleteHistory(id){
+  const a=dHistory(); const h=a.find(x=>x.id===id); if(!h) return;
+  if(!confirm('['+h.bizName+' · '+dFmtTime(h.ts)+'] 이력을 삭제할까요?')) return;
+  try{ if(S.view==='gen' && !S.generated && document.getElementById('f_bizName')) collectForm(); }catch(e){}
+  dHistorySave(a.filter(x=>x.id!==id)); render();
+}
+function dClearHistory(){
+  if(!confirm('적용 이력을 전부 삭제할까요? (현재 입력 중인 내용은 그대로 남습니다)')) return;
+  try{ if(S.view==='gen' && !S.generated && document.getElementById('f_bizName')) collectForm(); }catch(e){}
+  try{ localStorage.removeItem(HIST_KEY); }catch(e){}
+  render();
+}
+function dClearForm(){
+  try{ if(S.view==='gen' && !S.generated && document.getElementById('f_bizName')) collectForm(); }catch(e){}
+  const cur=dSnapshot();
+  if(dHasContent(cur)){
+    if(!confirm('현재 입력 내용을 이력에 저장해 두고, 새 업체를 위해 폼을 비울까요?')) return;
+    dPushHistory('비우기 전 저장');
+  }
+  Object.assign(D, JSON.parse(JSON.stringify(D_INIT)));
+  _uploadedFiles=[]; _lastCoverage=null; _lastNotes='';
+  S.generated=false; S._restored=null;
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  render();
+}
+/* 폼 상단 카드: 자동 저장 안내 + 복원 표시 + 이력 목록 */
+function renderHistoryCard(){
+  const hist=dHistory();
+  const cur=dSnapshot();
+  if(!hist.length && !dHasContent(cur)) return '';
+  const r=S._restored;
+  const restoredLine = r ? `<div style="font-size:12px;font-weight:800;color:var(--blue-d);margin-top:6px">✅ ${r.fromHistory?'이력에서 불러왔습니다':'마지막 작업 내용을 자동으로 복원했습니다'} — ${escapeHtml(r.bizName||'(회사명 없음)')}${r.ts?' · '+dFmtTime(r.ts):''}</div>` : '';
+  const rows=hist.map(h=>`
+    <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:12.5px;font-weight:900">${escapeHtml(h.bizName)}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--gray)">${dFmtTime(h.ts)} · ${escapeHtml(h.source||'')} · 연구원 ${h.people||0}명 · 기자재 ${h.equip||0}종</div>
+      </div>
+      <button class="btn" style="background:var(--blue);color:#fff;width:auto;padding:7px 12px;font-size:11.5px" onclick="dLoadHistory('${h.id}')">불러오기</button>
+      <button class="btn sec" style="width:auto;padding:7px 10px;font-size:11.5px;color:var(--red)" onclick="dDeleteHistory('${h.id}')">삭제</button>
+    </div>`).join('');
+  return `
+  <div class="card" style="border:2px solid var(--blue);padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <div style="font-size:13.5px;font-weight:900;color:var(--blue-d)">🕘 자동 저장 · 적용 이력 <span style="font-size:10.5px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px;margin-left:4px">${hist.length}건</span></div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:3px;line-height:1.6">서류분석 결과와 입력값은 이 브라우저에 자동 저장됩니다. 새로고침·뒤로가기를 해도 그대로 복원되니 서류분석을 다시 할 필요가 없습니다.</div>
+        ${restoredLine}
+      </div>
+      <button class="btn sec" style="width:auto;padding:9px 14px;font-size:12px" onclick="dClearForm()">새 업체로 비우기</button>
+    </div>
+    ${hist.length?`<details style="margin-top:10px">
+      <summary style="font-size:12px;font-weight:800;color:var(--blue-d);cursor:pointer">이력 보기 (${hist.length}건) — 눌러서 예전 내용 불러오기</summary>
+      <div style="margin-top:8px">${rows}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="cr-hint">※ 서류분석 적용·KOITA 생성 시점마다 자동으로 남습니다(최근 ${HIST_MAX}건). 이 브라우저에만 저장되며 다른 PC와 공유되지 않습니다.</div>
+        <a href="javascript:void(0)" onclick="dClearHistory()" style="font-size:11.5px;font-weight:800;color:var(--red)">이력 전체 삭제</a>
+      </div>
+    </details>`:''}
+  </div>`;
+}
+/* 서류 점검표·AI 메모를 폼에 다시 표시 (재렌더·복원 후) */
+function showParseExtras(){
+  try{ renderCoverage(_lastCoverage); }catch(e){}
+  const notesEl=document.getElementById('parseNotes');
+  if(notesEl){
+    if(_lastNotes){ notesEl.style.display='block'; notesEl.innerHTML='<div class="warn-box"><div class="wt">⚠️ AI가 확인 요청한 사항 (꼭 검토)</div>'+escapeHtml(_lastNotes).replace(/\n/g,'<br>')+'</div>'; }
+    else { notesEl.style.display='none'; notesEl.innerHTML=''; }
+  }
+}
+
 /* ============ 업종별 개요서/과제 템플릿 ============ */
 const TEMPLATES = {
   food:{
@@ -263,8 +441,9 @@ function render(){
   else if(S.view==='guide') app.innerHTML = renderGuide();
   window.scrollTo(0,0);
   bindCopy();
-  if(S.view==='gen' && !S.generated){ bindDropzone(); renderFileList(); }
+  if(S.view==='gen' && !S.generated){ bindDropzone(); renderFileList(); showParseExtras(); }
   if(S.view==='journal'){ bindJournal(); }
+  if(S.view==='gen'){ try{ dSaveDraft(); }catch(e){} }   // 입력값 자동 저장 (새로고침·뒤로가기 대비)
 }
 
 /* ---------- FORM ---------- */
@@ -272,6 +451,7 @@ function renderForm(){
   if(D.people.length===0) D.people.push(newPerson());
   if(D.equip.length===0) D.equip=[{name:'',qty:'1',loc:''}];
   return `
+  ${renderHistoryCard()}
   <div class="card" style="border:2px solid var(--green)">
     <h2>서류 넣으면 AI가 자동 작성 <span style="font-size:11px;background:var(--green);color:#fff;padding:2px 8px;border-radius:20px">자동화</span></h2>
     <p class="desc">사업자등록증·중소기업확인서·4대보험명부·졸업증명서 등을 넣으면 AI가 읽고 아래 폼을 전부 채웁니다 (PDF·이미지 가능)</p>
@@ -594,6 +774,7 @@ function generate(){
   collectForm();
   if(!D.bizName){alert('기업명을 입력하세요');return;}
   S.generated=true;
+  try{ dPushHistory('KOITA 생성'); dSaveDraft(); }catch(e){}   // 이력 + 자동 저장
   try{ jSaveHandoff(); }catch(e){}   // 연구일지 탭에 자동 반영
   render();
 }
@@ -812,6 +993,7 @@ async function runAutoParse(){
     // 서류 점검표(coverage)를 전역에 저장 → 폼 재렌더 후에도 표시 유지
     _lastCoverage = (result.data && result.data.coverage) ? result.data.coverage : null;
     _lastNotes = result.notes || '';
+    try{ S._restored=null; dPushHistory('서류분석 적용'); dSaveDraft(); }catch(e){}   // 이력 + 자동 저장
 
     S.generated=false;
     // 폼 전체를 다시 그림 (값 반영). 그린 뒤 점검표·상태를 복원
@@ -1022,6 +1204,7 @@ function renderOutput(data, isSample){
 
   ${!isSample?`<div style="display:flex;gap:8px;margin-bottom:14px"><button class="btn sec" onclick="editForm()" style="flex:1">← 입력 수정</button><button class="btn sec" onclick="exportJSON()" style="flex:1">💾 이 내용 JSON 백업</button></div>`:''}
 
+  ${(!isSample && S._restored)?`<div class="cr-hint" style="margin:-6px 0 12px">🕘 ${S._restored.fromHistory?'이력에서 불러온':'자동 복원된'} 내용입니다 (${escapeHtml(S._restored.bizName||'')}${S._restored.ts?' · '+dFmtTime(S._restored.ts):''}). 다른 업체를 시작하려면 [← 입력 수정] → [새 업체로 비우기]</div>`:''}
   ${!isSample?renderJournalCta(data):''}
 
   <div class="card">
@@ -3935,7 +4118,13 @@ const SAMPLE = {
   ]
 };
 
+try{ dRestoreDraft(); }catch(e){}   // 마지막 작업 내용 자동 복원
 render();
+['input','change'].forEach(ev=>document.addEventListener(ev, e=>{
+  if(S.view!=='gen' || S.generated) return;
+  const t=e.target; if(!t || !t.closest || !t.closest('#app')) return;
+  dSaveDraftSoon();
+}));
 </script>
 </body>
 </html>
