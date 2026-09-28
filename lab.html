@@ -214,13 +214,15 @@ const D = {
   people:[],
   // 기자재
   equip:[],
+  // 특허·출원 (있으면 개요서·연구과제·연구일지의 최우선 근거)
+  patent:{status:'none', title:'', no:'', summary:'', field:'', tasks:null, files:[]},
   _overviewOverride:null
 };
 
 /* ================= 입력 자동 저장 · 복원 · 적용 이력 =================
    - 현재 입력값(D)은 이 브라우저에 자동 저장되어 새로고침·뒤로가기·허브 이동 후에도 그대로 복원됩니다
    - 서류분석 적용 / KOITA 생성 시점마다 스냅샷을 이력으로 남겨 언제든 불러올 수 있습니다 (최근 20건) */
-const APP_VER='2026.09.28';   // 배포 확인용 (푸터에 표시)
+const APP_VER='2026.09.28b';   // 배포 확인용 (푸터에 표시)
 const DRAFT_KEY='nmsc_lab_draft';
 const HIST_KEY='nmsc_lab_history';
 const HIST_MAX=20;
@@ -241,6 +243,7 @@ function dHasContent(snap){
   if(!snap) return false;
   const has=v=>String(v||'').trim()!=='';
   return has(snap.bizName)||has(snap.bizNo)||has(snap.ceo)
+    ||has(snap.patent&&snap.patent.title)
     ||(snap.people||[]).some(p=>p&&has(p.name))
     ||(snap.equip||[]).some(e=>e&&has(e.name))
     ||!!(snap.overview&&snap.overview.main);
@@ -253,13 +256,14 @@ function dApplySnapshot(snap){
   if(!snap) return;
   Object.assign(D, JSON.parse(JSON.stringify(D_INIT)));
   Object.keys(D_INIT).forEach(k=>{
-    if(k==='_overviewOverride'||k==='people'||k==='equip') return;
+    if(k==='_overviewOverride'||k==='people'||k==='equip'||k==='patent') return;
     if(snap[k]!==undefined && snap[k]!==null) D[k]=String(snap[k]);
   });
   D.people=(Array.isArray(snap.people)?snap.people:[]).map(p=>Object.assign(newPerson(), p||{}));
   D.equip=(Array.isArray(snap.equip)?snap.equip:[]).map(e=>({name:(e&&e.name)||'',qty:String((e&&e.qty)||'1'),loc:(e&&e.loc)||''}));
+  D.patent=pNorm(snap.patent);
   const o=snap.overview;
-  D._overviewOverride = (o && o.main) ? {main:o.main||'', field:o.field||'', tasks:Array.isArray(o.tasks)?o.tasks.map(t=>({n:t.n||'',c:t.c||'',b:t.b||0})):null} : null;
+  D._overviewOverride = (o && o.main) ? {main:o.main||'', field:o.field||'', tasks:Array.isArray(o.tasks)?o.tasks.map(t=>({n:t.n||'',c:t.c||'',b:t.b||0})):null, patentBased:o.patentBased||''} : null;
   try{ _lastCoverage = snap.coverage||null; _lastNotes = snap.notes||''; }catch(e){}
 }
 function dSaveDraft(){
@@ -345,7 +349,7 @@ function dClearForm(){
     dPushHistory('비우기 전 저장');
   }
   Object.assign(D, JSON.parse(JSON.stringify(D_INIT)));
-  _uploadedFiles=[]; _lastCoverage=null; _lastNotes='';
+  _uploadedFiles=[]; _pFiles=[]; _lastCoverage=null; _lastNotes='';
   S.generated=false; S._restored=null;
   try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
   render();
@@ -436,6 +440,204 @@ const TEMPLATES = {
   }
 };
 
+/* ================= 특허·출원 정보 — 개요서·연구과제·연구일지의 최우선 근거 ================= */
+const PSTATUS={none:'없음', filed:'출원 중', granted:'등록'};
+function escAttr(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function pNorm(o){
+  o=(o&&typeof o==='object')?o:{};
+  let status=String(o.status||'none');
+  if(!PSTATUS[status]) status=/등록/.test(status)?'granted':(/출원|filed|pending/i.test(status)?'filed':'none');
+  return {
+    status, title:String(o.title||'').trim(), no:String(o.no||'').trim(),
+    summary:String(o.summary||'').trim(), field:String(o.field||'').trim(),
+    tasks:(Array.isArray(o.tasks)&&o.tasks.length)?o.tasks.filter(t=>t&&t.n).map(t=>({n:String(t.n).trim(),c:String(t.c||'').trim(),b:+t.b||0})):null,
+    files:Array.isArray(o.files)?o.files.slice(0,10):[]
+  };
+}
+function pActive(o){ const p=pNorm(o); return (p.title && p.status!=='none') ? p : null; }
+function pLabel(p){ return p ? ((PSTATUS[p.status]||'')+(p.no?' · '+p.no:'')) : ''; }
+/* 과제명에 넣을 짧은 발명 명칭 */
+function pShort(title){
+  let t=String(title||'').replace(/[「」『』"“”]/g,'').trim();
+  t=t.replace(/\s*(및|와|과|,)\s*(그|이를|이에|이의)\s*(제조|이용|위한|사용|적용)[^,]*$/,'').trim();
+  if(t.length>32){ const cut=t.lastIndexOf(' ',32); t=(cut>12?t.slice(0,cut):t.slice(0,32)).trim(); }
+  return t||String(title||'').slice(0,32);
+}
+/* 특허 기반 연구과제 3개 (AI 추출 결과가 있으면 그것, 없으면 템플릿) */
+function pTasks(p){
+  if(p&&p.tasks&&p.tasks.length>=3) return p.tasks.slice(0,3);
+  const s=pShort(p&&p.title);
+  return [
+    {n:s+' 핵심 성능 검증 및 개선 연구', c:'특허(출원) 기술의 핵심 구성을 시제품으로 구현하여 성능을 측정하고 개선점을 도출함', b:30},
+    {n:s+' 적용 조건·공정 최적화 연구', c:'재료·공정·적용 조건 변화에 따른 결과를 비교 분석하여 최적 조건을 확립함', b:30},
+    {n:s+' 시제품 신뢰성 및 사업화 검증 연구', c:'시제품의 내구성·안정성을 시험하고 문제점을 보완하여 사업화 가능성을 검토함', b:40}
+  ];
+}
+/* 특허 기반 KOITA 개요서 (주요업무·전문연구분야·과제) */
+function pOverview(data, p){
+  const who=(data.bizName||'당사').trim();
+  const dept=data.labType==='lab'?'기업부설연구소':'연구개발전담부서';
+  const sum=p.summary?p.summary.replace(/\s+/g,' ').slice(0,120):'';
+  const main=`${who}는 「${p.title}」(${pLabel(p)}) 기술을 보유하고 있으며, 기업의 전체 경영활동 중 ${dept}는 이 특허 기술의 핵심 구성을 시제품으로 구현하고 성능·내구성을 시험·검증하며, 적용 조건을 최적화하고 문제점을 개선하여 사업화 전 단계까지 기술을 완성하는 역할을 수행한다.${sum?' 해당 기술의 요지는 다음과 같다. '+sum+(/[.。]$/.test(sum)?'':'.'):''}`;
+  const field=`「${p.title}」 관련 기술 분야를 중심으로 연구개발을 수행한다. 특허(출원) 기술의 구성 요소별 성능을 측정·분석하고, 재료·공정·적용 조건 변화에 따른 결과를 비교하여 최적 조건을 도출하며, 시제품 시험을 통해 신뢰성과 사업화 가능성을 검증하여 기술 완성도를 높이는 연구를 수행한다.`;
+  return { main, field:(p.field&&p.field.length>=60)?p.field:field, tasks:pTasks(p), patentBased:p.title };
+}
+/* 서버 없이 특허 중심 계획서 골격 (과제명·목표·주요내용·12개월 배분표) */
+function pPlanParts(pt, m0){
+  const subTpl=['현황 조사 및 기준값 설정','시험 조건 설계 및 시제품 제작','측정·시험 및 결과 정리','문제점 분석 및 개선안 적용'];
+  const mainContents=pTasks(pt).map(t=>({big:t.n, subs:[t.c].filter(Boolean).concat(subTpl).slice(0,4)}));
+  const flat=[]; mainContents.forEach(mc=>mc.subs.forEach(s=>flat.push(mc.big+' — '+s)));
+  const monthlyPlan=[];
+  for(let i=0;i<12;i++){ const mm=(((m0||1)-1+i)%12)+1; monthlyPlan.push({month:mm, sub:flat[i%flat.length]}); }
+  monthlyPlan.sort((a,b)=>a.month-b.month);
+  return {
+    projectTitle:pShort(pt.title)+' 실용화 및 성능 개선 연구',
+    goal:`보유 특허(출원) 「${pt.title}」의 핵심 기술을 시제품으로 구현하고, 시험을 통해 성능·내구성·적용 조건을 검증하여 사업화 전 단계까지 기술을 완성한다.`,
+    mainContents, monthlyPlan
+  };
+}
+/* 서류분석 결과(notes/data)에서 특허 정보 추출 */
+function pExtractFromResult(r){
+  const notes=String((r&&r.notes)||'');
+  const d=(r&&r.data)||{};
+  let out=null;
+  const m=notes.match(/\[특허\s*정보\]([^\n]*)/);
+  if(m){
+    const seg=m[1];
+    const get=k=>{ const mm=seg.match(new RegExp(k+'\\s*[=:：]\\s*([^|\\n]*)')); return mm?mm[1].trim():''; };
+    const st=get('상태');
+    out={ title:get('명칭'), no:get('번호'), status:/등록/.test(st)?'granted':'filed', summary:get('요약') };
+    if(/^(없음|-|없다|해당\s*없음|null|none)$/i.test(out.title)) out=null;
+  }
+  const docs=((d.coverage&&d.coverage.detectedDocs)||[]).join(' ');
+  if(!out && /특허|출원|실용신안|명세서|공보/.test(docs) && d.researchTopic){
+    out={ title:String(d.researchTopic), no:'', status:/특허증|등록/.test(docs)?'granted':'filed', summary:'' };
+  }
+  if(out && !String(out.title||'').trim()) out=null;
+  if(out && d.overview){
+    out.field=d.overview.field||'';
+    const ts=Array.isArray(d.overview.tasks)?d.overview.tasks.filter(t=>t&&t.n).map(t=>({n:t.n,c:t.c||'',b:t.b||0})):[];
+    out.tasks=ts.length>=3?ts.slice(0,3):null;
+    if(!out.summary) out.summary=String(d.overview.main||'').slice(0,300);
+  }
+  return out?pNorm(out):null;
+}
+function pStripNotes(notes){ return String(notes||'').replace(/^\s*\[특허\s*정보\][^\n]*\n?/m,'').trim(); }
+function pTasksText(p){ return pTasks(p).map(t=>[t.n,t.c].filter(Boolean).join(': ')).join('\n'); }
+const PATENT_HINT=`\n\n[특허 서류가 있으면 — 최우선] 특허출원서·특허증·명세서·공개(등록)공보가 포함되어 있으면 그 발명을 최우선 근거로 삼으세요. researchTopic에는 발명의 명칭을, overview.main(주요업무)·overview.field(전문연구분야)·overview.tasks(연구과제 3개, 과제명에 발명의 핵심 기술 용어 포함)는 이 특허 기술의 구현·시험·검증·개선 중심으로 작성하세요. 그리고 notes 맨 앞줄에 반드시 "[특허정보] 명칭=<발명의 명칭> | 번호=<출원번호 또는 등록번호> | 상태=<출원중 또는 등록> | 출원인=<출원인> | 요약=<요약 200자 이내>" 한 줄을 적으세요. 특허 서류가 없으면 이 지시는 무시하세요.`;
+const PATENT_NOTE=`[특허 서류 분석 요청] 첨부 파일은 특허출원서·특허증·명세서·공개(등록)공보 등 특허 관련 서류입니다. 회사 정보가 아니라 특허 내용을 읽는 것이 목적입니다.
+1) researchTopic 칸에 '발명의 명칭'을 그대로 적으세요.
+2) overview.main(주요업무, 100자 이상): 연구소(전담부서)가 이 특허 기술의 구현·시험·검증·개선을 담당한다는 내용으로, 특허의 핵심 구성과 효과를 쉬운 말로 요약해 쓰세요.
+3) overview.field(전문연구분야, 100자 이상): 특허의 기술분야·해결하려는 과제·효과를 바탕으로 쓰세요.
+4) overview.tasks: 이 특허를 바탕으로 1년간 수행할 연구과제 3개 — 과제명(n)에 발명의 핵심 기술 용어를 넣고, 연구내용(c)은 구체적으로, 비중(b)은 합계 100.
+5) notes 맨 앞줄에 반드시 다음 형식 한 줄을 적으세요: [특허정보] 명칭=<발명의 명칭> | 번호=<출원번호 또는 등록번호> | 상태=<출원중 또는 등록> | 출원인=<출원인> | 요약=<요약(초록) 200자 이내>
+6) 사업자등록증 등 회사 서류가 없으면 회사 정보 칸은 비워두세요. 인력(people)·장비(equip)는 채우지 마세요.`;
+
+/* ---- [신규 업체 입력] 탭: 특허 섹션 ---- */
+let _pFiles=[];   // 특허 서류 {name, media_type, data}
+function renderPatentSection(){
+  const p=pNorm(D.patent);
+  return `
+      <div id="patentBox" style="border:2px solid var(--blue);border-radius:12px;padding:12px 14px;background:var(--blue-ll);margin-top:10px">
+        <div style="font-size:13px;font-weight:900;color:var(--blue-d)">📜 특허·출원 정보 <span style="font-size:10.5px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px;margin-left:4px">있으면 최우선 반영</span></div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:3px;line-height:1.7">특허출원서·특허증이 있으면 <b>그 발명을 중심으로</b> 주요업무·전문연구분야·연구과제 3개를 만들고, [연구일지] 탭에도 그대로 넘어가 연구일지의 중심이 됩니다. 없으면 '없음'으로 두세요.</div>
+        <div class="frow" style="margin-top:10px">
+          <div class="fld"><label>특허 상태</label><select id="f_patentStatus">${Object.entries(PSTATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+          <div class="fld"><label>출원번호 / 등록번호</label><input id="f_patentNo" value="${escAttr(p.no)}" placeholder="10-2025-0012345"></div>
+        </div>
+        <div class="fld"><label>발명의 명칭 <span style="color:var(--gray);font-weight:600">— 특허증·출원서에 적힌 그대로</span></label><input id="f_patentTitle" value="${escAttr(p.title)}" placeholder="예: 내부식성 코팅층을 갖는 금속제 안전 난간 및 그 제조방법" oninput="pTitleTyped('f_patentStatus')"></div>
+        <div class="fld"><label>기술 요지 <span style="color:var(--gray);font-weight:600">— 요약(초록)·청구항 1항·해결하려는 과제</span></label><textarea id="f_patentSummary" placeholder="특허로(patent.go.kr)·KIPRIS에서 요약을 복사해 붙여넣으세요. 아래에서 서류를 읽히면 자동으로 채워집니다.">${escapeHtml(p.summary)}</textarea></div>
+        <div id="pDropzone" style="border:2px dashed var(--blue);border-radius:10px;padding:14px;text-align:center;background:#fff;cursor:pointer;margin-top:4px">
+          <div style="font-size:12.5px;font-weight:800;color:var(--blue-d)">📎 특허출원서·특허증·명세서 PDF/이미지를 여기로 (AI가 읽어서 위 칸을 채웁니다)</div>
+          <div style="font-size:11px;font-weight:600;color:var(--gray);margin-top:3px">여러 개 한번에 · 파일당 20MB</div>
+          <input type="file" id="pFileInput" multiple accept="application/pdf,image/*" style="display:none">
+        </div>
+        <div id="pFileList" style="margin-top:8px"></div>
+        <button class="btn sec" id="pParseBtn" style="width:100%;margin-top:8px;padding:10px;font-size:13px" onclick="runPatentParse()">특허 서류 읽어서 위 칸 채우기 (AI · 10~30초)</button>
+        <div id="pParseStatus" style="margin-top:8px;font-size:12.5px;font-weight:800;display:none"></div>
+        <div class="cr-hint" style="margin-top:6px">※ AI가 못 읽으면 발명의 명칭과 요약만 직접 붙여넣어도 됩니다. 맨 위 서류함에 특허 서류를 같이 올려도 자동으로 인식합니다.</div>
+      </div>`;
+}
+function pTitleTyped(selId){ const st=document.getElementById(selId); if(st && st.value==='none') st.value='filed'; }
+function bindPatentDropzone(){
+  const dz=document.getElementById('pDropzone'), fi=document.getElementById('pFileInput');
+  if(!dz||!fi) return;
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.style.background='var(--blue-l)';};
+  dz.ondragleave=()=>{dz.style.background='#fff';};
+  dz.ondrop=e=>{e.preventDefault();dz.style.background='#fff';pHandleFiles(e.dataTransfer.files,_pFiles,'pFileList','removePatentFile');};
+  fi.onchange=()=>pHandleFiles(fi.files,_pFiles,'pFileList','removePatentFile');
+  pRenderFileList(_pFiles,'pFileList','removePatentFile');
+}
+async function pHandleFiles(fileList, arrRef, listId, rmFn){
+  const arr=Array.from(fileList).filter(file=>{
+    if(file.size > 20*1024*1024){ alert(file.name+' : 20MB를 초과해 제외합니다'); return false; }
+    return true;
+  });
+  for(const file of arr){
+    try{ arrRef.push(await nmscShrink(file)); }catch(e){ alert(file.name+' : 읽지 못해 제외합니다'); }
+    pRenderFileList(arrRef, listId, rmFn);
+  }
+}
+function pRenderFileList(arr, listId, rmFn){
+  const el=document.getElementById(listId); if(!el) return;
+  if(!arr.length){ el.innerHTML=''; return; }
+  el.innerHTML=arr.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:5px">
+      <span style="font-size:15px">${f.media_type.includes('pdf')?'📄':'🖼️'}</span>
+      <span style="flex:1;font-size:12px;font-weight:700;word-break:break-all">${escapeHtml(f.name)}<span style="font-weight:600;color:var(--gray);margin-left:6px;font-size:11px">${nmscKB(nmscBytes(f.data))}</span></span>
+      <button onclick="${rmFn}(${i})" style="background:var(--red-l);color:var(--red);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:900;cursor:pointer">삭제</button>
+    </div>`).join('');
+}
+function removePatentFile(i){ _pFiles.splice(i,1); pRenderFileList(_pFiles,'pFileList','removePatentFile'); }
+function pParseUrl(){
+  let u=(document.getElementById('workerUrl')?.value || localStorage_get('nmsc_worker_url')).trim();
+  if(!u) return '';
+  return u.replace(/\/(parse-docs|parse-roster|generate-plan|generate-note)\/?$/,'').replace(/\/+$/,'')+'/parse-docs';
+}
+async function runPatentParse(){
+  const st=document.getElementById('pParseStatus'), btn=document.getElementById('pParseBtn');
+  const show=(c,h)=>{ if(st){st.style.display='block';st.style.color=c;st.innerHTML=h;} };
+  const url=pParseUrl();
+  if(!url){ show('var(--red)','❌ 서버 주소가 없습니다. 맨 위 카드의 [⚙️ 서버 주소 설정]에서 저장하세요.'); return; }
+  if(!_pFiles.length){ show('var(--red)','❌ 먼저 특허 서류를 올려주세요. (없으면 발명의 명칭과 요약을 직접 입력)'); return; }
+  try{ collectForm(); }catch(e){}
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
+  show('var(--amber)','⏳ AI가 특허 서류를 읽는 중입니다... (10~30초)');
+  const note=PATENT_NOTE+(D.bizName?'\n회사명: '+D.bizName:'')+(D.mainProduct?'\n주요제품: '+D.mainProduct:'');
+  try{
+    const r=await nmscParseDocsBatched(url, _pFiles, note, (i,n)=>{ if(n>1) show('var(--amber)','⏳ '+n+'번에 나눠 보냅니다 — '+i+'/'+n+' 묶음 분석 중...'); });
+    const pt=pExtractFromResult(r);
+    if(!pt){
+      show('var(--red)','❌ 특허 내용을 읽지 못했습니다. 발명의 명칭과 요약을 위 칸에 직접 붙여넣어 주세요. (특허로·KIPRIS에서 복사)');
+    }else{
+      pt.files=_pFiles.map(f=>f.name);
+      D.patent=pt;
+      if(r.data && r.data.overview && r.data.overview.main){
+        D._overviewOverride={ main:r.data.overview.main||'', field:r.data.overview.field||'', tasks:pt.tasks, patentBased:pt.title };
+      } else { D._overviewOverride=null; }
+      if(!(D.researchTopic||'').trim()) D.researchTopic=pShort(pt.title);
+      pFillFields('f_', pt);
+      const rt=document.getElementById('f_researchTopic'); if(rt && !rt.value.trim()) rt.value=D.researchTopic;
+      try{ S._restored=null; dPushHistory('특허 분석 적용'); dSaveDraft(); }catch(e){}
+      show('var(--blue)','✅ 특허 내용을 읽었습니다 — 「'+escapeHtml(pt.title)+'」 ('+escapeHtml(pLabel(pt))+')<br><span style="font-weight:700;color:#234">주요업무·전문연구분야·연구과제 3개를 이 특허 중심으로 준비했습니다. 내용을 확인한 뒤 맨 아래 [KOITA 입력값 생성]을 누르세요.</span>');
+    }
+  }catch(e){ show('var(--red)','❌ '+escapeHtml(e.message)); }
+  if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+}
+/* prefix('f_' 또는 'j_')에 맞춰 특허 칸 채우기 */
+function pFillFields(prefix, p){
+  p=pNorm(p);
+  const el=(id,v)=>{ const e=document.getElementById(prefix+id); if(e) e.value=v; };
+  const st=document.getElementById(prefix+'patentStatus'); if(st) st.value=p.status;
+  el('patentTitle', p.title); el('patentNo', p.no); el('patentSummary', p.summary);
+}
+function pReadFields(prefix, base){
+  const st=document.getElementById(prefix+'patentStatus'); if(!st) return pNorm(base);
+  const v=id=>(document.getElementById(prefix+id)?.value||'').trim();
+  return pNorm(Object.assign({}, base||{}, { status:st.value, no:v('patentNo'), title:v('patentTitle'), summary:v('patentSummary') }));
+}
+
 /* ================= RENDER ================= */
 function switchTab(v){
   S.view=v;
@@ -445,13 +647,14 @@ function switchTab(v){
   render();
 }
 function render(){
+  try{ jFlushMonthEdits(); }catch(e){}   // 월별 배분표에 저장 안 된 입력이 있으면 먼저 저장
   const app=document.getElementById('app');
   if(S.view==='gen') app.innerHTML = S.generated ? renderOutput(D) : renderForm();
   else if(S.view==='journal') app.innerHTML = renderJournal();
   else if(S.view==='guide') app.innerHTML = renderGuide();
   window.scrollTo(0,0);
   bindCopy();
-  if(S.view==='gen' && !S.generated){ bindDropzone(); renderFileList(); showParseExtras(); }
+  if(S.view==='gen' && !S.generated){ bindDropzone(); renderFileList(); showParseExtras(); bindPatentDropzone(); }
   if(S.view==='journal'){ bindJournal(); }
   if(S.view==='gen'){ try{ dSaveDraft(); }catch(e){} }   // 입력값 자동 저장 (새로고침·뒤로가기 대비)
 }
@@ -662,6 +865,7 @@ function renderForm(){
         <div class="fld"><label>핵심 연구대상 (제품/서비스명)</label><input id="f_researchTopic" value="${D.researchTopic}" placeholder="수입 분모자 제품 / ○○"></div>
       </div>
       <div class="cr-hint">※ 업종+연구대상을 넣으면 주요업무·전문연구분야·연구과제 3개가 자동 작성됩니다. 생성 후 수정 가능.</div>
+      ${renderPatentSection()}
     </div>
 
     <div class="frm-sec">
@@ -779,6 +983,11 @@ function collectForm(){
   document.querySelectorAll('[data-e]').forEach(el=>{
     const i=+el.dataset.e,k=el.dataset.k; if(D.equip[i]) D.equip[i][k]=el.value;
   });
+  if(document.getElementById('f_patentStatus')){
+    const before=pNorm(D.patent);
+    D.patent=pReadFields('f_', before);
+    if(D.patent.title!==before.title){ D.patent.tasks=null; D.patent.field=''; }   // 명칭이 바뀌면 AI 추출 과제는 버림
+  }
 }
 function generate(){
   collectForm();
@@ -987,7 +1196,7 @@ async function runAutoParse(){
   status.innerHTML='⏳ AI가 서류를 읽는 중입니다... (10~30초)';
   btn.disabled=true; btn.style.opacity='0.6';
 
-  const note=document.getElementById('companyNote')?.value||'';
+  const note=(document.getElementById('companyNote')?.value||'')+PATENT_HINT;
 
   try{
     const result=await nmscParseDocsBatched(workerUrl, _uploadedFiles, note, (i,n)=>{
@@ -999,6 +1208,17 @@ async function runAutoParse(){
 
     // 성공 - 폼 채우기
     applyData(result.data);
+    // 특허 서류가 섞여 있었으면 특허 정보도 반영
+    try{
+      const pt=pExtractFromResult(result);
+      if(pt){
+        pt.files=_uploadedFiles.filter(f=>/특허|출원|patent|명세서|공보/i.test(f.name||'')).map(f=>f.name);
+        D.patent=pt;
+        if(D._overviewOverride) D._overviewOverride.patentBased=pt.title;
+        if(!(D.researchTopic||'').trim()) D.researchTopic=pShort(pt.title);
+      }
+      result.notes=pStripNotes(result.notes);
+    }catch(e){}
 
     // 서류 점검표(coverage)를 전역에 저장 → 폼 재렌더 후에도 표시 유지
     _lastCoverage = (result.data && result.data.coverage) ? result.data.coverage : null;
@@ -1101,6 +1321,7 @@ function applyData(obj){
   if(Array.isArray(obj.equip)&&obj.equip.length){
     D.equip=obj.equip.map(e=>({name:e.name||'',qty:String(e.qty||'1'),loc:e.loc||''}));
   }
+  if(obj.patent && obj.patent.title){ D.patent=pNorm(obj.patent); }
   // 개요서를 직접 넣은 경우(overview override) — AI가 맞춤작성한 문장
   if(obj.overview){
     D._overviewOverride = {
@@ -1119,6 +1340,7 @@ function exportJSON(){
   keys.forEach(k=>out[k]=D[k]);
   out.people=D.people; out.equip=D.equip;
   if(D._overviewOverride) out.overview=D._overviewOverride;
+  if(pActive(D.patent)) out.patent=D.patent;
   const txt=JSON.stringify(out,null,2);
   navigator.clipboard.writeText(txt).then(()=>alert('현재 입력값이 JSON으로 복사되었습니다. 백업하거나 담당자에게 전달하세요.')).catch(()=>{
     const w=window.open('','_blank');w.document.write('<pre>'+txt.replace(/</g,'&lt;')+'</pre>');
@@ -1148,6 +1370,15 @@ function copyRow(label,val,hint){
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 function buildOverview(data){
+  // 특허(출원)가 있으면 그 발명이 최우선 — AI가 특허를 읽고 쓴 개요서면 그대로, 아니면 특허 템플릿
+  const pt=pActive(data.patent);
+  if(pt){
+    const o=data._overviewOverride;
+    if(o && o.main && o.patentBased && jNormName(o.patentBased)===jNormName(pt.title)){
+      return { main:o.main, field:o.field||pOverview(data,pt).field, tasks:(o.tasks&&o.tasks.length)?o.tasks:pTasks(pt) };
+    }
+    return pOverview(data, pt);
+  }
   // AI가 맞춤작성한 개요서가 있으면 그것을 우선 사용
   if(data._overviewOverride && data._overviewOverride.main){
     const o=data._overviewOverride;
@@ -1250,6 +1481,7 @@ function renderOutput(data, isSample){
 
   <div class="card">
     <div class="out-tab-title"><span class="ktab">KOITA 탭 ②</span> 연구개발활동 개요서</div>
+    ${(()=>{ const pt=pActive(data.patent); return pt?`<div style="border:1.5px solid var(--blue);border-radius:10px;padding:10px 12px;background:var(--blue-ll);margin-bottom:10px;font-size:12px;font-weight:700;color:#234;line-height:1.7">📜 <b>특허 기반 개요서</b> — 「${escapeHtml(pt.title)}」 (${escapeHtml(pLabel(pt))}) 를 근거로 주요업무·전문연구분야·연구과제를 작성했습니다. KOITA 개요서 입력란에 특허 항목은 없으니 아래 문장을 그대로 복사하고, 특허증(출원서)은 실사·증빙용으로 보관하세요.</div>`:''; })()}
     ${copyRow('주요업무 (100자↑)', ov.main, '기업 경영활동 중 연구소 역할')}
     ${copyRow('전문연구분야 (100자↑)', ov.field, '전문 기술분야 및 연구목표')}
     <div style="font-size:12px;font-weight:900;color:var(--gray);margin:14px 0 8px">▼ 신고일로부터 1년간 수행할 대표 연구과제 3개</div>
@@ -1438,7 +1670,11 @@ function jStripPhotos(co){
   Object.values(c.notes||{}).forEach(n=>{ delete n.photos; });
   return c;
 }
+function jTouch(name){ const co=J.companies[name]; if(co){ co._updatedAt=Date.now(); } }
+let _jPushTimers={};
+function jCloudPushSoon(name){ clearTimeout(_jPushTimers[name]); jTouch(name); _jPushTimers[name]=setTimeout(()=>{ jCloudPush(name); },800); }
 async function jCloudPush(name){
+  if(name && J.companies[name]){ jTouch(name); jSave(); }   // 마지막 수정 시각 기록 (동기화 시 최신본 판단)
   const base=jWorkerBase(), key=jKey();
   if(!base||!key||!name||!J.companies[name]) return;
   try{
@@ -1459,21 +1695,29 @@ async function jCloudPullAll(silent){
     const resp=await fetch(base+'/journal-load',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
     const r=await resp.json();
     if(r.error){ if(!silent) alert('불러오기 실패: '+r.error); jSyncStatus('연결 실패'); return false; }
-    let changed=false;
+    let changed=false; const toPush=[];
     Object.entries(r.companies||{}).forEach(([name,data])=>{
       const local=J.companies[name];
-      if(!local){ J.companies[name]=data; changed=true; }
-      else{
-        // 병합: 클라우드에만 있는 노트 가져오기 + 로컬 사진 유지, 계획서는 클라우드 우선
-        if(data.plan) local.plan=data.plan;
+      if(!local){ J.companies[name]=data; changed=true; return; }
+      local.notes=local.notes||{};
+      const lt=+(local._updatedAt||0), ct=+(data._updatedAt||0);
+      if(ct>=lt){
+        // 클라우드가 더 새롭거나 같음: 계획서·노트는 클라우드 우선 (로컬 사진은 유지)
+        if(data.plan){ if(JSON.stringify(local.plan||null)!==JSON.stringify(data.plan)) changed=true; local.plan=data.plan; }
         Object.entries(data.notes||{}).forEach(([ym,n])=>{
           if(!local.notes[ym]) { local.notes[ym]=n; changed=true; }
           else { const ph=local.notes[ym].photos; local.notes[ym]={...n, photos:ph||[]}; }
         });
+        if(ct) local._updatedAt=ct;
+      }else{
+        // 이 PC에서 고친 내용이 더 새로움: 로컬을 지키고 클라우드에만 있는 노트만 가져온 뒤 클라우드를 최신본으로 갱신
+        Object.entries(data.notes||{}).forEach(([ym,n])=>{ if(!local.notes[ym]){ local.notes[ym]=n; changed=true; } });
+        toPush.push(name);
       }
     });
     if(!J.cur||!J.companies[J.cur]) J.cur=Object.keys(J.companies)[0]||'';
     jSave();
+    toPush.forEach(n=>{ try{ jCloudPush(n); }catch(e){} });
     jSyncStatus('동기화됨 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
     return changed;
   }catch(e){ jSyncStatus('연결 실패'); if(!silent) alert('클라우드 연결 실패: '+e.message); return false; }
@@ -1658,6 +1902,8 @@ function renderJRegister(hasOthers){
 보관 중 변질 방지를 위한 포장·보관 조건 연구
 원료 배합비에 따른 품질 편차 줄이기 연구"></textarea></div>
 
+    ${renderJPatentBlock()}
+
     <details style="margin-bottom:12px">
       <summary style="font-size:11.5px;font-weight:800;color:var(--blue-d);cursor:pointer">이미 만들어 둔 연구계획서(HWP·PDF)가 있다면 → 본문 붙여넣기 (선택)</summary>
       <textarea id="j_planPaste" style="width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12px;font-family:inherit;margin-top:7px" placeholder="한글 파일을 열어 Ctrl+A → Ctrl+C 한 뒤 여기에 붙여넣으세요. 과제명·목표·월별 계획을 그대로 살려서 정리합니다."></textarea>
@@ -1674,6 +1920,73 @@ function renderJRegister(hasOthers){
 /* ===== 연구일지 전용 서류 업로드 → AI 자동 입력 ===== */
 let _jFiles = [];              // {name, media_type, data}
 let _jParsedExtra = null;      // {equip:[], tasks:[], labName, labAddr, area}
+let _jpFiles = [];             // 등록 화면의 특허 서류
+let _jPatent = null;           // 등록 화면의 특허 정보(AI 추출·핸드오프 포함)
+
+/* ---- 등록 화면: 특허·출원 블록 ---- */
+function renderJPatentBlock(){
+  const p=pNorm(_jPatent||{});
+  return `
+    <div id="jPatentBox" style="border:2px solid var(--blue);border-radius:12px;padding:12px 14px;background:var(--blue-ll);margin-bottom:12px">
+      <div style="font-size:13px;font-weight:900;color:var(--blue-d)">📜 특허·출원 정보 <span style="font-size:10.5px;background:var(--blue);color:#fff;padding:2px 8px;border-radius:20px;margin-left:4px">있으면 연구일지의 중심</span></div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:3px;line-height:1.7">특허가 있는 업체는 <b>그 발명을 중심으로</b> 연구과제·월별 배분표·보고서를 씁니다. 특허출원서·특허증을 올리면 AI가 읽어서 채우고, 없으면 발명의 명칭과 요약을 직접 붙여넣으세요.</div>
+      <div class="frow" style="margin-top:10px">
+        <div class="fld"><label>특허 상태</label><select id="j_patentStatus">${Object.entries(PSTATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="fld"><label>출원번호 / 등록번호</label><input id="j_patentNo" value="${escAttr(p.no)}" placeholder="10-2025-0012345"></div>
+      </div>
+      <div class="fld"><label>발명의 명칭</label><input id="j_patentTitle" value="${escAttr(p.title)}" placeholder="특허증·출원서에 적힌 그대로" oninput="pTitleTyped('j_patentStatus')"></div>
+      <div class="fld"><label>기술 요지 <span style="color:var(--gray);font-weight:600">— 요약(초록)·청구항 1항·해결하려는 과제</span></label><textarea id="j_patentSummary" placeholder="특허로(patent.go.kr)·KIPRIS에서 요약을 복사해 붙여넣으세요.">${escapeHtml(p.summary)}</textarea></div>
+      <div id="jpDropzone" style="border:2px dashed var(--blue);border-radius:10px;padding:14px;text-align:center;background:#fff;cursor:pointer;margin-top:4px">
+        <div style="font-size:12.5px;font-weight:800;color:var(--blue-d)">📎 특허출원서·특허증·명세서 PDF/이미지를 여기로</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray);margin-top:3px">여러 개 한번에 · 파일당 20MB</div>
+        <input type="file" id="jpFileInput" multiple accept="application/pdf,image/*" style="display:none">
+      </div>
+      <div id="jpFileList" style="margin-top:8px"></div>
+      <button class="btn sec" id="jpParseBtn" style="width:100%;margin-top:8px;padding:10px;font-size:13px" onclick="jPatentParse()">특허 서류 읽어서 위 칸 채우기 (AI · 10~30초)</button>
+      <div id="jpParseStatus" style="margin-top:8px;font-size:12.5px;font-weight:800;display:none"></div>
+      <div class="cr-hint" style="margin-top:6px">※ 연구과제 칸이 비어 있으면 특허 중심 과제 3개가 자동으로 들어갑니다. 위 대용량 서류함에 같이 올려도 인식합니다.</div>
+    </div>`;
+}
+function bindJPatentDropzone(){
+  const dz=document.getElementById('jpDropzone'), fi=document.getElementById('jpFileInput');
+  if(!dz||!fi) return;
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.style.background='var(--blue-l)';};
+  dz.ondragleave=()=>{dz.style.background='#fff';};
+  dz.ondrop=e=>{e.preventDefault();dz.style.background='#fff';pHandleFiles(e.dataTransfer.files,_jpFiles,'jpFileList','jRemovePatentFile');};
+  fi.onchange=()=>pHandleFiles(fi.files,_jpFiles,'jpFileList','jRemovePatentFile');
+  pRenderFileList(_jpFiles,'jpFileList','jRemovePatentFile');
+}
+function jRemovePatentFile(i){ _jpFiles.splice(i,1); pRenderFileList(_jpFiles,'jpFileList','jRemovePatentFile'); }
+function jPatentVals(){
+  if(!document.getElementById('j_patentStatus')) return pActive(_jPatent);
+  return pActive(pReadFields('j_', _jPatent||{}));
+}
+async function jPatentParse(){
+  const base=jWorkerBase();
+  const st=document.getElementById('jpParseStatus'), btn=document.getElementById('jpParseBtn');
+  const show=(c,h)=>{ if(st){st.style.display='block';st.style.color=c;st.innerHTML=h;} };
+  if(!base){ show('var(--red)','❌ 서버 주소가 없습니다. 맨 위 [⚙️ 서버 주소 설정]에서 저장하세요.'); return; }
+  if(!_jpFiles.length){ show('var(--red)','❌ 먼저 특허 서류를 올려주세요. (없으면 발명의 명칭과 요약을 직접 입력)'); return; }
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
+  show('var(--amber)','⏳ AI가 특허 서류를 읽는 중입니다... (10~30초)');
+  const nm=(document.getElementById('j_bizName')?.value||'').trim();
+  try{
+    const r=await nmscParseDocsBatched(base+'/parse-docs', _jpFiles, PATENT_NOTE+(nm?'\n회사명: '+nm:''), (i,n)=>{ if(n>1) show('var(--amber)','⏳ '+n+'번에 나눠 보냅니다 — '+i+'/'+n+' 묶음 분석 중...'); });
+    const pt=pExtractFromResult(r);
+    if(!pt){
+      show('var(--red)','❌ 특허 내용을 읽지 못했습니다. 발명의 명칭과 요약을 위 칸에 직접 붙여넣어 주세요. (특허로·KIPRIS에서 복사)');
+    }else{
+      pt.files=_jpFiles.map(f=>f.name);
+      _jPatent=pt; pFillFields('j_', pt);
+      const ta=document.getElementById('j_tasks');
+      let tmsg='';
+      if(ta && !ta.value.trim()){ ta.value=pTasksText(pt); tmsg=' 연구과제 칸도 특허 중심으로 채웠습니다.'; }
+      show('var(--blue)','✅ 특허 내용을 읽었습니다 — 「'+escapeHtml(pt.title)+'」 ('+escapeHtml(pLabel(pt))+').'+tmsg+'<br><span style="font-weight:700;color:#234">내용을 확인한 뒤 [업체 등록하기]를 누르세요.</span>');
+    }
+  }catch(e){ show('var(--red)','❌ '+escapeHtml(e.message)); }
+  if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+}
 
 function bindJournalDropzone(){
   const dz=document.getElementById('jDropzone'), fi=document.getElementById('jFileInput');
@@ -1727,7 +2040,7 @@ async function jParseDocs(){
   if(!_jFiles.length){ show('var(--red)','❌ 먼저 서류를 올려주세요.'); return; }
   const btn=document.getElementById('jParseBtn'); if(btn){btn.disabled=true;btn.style.opacity='.6';}
   show('var(--amber)','⏳ AI가 서류를 읽는 중입니다... (10~30초)');
-  const note='이 회사는 이미 기업부설연구소 또는 연구개발전담부서 인정을 받은 업체입니다(설립 완료). 연구소인정서에서 인정일(foundLabDate)·부서명(labName)·구분(labType)을, 사업자등록증에서 회사명·대표자·업종·주요제품을, 연구계획서나 KOITA 개요서가 있으면 연구과제(overview.tasks)를, 장비 목록이 있으면 equip을 정확히 읽어주세요. 연구원 명단은 people로 주세요.';
+  const note='이 회사는 이미 기업부설연구소 또는 연구개발전담부서 인정을 받은 업체입니다(설립 완료). 연구소인정서에서 인정일(foundLabDate)·부서명(labName)·구분(labType)을, 사업자등록증에서 회사명·대표자·업종·주요제품을, 연구계획서나 KOITA 개요서가 있으면 연구과제(overview.tasks)를, 장비 목록이 있으면 equip을 정확히 읽어주세요. 연구원 명단은 people로 주세요.'+PATENT_HINT;
   try{
     const r=await nmscParseDocsBatched(base+'/parse-docs', _jFiles, note, (i,n)=>{
       show('var(--amber)', n>1
@@ -1754,6 +2067,15 @@ async function jParseDocs(){
       tasks=d.overview.tasks.map(t=>[t.n,t.c].filter(Boolean).join(': ')).join('\n');
     } else if(d.researchTopic){ tasks=d.researchTopic; }
     if(tasks){ el('j_tasks',tasks); filled.push('연구과제'); }
+    // 특허 서류가 섞여 있었으면 특허 정보도 채움
+    try{
+      const pt=pExtractFromResult(r);
+      if(pt){
+        pt.files=_jFiles.filter(f=>/특허|출원|patent|명세서|공보/i.test(f.name||'')).map(f=>f.name);
+        _jPatent=pt; pFillFields('j_', pt); filled.push('특허('+PSTATUS[pt.status]+')');
+        const ta=document.getElementById('j_tasks'); if(ta && !ta.value.trim()) ta.value=pTasksText(pt);
+      }
+    }catch(e){}
     // 보고서에 쓸 장비 목록 보관
     _jParsedExtra={ equip:Array.isArray(d.equip)?d.equip:[], labName:d.labName||'', labAddr:d.labAddr||'', area:d.area||'' };
 
@@ -1790,7 +2112,8 @@ function jFormVals(){
   const v=id=>(document.getElementById(id)?.value||'').trim();
   return {bizName:v('j_bizName'), ceo:v('j_ceo'), biz:v('j_biz'), people:v('j_people'),
     dept:document.getElementById('j_dept')?.value||'연구개발전담부서',
-    approve:v('j_approve'), start:v('j_start'), tasks:v('j_tasks'), planPaste:v('j_planPaste')};
+    approve:v('j_approve'), start:v('j_start'), tasks:v('j_tasks'), planPaste:v('j_planPaste'),
+    patent:jPatentVals()};
 }
 
 /* ---- 서버 없이 즉시 등록 (설립 완료 업체용) ---- */
@@ -1804,8 +2127,13 @@ function jQuickRegister(){
   const m0 = parseInt(startYm.slice(5,7))||1;
   const first=(f.people.split(',')[0]||'').trim();
 
-  // 과제 → 주요내용(대주제) + 소주제 자동 분해
+  // 특허(출원)가 있으면 그 발명이 연구의 중심
+  const pt=f.patent||null;
+  // 과제 → 주요내용(대주제) + 소주제 자동 분해 (직접 적은 과제가 있으면 그것이 최우선)
   let bigs=f.tasks.split('\n').map(s=>s.replace(/^\s*\d+[.)]\s*/,'').trim()).filter(Boolean);
+  if(!bigs.length && pt){
+    bigs=pTasks(pt).map(t=>t.n+': '+t.c);
+  }
   if(!bigs.length){
     const b=f.biz||'주요 제품';
     bigs=[b+' 품질 향상 연구', b+' 공정·조건 최적화 연구', b+' 보관·안정성 개선 연구'];
@@ -1830,8 +2158,11 @@ function jQuickRegister(){
 
   const plan={
     company:f.bizName, ceo:f.ceo, year:year,
-    projectTitle:(f.biz? f.biz+' 품질·공정 개선 연구' : bigs[0]),
-    director:first, goal:'현재 제품·공정에서 나타나는 문제를 찾아 원인을 확인하고, 시험을 통해 개선 조건을 정리해 사업화 전 단계까지 검증한다.',
+    projectTitle: pt ? (pShort(pt.title)+' 실용화 및 성능 개선 연구') : (f.biz? f.biz+' 품질·공정 개선 연구' : bigs[0]),
+    director:first,
+    goal: pt ? `보유 특허(출원) 「${pt.title}」의 핵심 기술을 시제품으로 구현하고, 시험을 통해 성능·내구성·적용 조건을 검증하여 사업화 전 단계까지 기술을 완성한다.`
+             : '현재 제품·공정에서 나타나는 문제를 찾아 원인을 확인하고, 시험을 통해 개선 조건을 정리해 사업화 전 단계까지 검증한다.',
+    patent: pt||null,
     people:f.people, mainContents, monthlyPlan,
     startDate:startYm+'-01', dept:f.dept, manpower:String(f.people.split(',').filter(Boolean).length),
     budget:'자체 부담', noteWriter:first, noteCycle:'분기 1회 작성(월별 진행내용 구분 기재)',
@@ -1840,7 +2171,7 @@ function jQuickRegister(){
               :((D.equip||[]).filter(e=>e&&e.name))
   };
   J.companies[f.bizName]={ plan, notes:(J.companies[f.bizName]?.notes)||{} };
-  J.cur=f.bizName; J._addNew=false; _jFiles=[]; jSave(); jCloudPush(f.bizName);
+  J.cur=f.bizName; J._addNew=false; _jFiles=[]; _jpFiles=[]; _jPatent=null; jSave(); jCloudPush(f.bizName);
   try{ jClearHandoff(f.bizName); }catch(e){}
   alert('['+f.bizName+'] 등록 완료!\n아래 [연구개발보고서·노트 생성]에서 분기를 선택해 만드세요.');
   render();
@@ -1871,6 +2202,7 @@ function jHandoffFromD(){
     approve:D.foundLabDate||'',
     tasks,
     equip:(D.equip||[]).filter(e=>e&&e.name).map(e=>({name:e.name,qty:e.qty||'1',loc:e.loc||''})),
+    patent:pActive(D.patent),
     ts:Date.now()
   };
 }
@@ -1911,6 +2243,7 @@ function jApplyHandoff(h, silent){
   const dept=document.getElementById('j_dept'); if(dept) dept.value=h.dept||'연구개발전담부서';
   el('j_tasks', jTasksText(h.tasks));
   if(h.equip && h.equip.length){ _jParsedExtra=Object.assign({}, _jParsedExtra||{}, {equip:h.equip}); }
+  _jPatent=h.patent?pNorm(h.patent):null; pFillFields('j_', _jPatent||{});
   if(!silent) alert('가져왔습니다. 인정일을 확인한 뒤 [업체 등록하기]를 누르세요.');
   return true;
 }
@@ -1923,7 +2256,8 @@ function jImportFromD(silent){
 function jSkipHandoff(){
   const h=jGetHandoff(); if(!h) return;
   J._hoSkip=J._hoSkip||{}; J._hoSkip[h.bizName]=true;
-  ['j_bizName','j_ceo','j_biz','j_people','j_approve','j_tasks','j_planPaste'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['j_bizName','j_ceo','j_biz','j_people','j_approve','j_tasks','j_planPaste','j_patentTitle','j_patentNo','j_patentSummary'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  _jPatent=null; const ps=document.getElementById('j_patentStatus'); if(ps) ps.value='none';
   const bar=document.getElementById('jHoBar'); if(bar) bar.style.display='none';
   document.getElementById('j_bizName')?.focus();
 }
@@ -1942,7 +2276,7 @@ function jGoJournalFromD(){
   try{ jSaveHandoff(); }catch(e){}
   const h=jGetHandoff();
   if(h){ J._hoDismissed=J._hoDismissed||{}; delete J._hoDismissed[h.bizName]; if(J._hoSkip) delete J._hoSkip[h.bizName]; }
-  J._addNew=true; _jFiles=[]; _jParsedExtra=null;
+  J._addNew=true; _jFiles=[]; _jParsedExtra=null; _jpFiles=[]; _jPatent=null;
   switchTab('journal');
   setTimeout(()=>{ document.getElementById('jHoBar')?.scrollIntoView({behavior:'smooth',block:'center'}); },120);
 }
@@ -1964,18 +2298,20 @@ async function jGeneratePlan(){
   const biz=f.biz, ceo=f.ceo, people=f.people, dept=f.dept, tasks=f.tasks;
   const start=f.approve ? f.approve.slice(0,7) : (f.start||'');
 
+  const pt=f.patent||null;
+  const PTB = pt ? ('[특허 정보 — 최우선 근거. 연구의 중심은 이 특허 기술입니다]\n발명의 명칭: '+pt.title+'\n상태·번호: '+pLabel(pt)+'\n'+(pt.summary?('기술 요지: '+pt.summary.slice(0,1200)+'\n'):'')+'→ projectTitle·goal·mainContents·monthlyPlan 모두 이 특허 기술의 구현·시험·검증·개선 활동으로 구성하세요. 업종 일반론이 아니라 특허의 핵심 구성 요소와 효과를 구체적으로 다루세요. 과제명에는 발명의 핵심 기술 용어를 넣으세요.\n\n') : '';
   show('var(--amber)','AI가 연구계획서를 작성 중입니다... (20~40초)');
   const btn=document.getElementById('jPlanBtn'); btn.disabled=true; btn.style.opacity='.6';
   try{
-    const prompt=`[회사 정보]\n회사명: ${bizName}\n업종/주요제품: ${biz}\n대표자: ${ceo}\n연구원: ${people}\n수행 부서: ${dept}\n연구소(전담부서) 인정일: ${f.approve||'(미입력)'}\n계획 시작: ${start} (이 달부터 12개월)\n\n[KOITA 개요서 연구과제(있으면 이걸 발전시켜 소주제 6개로)]\n${tasks||'(제공 안 됨 — 업종에 맞게 생성)'}\n\n${f.planPaste?('[이미 작성된 기존 연구계획서 본문 — 과제명·목표·월별 계획을 최대한 그대로 살려 정리할 것]\\n'+f.planPaste.slice(0,4000)+'\\n\\n'):''}위 정보로 1년치 연구개발계획서를 스키마대로 생성하세요. monthlyPlan은 ${start||'해당 연도 1월'}부터 12개월.`;
+    const prompt=`[회사 정보]\n회사명: ${bizName}\n업종/주요제품: ${biz}\n대표자: ${ceo}\n연구원: ${people}\n수행 부서: ${dept}\n연구소(전담부서) 인정일: ${f.approve||'(미입력)'}\n계획 시작: ${start} (이 달부터 12개월)\n\n${PTB}[KOITA 개요서 연구과제(있으면 이걸 발전시켜 소주제 6개로)]\n${tasks||'(제공 안 됨 — 업종에 맞게 생성)'}\n\n${f.planPaste?('[이미 작성된 기존 연구계획서 본문 — 과제명·목표·월별 계획을 최대한 그대로 살려 정리할 것]\\n'+f.planPaste.slice(0,4000)+'\\n\\n'):''}위 정보로 1년치 연구개발계획서를 스키마대로 생성하세요. monthlyPlan은 ${start||'해당 연도 1월'}부터 12개월.`;
     const resp=await fetch(base+'/generate-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     const r=await resp.json();
     if(r.error && !r.data){ show('var(--red)','오류: '+escapeHtml(r.error)+(r.raw?'<br><textarea style="width:100%;min-height:100px;font-size:11px">'+escapeHtml(r.raw)+'</textarea>':'')); btn.disabled=false;btn.style.opacity='1'; return; }
-    const plan=r.data; plan.ceo=ceo; plan.people=people; plan.startYm=start;
+    const plan=r.data; plan.ceo=ceo; plan.people=people; plan.startYm=start; plan.patent=pt||null;
     plan.labApproved=f.approve||''; plan.bizDesc=biz; plan.dept=plan.dept||dept;
     plan.equipList=(_jParsedExtra&&_jParsedExtra.equip&&_jParsedExtra.equip.length)?_jParsedExtra.equip:((D.equip||[]).filter(e=>e&&e.name));
     J.companies[bizName]={ plan, notes:(J.companies[bizName]?.notes)||{} };
-    J.cur=bizName; J._addNew=false; _jFiles=[]; jSave(); jCloudPush(bizName);
+    J.cur=bizName; J._addNew=false; _jFiles=[]; _jpFiles=[]; _jPatent=null; jSave(); jCloudPush(bizName);
     try{ jClearHandoff(bizName); }catch(e){}
     show('var(--blue)','연구계획서 생성 완료. 아래에서 확인하세요.');
     setTimeout(()=>{render();},400);
@@ -1986,13 +2322,13 @@ async function jGeneratePlan(){
 }
 
 function jAddNewCompany(){
-  J._addNew=true; _jFiles=[]; _jParsedExtra=null; render();
+  J._addNew=true; _jFiles=[]; _jParsedExtra=null; _jpFiles=[]; _jPatent=null; render();
   setTimeout(()=>{ document.getElementById('jDropzone')?.scrollIntoView({behavior:'smooth',block:'center'}); },120);
 }
 function jCancelAdd(){
   const h=jGetHandoff();
   if(h){ J._hoDismissed=J._hoDismissed||{}; J._hoDismissed[h.bizName]=true; }  // 이 업체는 다시 자동으로 열지 않음
-  J._addNew=false; _jFiles=[]; render();
+  J._addNew=false; _jFiles=[]; _jpFiles=[]; _jPatent=null; render();
 }
 
 /* 작성 단위 전환 — 분량 옵션·버튼·종료일 자동 갱신 */
@@ -2077,37 +2413,52 @@ function jDeleteCompany(){
 function renderJPlanSummary(co){
   const p=co.plan;
   if(!p._mpOrig && (p.monthlyPlan||[]).length){ try{ p._mpOrig=JSON.parse(JSON.stringify(p.monthlyPlan)); }catch(e){} }
-  const origOf=m=>{ const o=(p._mpOrig||[]).find(x=>+x.month===+m); return o?String(o.sub||''):''; };
-  const mpEdited=(p.monthlyPlan||[]).some(m=>String(m.sub||'')!==origOf(m.month));
-  const mp=(p.monthlyPlan||[]).map(m=>{
-    const chg=String(m.sub||'')!==origOf(m.month);
-    const ln=Math.min(6, Math.max(2, Math.ceil(String(m.sub||'').length/46)));
-    return `<tr>
-      <td style="text-align:center;vertical-align:top;padding-top:11px;font-weight:800;color:${chg?'var(--red)':'var(--text)'}">${m.month}월${chg?'<br><span style="font-size:10px;font-weight:900">수정됨</span>':''}</td>
-      <td style="padding:6px">
-        <textarea rows="${ln}" onchange="jSetMonthSub(${m.month},this.value)"
-          style="width:100%;border:1.5px solid ${chg?'var(--red)':'var(--line)'};border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;line-height:1.6;resize:vertical">${escapeHtml(m.sub||'')}</textarea>
-      </td></tr>`;
-  }).join('');
+  const mpEdited=(p.monthlyPlan||[]).some(m=>String(m.sub||'')!==jMonthOrig(p,m.month));
+  const mp=(p.monthlyPlan||[]).map(m=>jMonthRowHtml(p,m)).join('');
+  const pt=pActive(p.patent);
+  const pe=pNorm(p.patent);
   return `
-  <div class="card">
+  <div class="card" id="jPlanCard">
     <h2>연구개발계획서 — ${escapeHtml(p.company||'')} <span style="font-size:11px;color:var(--gray);font-weight:600">${p.year||''}년</span></h2>
     <table class="otable" style="margin-bottom:10px">
       <tr><th style="width:130px">연구과제명</th><td>${escapeHtml(p.projectTitle||'')}
-        <button class="btn sec" style="padding:3px 8px;font-size:10.5px;margin-left:6px;vertical-align:middle" onclick="jEditField('projectTitle','연구과제명')">수정</button></td></tr>
+        <button class="btn sec" style="width:auto;padding:3px 8px;font-size:10.5px;margin-left:6px;vertical-align:middle" onclick="jEditField('projectTitle','연구과제명')">수정</button></td></tr>
+      <tr><th>특허 근거</th><td>${pt?`「${escapeHtml(pt.title)}」 <span style="color:var(--gray);font-weight:600">(${escapeHtml(pLabel(pt))})</span>`:`<span style="color:var(--gray);font-weight:600">(없음 — 특허·출원이 있으면 등록하세요. 보고서의 중심 근거가 됩니다)</span>`}
+        <button class="btn sec" style="width:auto;padding:3px 8px;font-size:10.5px;margin-left:6px;vertical-align:middle" onclick="jTogglePatentEdit()">${pt?'수정':'특허 등록'}</button></td></tr>
       <tr><th>과제책임자</th><td>${escapeHtml(p.director||'')}</td></tr>
       <tr><th>목표</th><td>${escapeHtml(p.goal||'')}</td></tr>
       <tr><th>주요내용</th><td>${(p.mainContents||[]).map((m,i)=>`<b>${i+1}. ${escapeHtml(m.big)}</b><br>${(m.subs||[]).map(s=>'- '+escapeHtml(s)).join('<br>')}`).join('<br>')}</td></tr>
       <tr><th>전체 연구개발기간</th><td>${escapeHtml(jTotalText(p)||'')}</td></tr>
       <tr><th>착수/부서</th><td>${escapeHtml(p.startDate||'')} · ${escapeHtml(p.dept||'')} · 인력 ${escapeHtml(p.manpower||'')}명 · 비용 ${escapeHtml(p.budget||'')}</td></tr>
     </table>
-    <details>
-      <summary style="font-size:12px;font-weight:800;color:var(--blue-d);cursor:pointer">월별 배분표 보기 · 수정${mpEdited?' <span style="color:var(--red)">(수정됨)</span>':''}</summary>
-      <div class="cr-hint" style="margin:8px 0 6px">여기서 고친 세부주제가 <b>촬영 장면</b>과 <b>보고서 본문</b>에 그대로 쓰입니다.
+    <div id="jPatentEdit" style="display:${J._patentEditOpen?'block':'none'};border:2px solid var(--blue);border-radius:12px;padding:12px 14px;background:var(--blue-ll);margin-bottom:10px">
+      <div style="font-size:13px;font-weight:900;color:var(--blue-d)">📜 특허·출원 정보</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--gray);margin-top:3px;line-height:1.7">저장하면 이후 만드는 보고서·노트에 이 특허가 최우선 근거로 들어갑니다. 이미 만든 보고서는 바뀌지 않습니다.</div>
+      <div class="frow" style="margin-top:10px">
+        <div class="fld"><label>특허 상태</label><select id="jp_status">${Object.entries(PSTATUS).map(([k,v])=>`<option value="${k}" ${pe.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="fld"><label>출원번호 / 등록번호</label><input id="jp_no" value="${escAttr(pe.no)}" placeholder="10-2025-0012345"></div>
+      </div>
+      <div class="fld"><label>발명의 명칭</label><input id="jp_title" value="${escAttr(pe.title)}" placeholder="특허증·출원서에 적힌 그대로" oninput="pTitleTyped('jp_status')"></div>
+      <div class="fld"><label>기술 요지 (요약·청구항 1항·해결 과제)</label><textarea id="jp_summary" placeholder="특허로(patent.go.kr)·KIPRIS에서 요약을 복사해 붙여넣으세요.">${escapeHtml(pe.summary)}</textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" style="background:var(--blue);color:#fff;flex:1;padding:10px;font-size:13px" onclick="jSavePatentFromPlan()">특허 정보 저장</button>
+        <button class="btn sec" style="width:auto;padding:10px 14px;font-size:13px" onclick="jTogglePatentEdit()">닫기</button>
+      </div>
+      ${pt?`<button class="btn sec" style="width:100%;margin-top:8px;padding:10px;font-size:12.5px" onclick="jRebuildFromPatent()">이 특허 중심으로 과제·목표·월별 배분표 다시 만들기 (서버 없이)</button>
+      <div class="cr-hint" style="margin-top:4px">※ 직접 고쳐 둔 배분표가 있으면 사라집니다. AI 문장으로 만들려면 [계획서 다시 생성]을 누르세요 — 특허가 자동으로 반영됩니다.</div>`:''}
+    </div>
+    <details id="jmDetails" ${(mpEdited||J._mpOpen)?'open':''}>
+      <summary style="font-size:12px;font-weight:800;color:var(--blue-d);cursor:pointer">월별 배분표 보기 · 수정 <span id="jmEdited" style="color:var(--red);display:${mpEdited?'inline':'none'}">(수정됨)</span></summary>
+      <div class="cr-hint" style="margin:8px 0 6px">여기서 고친 세부주제가 <b>촬영 장면</b>과 <b>보고서 본문</b>에 그대로 쓰입니다. 하고 싶은 연구 내용을 각 달 칸에 직접 적으세요 — 적은 내용이 AI 제안보다 우선합니다.<br>
       한 과제를 두 달에 걸쳐 했다면 두 달의 칸을 같은 내용으로 맞추고, 그 두 달을 <b>기간 직접 지정</b>으로 묶어 한 장으로 만드세요.<br>
-      ※ 칸 밖을 클릭하면 저장됩니다. <b>이미 만들어 둔 노트에는 반영되지 않으니</b> 해당 회차를 다시 생성하세요.</div>
-      <table class="otable" style="margin-top:4px"><tr><th style="width:64px">월</th><th>세부주제</th></tr>${mp}</table>
-      ${mpEdited?`<button class="btn sec" style="width:100%;margin-top:8px;padding:8px;font-size:12px;color:var(--red);border-color:var(--red)" onclick="jResetMonthPlan()">처음 만들어진 배분표로 되돌리기</button>`:''}
+      ※ 각 칸 옆 <b>[저장]</b>을 누르거나 칸 밖을 클릭하면 그 달만 저장됩니다(화면이 새로 그려지지 않습니다). <b>이미 만들어 둔 노트에는 반영되지 않으니</b> 해당 회차를 다시 생성하세요.</div>
+      <table class="otable" id="jmTable" data-co="${escAttr(J.cur)}" style="margin-top:4px"><tr><th style="width:64px">월</th><th>세부주제</th></tr>${mp}</table>
+      <div id="jmAllBar" style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;background:#fff;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:800;color:var(--ink);flex:1;min-width:160px">저장 안 된 달: <b id="jmAllCnt" style="color:var(--red)">0</b>개</span>
+        <button class="btn" style="background:var(--blue);color:#fff;width:auto;padding:7px 14px;font-size:12px" onclick="jSaveAllMonths()">전체 저장</button>
+        <span id="jmAllMsg" style="font-size:11.5px;font-weight:800;color:var(--blue-d)"></span>
+      </div>
+      <button id="jmResetBtn" class="btn sec" style="width:100%;margin-top:8px;padding:8px;font-size:12px;color:var(--red);border-color:var(--red);display:${mpEdited?'block':'none'}" onclick="jResetMonthPlan()">처음 만들어진 배분표로 되돌리기</button>
     </details>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn" style="background:var(--blue);color:#fff;flex:1" onclick="jPrintPlan()">계획서 인쇄 / PDF</button>
@@ -2115,26 +2466,135 @@ function renderJPlanSummary(co){
     </div>
   </div>`;
 }
-function jSetMonthSub(month, v){
-  const co=J.companies[J.cur]; if(!co||!co.plan) return;
-  const p=co.plan;
+/* ---- 월별 배분표: 한 달씩 저장 (재렌더 없음) ---- */
+function jMonthOrig(p, month){ const o=((p&&p._mpOrig)||[]).find(x=>+x.month===+month); return o?String(o.sub||''):''; }
+function jMonthSaved(p, month){ const it=((p&&p.monthlyPlan)||[]).find(x=>+x.month===+month); return it?String(it.sub||''):''; }
+function jMonthRowHtml(p, m){
+  const sub=String(m.sub||''); const chg=sub!==jMonthOrig(p,m.month);
+  const ln=Math.min(6, Math.max(2, Math.ceil(sub.length/46)));
+  return `<tr id="jmRow_${m.month}">
+      <td style="text-align:center;vertical-align:top;padding-top:11px;font-weight:800;color:${chg?'var(--red)':'var(--ink)'}">${m.month}월<br><span id="jmBadge_${m.month}" style="font-size:10px;font-weight:900;color:var(--red)">${chg?'수정됨':''}</span></td>
+      <td style="padding:6px">
+        <textarea id="jm_${m.month}" rows="${ln}" oninput="jMonthInput(${m.month})" onchange="jSaveMonth(${m.month},true)"
+          style="width:100%;border:1.5px solid ${chg?'var(--red)':'var(--line)'};border-radius:7px;padding:7px 9px;font-size:12px;font-family:inherit;line-height:1.6;resize:vertical">${escapeHtml(sub)}</textarea>
+        <div style="display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap">
+          <button class="btn" id="jmSave_${m.month}" onclick="jSaveMonth(${m.month},false)" disabled style="background:var(--blue);color:#fff;width:auto;padding:5px 12px;font-size:11.5px;opacity:.45">저장</button>
+          <button class="btn sec" id="jmRev_${m.month}" onclick="jRevertMonth(${m.month})" style="width:auto;padding:5px 10px;font-size:11px;display:${chg?'inline-block':'none'}">원래대로</button>
+          <span id="jmMsg_${m.month}" style="font-size:11px;font-weight:800;color:var(--blue-d)"></span>
+        </div>
+      </td></tr>`;
+}
+function jMonthPlan(){
+  const t=document.getElementById('jmTable');
+  const name=(t&&t.dataset.co)||J.cur;
+  const co=J.companies[name];
+  return (co&&co.plan)?{name, co, p:co.plan}:null;
+}
+function jMonthInput(month){
+  const x=jMonthPlan(); const ta=document.getElementById('jm_'+month); if(!x||!ta) return;
+  const dirty=ta.value.trim()!==jMonthSaved(x.p,month).trim();
+  ta.dataset.dirty=dirty?'1':'';
+  const b=document.getElementById('jmSave_'+month); if(b){ b.disabled=!dirty; b.style.opacity=dirty?'1':'.45'; }
+  const msg=document.getElementById('jmMsg_'+month); if(msg){ msg.style.color='var(--red)'; msg.textContent=dirty?'저장 안 됨':''; }
+  ta.style.borderColor=dirty?'var(--red)':(ta.value.trim()!==jMonthOrig(x.p,month).trim()?'var(--red)':'var(--line)');
+  jMonthBar();
+}
+function jSaveMonth(month, quiet){
+  const x=jMonthPlan(); const ta=document.getElementById('jm_'+month); if(!x||!ta) return false;
+  const p=x.p;
   p.monthlyPlan=p.monthlyPlan||[];
   if(!p._mpOrig){ try{ p._mpOrig=JSON.parse(JSON.stringify(p.monthlyPlan)); }catch(e){} }
-  const nv=String(v||'').trim();
-  const it=p.monthlyPlan.find(x=>+x.month===+month);
+  const nv=ta.value.trim();
+  const it=p.monthlyPlan.find(y=>+y.month===+month);
+  const changed = it ? (String(it.sub||'')!==nv) : true;
   if(it) it.sub=nv; else p.monthlyPlan.push({month:+month, sub:nv});
   p.monthlyPlan.sort((a,b)=>(+a.month)-(+b.month));
-  jSave(); try{ jCloudPush(J.cur); }catch(e){}
-  render();
-  setTimeout(()=>{ const d=document.querySelector('.card details'); if(d) d.open=true; },40);
+  if(changed){ jSave(); try{ jCloudPushSoon(x.name); }catch(e){} }
+  ta.dataset.dirty='';
+  jRefreshMonthRow(month, changed||!quiet);
+  jRefreshMonthSummary();
+  jMonthBar();
+  return changed;
 }
+function jRefreshMonthRow(month, flash){
+  const x=jMonthPlan(); const ta=document.getElementById('jm_'+month); if(!x||!ta) return;
+  const chg=jMonthSaved(x.p,month)!==jMonthOrig(x.p,month);
+  ta.style.borderColor=chg?'var(--red)':'var(--line)';
+  const row=document.getElementById('jmRow_'+month); const td=row&&row.firstElementChild; if(td) td.style.color=chg?'var(--red)':'var(--ink)';
+  const badge=document.getElementById('jmBadge_'+month); if(badge) badge.textContent=chg?'수정됨':'';
+  const b=document.getElementById('jmSave_'+month); if(b){ b.disabled=true; b.style.opacity='.45'; }
+  const rv=document.getElementById('jmRev_'+month); if(rv) rv.style.display=chg?'inline-block':'none';
+  const msg=document.getElementById('jmMsg_'+month);
+  if(msg){
+    if(flash){ msg.style.color='var(--blue-d)'; msg.textContent='✓ 저장됨'; clearTimeout(msg._t); msg._t=setTimeout(()=>{ if(msg.textContent==='✓ 저장됨') msg.textContent=''; },2500); }
+    else msg.textContent='';
+  }
+}
+function jRefreshMonthSummary(){
+  const x=jMonthPlan(); if(!x) return;
+  const edited=(x.p.monthlyPlan||[]).some(m=>String(m.sub||'')!==jMonthOrig(x.p,m.month));
+  const s=document.getElementById('jmEdited'); if(s) s.style.display=edited?'inline':'none';
+  const r=document.getElementById('jmResetBtn'); if(r) r.style.display=edited?'block':'none';
+}
+function jMonthDirty(){ return Array.from(document.querySelectorAll('textarea[id^="jm_"]')).filter(t=>t.dataset.dirty==='1'); }
+function jMonthBar(){
+  const n=jMonthDirty().length;
+  const c=document.getElementById('jmAllCnt'); if(c) c.textContent=String(n);
+}
+function jSaveAllMonths(){
+  const rows=jMonthDirty(); let k=0;
+  rows.forEach(t=>{ const m=+t.id.replace('jm_',''); if(jSaveMonth(m,true)) k++; });
+  const msg=document.getElementById('jmAllMsg');
+  if(msg){ msg.textContent=k?('✓ '+k+'개 달 저장됨'):'저장할 변경이 없습니다 (이미 저장됨)'; clearTimeout(msg._t); msg._t=setTimeout(()=>{ msg.textContent=''; },3000); }
+  jMonthBar();
+}
+function jRevertMonth(month){
+  const x=jMonthPlan(); const ta=document.getElementById('jm_'+month); if(!x||!ta) return;
+  ta.value=jMonthOrig(x.p,month); ta.dataset.dirty='1'; jSaveMonth(month,true);
+}
+function jFlushMonthEdits(){ jMonthDirty().forEach(t=>{ const m=+t.id.replace('jm_',''); try{ jSaveMonth(m,true); }catch(e){} }); }
+function jSetMonthSub(month, v){ const ta=document.getElementById('jm_'+month); if(ta && v!==undefined) ta.value=v; jSaveMonth(month,true); }
 function jResetMonthPlan(){
   const co=J.companies[J.cur]; if(!co||!co.plan||!co.plan._mpOrig) return;
   if(!confirm('직접 고친 세부주제가 모두 사라지고 처음 만들어진 배분표로 돌아갑니다. 계속할까요?')) return;
   co.plan.monthlyPlan=JSON.parse(JSON.stringify(co.plan._mpOrig));
   jSave(); try{ jCloudPush(J.cur); }catch(e){}
+  J._mpOpen=true; render();
+  setTimeout(()=>{ document.getElementById('jmDetails')?.scrollIntoView({behavior:'smooth',block:'start'}); },60);
+}
+/* ---- 계획서 카드: 특허 정보 편집 ---- */
+function jTogglePatentEdit(){
+  const b=document.getElementById('jPatentEdit'); if(!b) return;
+  const open=b.style.display==='none'; b.style.display=open?'block':'none'; J._patentEditOpen=open;
+  if(open) document.getElementById('jp_title')?.focus();
+}
+function jSavePatentFromPlan(){
+  const co=J.companies[J.cur]; if(!co||!co.plan) return;
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  const st=document.getElementById('jp_status')?.value||'none';
+  const cur=pNorm(co.plan.patent);
+  const np=pNorm({ status:st, title:v('jp_title'), no:v('jp_no'), summary:v('jp_summary'), field:cur.field, tasks:(v('jp_title')===cur.title?cur.tasks:null), files:cur.files });
+  if(np.title && np.status==='none') np.status='filed';
+  co.plan.patent=np.title?np:null;
+  J._patentEditOpen=false;
+  jSave(); try{ jCloudPush(J.cur); }catch(e){}
   render();
-  setTimeout(()=>{ const d=document.querySelector('.card details'); if(d) d.open=true; },40);
+  setTimeout(()=>{ document.getElementById('jPlanCard')?.scrollIntoView({behavior:'smooth',block:'start'}); },60);
+}
+function jRebuildFromPatent(){
+  const co=J.companies[J.cur]; if(!co||!co.plan) return;
+  const pt=pActive(co.plan.patent); if(!pt){ alert('특허 정보를 먼저 저장하세요.'); return; }
+  if(!confirm('연구과제명·목표·주요내용·월별 배분표를 「'+pt.title+'」 중심으로 다시 만듭니다.\n직접 고친 배분표는 사라집니다. 계속할까요?')) return;
+  const p=co.plan;
+  const sm=p.startYm||p.startDate||(p.labApproved||'').slice(0,7)||'';
+  const m0=parseInt(String(sm).slice(5,7))||1;
+  const parts=pPlanParts(pt, m0);
+  p.projectTitle=parts.projectTitle; p.goal=parts.goal; p.mainContents=parts.mainContents; p.monthlyPlan=parts.monthlyPlan;
+  try{ p._mpOrig=JSON.parse(JSON.stringify(parts.monthlyPlan)); }catch(e){}
+  J._patentEditOpen=false; J._mpOpen=true;
+  jSave(); try{ jCloudPush(J.cur); }catch(e){}
+  render();
+  setTimeout(()=>{ document.getElementById('jPlanCard')?.scrollIntoView({behavior:'smooth',block:'start'}); },60);
 }
 function jEditField(field, label){
   const co=J.companies[J.cur]; if(!co||!co.plan) return;
@@ -2527,6 +2987,16 @@ function jPrevKey(key){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
+function jPatentPromptBlock(p){
+  const pt=pActive(p&&p.patent); if(!pt) return '';
+  return `
+[특허 기반 연구 — 최우선 근거]
+이 회사는 「${pt.title}」(${pLabel(pt)}) 특허 기술을 가지고 있고, 모든 연구활동은 이 기술을 만들고·시험하고·고치는 일입니다.
+${pt.summary?('기술 요지: '+pt.summary.replace(/\s+/g,' ').slice(0,600)+'\n'):''}- 대상 제품·기술은 이 특허의 명칭에 있는 것으로 쓰세요. 관계없는 다른 제품을 끌어오지 마세요.
+- 특허의 핵심 구성(재료·구조·방법)이 본문의 시험 대상이 되어야 합니다.
+- 특허 문서의 어려운 용어는 그대로 쓰지 말고 쉬운 말로 풀어 쓰세요.
+`;
+}
 async function jGenerateNote(forceKey, silent){
   const base=jWorkerBase();
   const st=document.getElementById('jNoteStatus');
@@ -2548,6 +3018,7 @@ async function jGenerateNote(forceKey, silent){
   const prev=prevManual?('[직전 보고서(수기)]\n'+prevManual.slice(0,2000)):prevGen;
   const people=(p.people||p.director||'').split(',').map(x=>x.trim()).filter(Boolean);
   const who=people.length?people.join(', '):'담당 연구원';
+  const PT=jPatentPromptBlock(p);
 
   /* ---- 사진 정합성: 이미 뽑아둔 촬영 장면과 실측 메모를 확정 사실로 넘김 ---- */
   const _pre0=co.notes[key]||{};
@@ -2585,7 +3056,7 @@ ${realMemo}
 전체 연구개발기간: ${jTotalText(p)} (계획 기준)
 참여 인원 수: ${people.length||2}명 (이름은 본문에 절대 쓰지 마세요)
 보유 장비: ${(p.equipList||[]).map(e=>e.name+(e.qty?'('+e.qty+'대)':'')).join(', ')||'(미기재)'}
-
+${PT}
 [작성 기간]
 ${per.label} (${per.range})
 기간 내 세부주제(배분표):
@@ -3564,7 +4035,7 @@ async function jAiGuide(ym){
   const prompt=`첨부한 사진 ${images.length}장은 어느 중소기업 연구개발전담부서에서 실제로 촬영한 연구활동 사진입니다.
 회사 업종·주요제품: ${p.bizDesc||'(미기재)'}
 연구과제: ${p.projectTitle||'(미기재)'}
-작성 기간: ${per.label}
+${(p.patent&&p.patent.title)?('보유 특허(출원): '+p.patent.title+'\n'):''}작성 기간: ${per.label}
 
 사진을 순서대로 하나씩 보고, 각 사진이 무슨 작업 장면인지 한 문장으로 적으세요.
 
@@ -4083,6 +4554,7 @@ function jPrintPlan(){
   <tr><th>회사명</th><td>${p.company||''}</td><th>작성연도</th><td>${p.year||''}</td></tr>
   <tr><th>과제책임자</th><td colspan="3">${p.director||''}</td></tr>
   <tr><th>연구과제명</th><td colspan="3">${p.projectTitle||''}</td></tr>
+  ${(p.patent&&p.patent.title)?`<tr><th>특허(출원) 근거</th><td colspan="3">「${p.patent.title}」 (${pLabel(pNorm(p.patent))})</td></tr>`:''}
   <tr><th>목표</th><td colspan="3">${p.goal||''}</td></tr>
   <tr><th>주요내용</th><td colspan="3">${mc}</td></tr>
   <tr><th>과제착수시점</th><td>${p.startDate||''}</td><th>수행 부서</th><td>${p.dept||''}</td></tr>
@@ -4094,6 +4566,7 @@ function jPrintPlan(){
 }
 function bindJournal(){
   bindJournalDropzone();
+  try{ bindJPatentDropzone(); }catch(e){}
   try{ jAutoApplyHandoff(); }catch(e){}
   setTimeout(()=>{ if(document.getElementById('j_unit')) jSyncUnit(); },30);
   // 탭 열 때 클라우드 자동 동기화 (세션당 1회)
@@ -4131,6 +4604,8 @@ const SAMPLE = {
 try{ dRestoreDraft(); }catch(e){}   // 마지막 작업 내용 자동 복원
 try{ document.getElementById('appVer').textContent='v'+APP_VER; }catch(e){}
 render();
+window.addEventListener('beforeunload', ()=>{ try{ jFlushMonthEdits(); }catch(e){} });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden'){ try{ jFlushMonthEdits(); }catch(e){} } });
 ['input','change'].forEach(ev=>document.addEventListener(ev, e=>{
   if(S.view!=='gen' || S.generated) return;
   const t=e.target; if(!t || !t.closest || !t.closest('#app')) return;
