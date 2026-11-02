@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제품소개 | i-body 아이바디</title>
+<meta name="description" content="아이바디, 메디워터 7 제품 안내와 음용법">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,700&family=Montserrat:wght@900&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="header">
+  <div class="inner">
+    <a class="wordmark" href="index.html" aria-label="i-body 홈"><img src="assets/logo.svg" alt="">i-body</a>
+    <nav class="gnb" aria-label="주 메뉴">
+      <a href="about.html">About</a>
+      <a href="product.html">Product</a>
+      <a href="shop.html">Shop</a>
+      <a href="camp.html">Camp</a>
+      <a href="story.html">Story</a>
+      <a href="mypage.html">Member</a>
+    </nav>
+    <div class="util">
+      <a class="hide-m" href="login.html">로그인</a>
+      <a class="hide-m" href="login.html">회원가입</a>
+      <a class="cart" href="shop.html" aria-label="장바구니"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="1.8" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M6 6L5 3H2"/></svg>0</a>
+      <button class="menu-toggle" aria-label="메뉴 열기" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="inner">
+    <div class="sub_head">
+      <h1>Product</h1>
+      <div class="category"><a class="selected" href="#ibody">아이바디</a><a href="#m7">메디워터 7</a></div>
+    </div>
+
+    <section id="ibody" class="sub_body grid c2">
+      <div class="card sq"><img src="assets/img/pouch.jpg" alt="아이바디 파우치" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:62%"></div>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:28px;padding:20px 30px">
+        <div>
+          <p class="en" style="font-size:24px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Product A</p>
+          <h2 style="font-size:42px;font-weight:600;line-height:1.2">아이바디</h2>
+          <p class="en" style="font-size:22px;color:var(--muted);margin-top:8px">내 몸을 위한 선물. Special Care for My Body</p>
+        </div>
+        <p class="body" style="color:#353535;font-size:17px">M7 메디워터를 바탕으로 만든 아이바디 음료. 하루 한 포를 물에 희석해 차처럼 마십니다. 힐링캠프에서 2박 3일 동안 음용법과 식단을 함께 배운 뒤 구매할 수 있습니다.</p>
+        <div class="spec">
+          <div><span>용량</span><span>125ml × 30포 / 1박스</span></div>
+          <div><span>음용법</span><span>1포를 물 500ml에 희석, 하루 1~2포</span></div>
+          <div><span>보관</span><span>직사광선을 피해 서늘한 곳</span></div>
+          <div><span>가격</span><span class="price">199,000원</span></div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <a class="btn" href="shop.html">구매하기</a>
+          <a class="btn outline" href="camp.html">캠프 알아보기</a>
+        </div>
+        <p class="note">원재료명·영양정보는 자료 수령 후 이 자리에 표기합니다. 본 제품은 질병의 예방·치료를 위한 의약품이 아닙니다.</p>
+      </div>
+    </section>
+
+    <section id="m7" class="sec grid c2">
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:28px;padding:20px 30px;order:1">
+        <div>
+          <p class="en" style="font-size:24px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Product B</p>
+          <h2 style="font-size:42px;font-weight:600;line-height:1.2">M7 메디워터</h2>
+          <p class="en" style="font-size:22px;color:var(--muted);margin-top:8px">Medi Water 7</p>
+        </div>
+        <p class="body" style="color:#353535;font-size:17px">충북 보은 속리산 자락 지하 200m에서 끌어올린 약알칼리 미네랄 워터(pH 7.6~8.0). 아이바디 음료의 바탕이 되는 물입니다.</p>
+        <div class="spec">
+          <div><span>수원지</span><span>충북 보은군 속리산 지하 200m</span></div>
+          <div><span>pH</span><span>7.6 ~ 8.0 약알칼리</span></div>
+          <div><span>가격</span><span class="price">66,000원</span></div>
+        </div>
+        <a class="btn" href="shop.html" style="align-self:flex-start">구매하기</a>
+      </div>
+      <div class="card sq blue" style="order:2"><img src="assets/img/m7.jpg" alt="메디워터 7" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:64%"></div>
+    </section>
+
+    <section class="sec last">
+      <div class="title_area"><h2>How to drink</h2></div>
+      <div class="grid c3 steps">
+        <div class="box"><span class="num">01</span><h3>희석하기</h3><p>아이바디 1포를 텀블러(500ml)의 물에 섞습니다. 물이 운반 역할을 합니다.</p></div>
+        <div class="box"><span class="num">02</span><h3>하루 동안 나눠 마시기</h3><p>한 번에 마시지 말고 차처럼 꾸준히. 아침·활동 전후·저녁으로 나눕니다.</p></div>
+        <div class="box"><span class="num">03</span><h3>식단과 함께</h3><p>캠프에서 배운 식단을 집에서도 이어갑니다. 음료만으로 되는 것이 아닙니다.</p></div>
+      </div>
+    </section>
+  </div>
+</main>
+<footer class="footer">
+  <div class="wrap">
+    <div class="cols">
+      <a class="wordmark" href="index.html">i-body</a>
+      <ul>
+        <li><h3>Company</h3><strong>주식회사 아이바디</strong><p>대표 강신빈<br>사업자등록번호 721-81-3122<br>경기도 양주시 장흥면 호국로73번길 185 아이바디체험관</p></li>
+        <li><h3>Customer</h3><strong>010-6365-3336</strong><p>캠프 문의 010-8696-7853<br>jihyun502@naver.com<br>평일 10:00–18:00</p></li>
+        <li class="sns"><h3>SNS</h3><a href="#">Instagram</a><a href="#">Facebook</a><a href="#">KakaoStory</a></li>
+      </ul>
+    </div>
+    <p class="copyright">Copyright © 주식회사 아이바디. All rights reserved.</p>
+  </div>
+</footer>
+<script src="js/main.js"></script>
+</body>
+</html>

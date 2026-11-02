@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 · 입금·수당 장부 | i-body</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Montserrat:wght@900&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="admin">
+  <aside>
+    <a class="wordmark" href="index.html">i-body <small>ADMIN</small></a>
+    <nav>
+      <a href="#">대시보드</a>
+      <a href="#">회원 관리</a>
+      <a href="#" class="is-active">입금·수당 장부</a>
+      <a href="#">주문·출고</a>
+      <a href="#">캠프 명단</a>
+      <a href="#">스토리 게시물</a>
+      <a href="#">수당 비율 설정</a>
+    </nav>
+    <p style="margin-top:auto;font-size:12px;color:var(--muted);line-height:1.7">PC · 모바일 동일 화면<br>관리자: 대표 / 직원 2명</p>
+  </aside>
+  <main>
+    <div class="head">
+      <div><h1>입금·수당 장부</h1><p style="font-size:13px;color:var(--muted);margin-top:4px">현장 서류철을 대신합니다. 입금을 기록하면 수당·포인트가 비율대로 자동 계산됩니다.</p></div>
+      <div style="display:flex;gap:8px"><button class="btn outline" type="button">엑셀 내보내기</button><button class="btn" type="button">+ 입금 기록</button></div>
+    </div>
+
+    <div class="panel">
+      <p style="font-size:14px;font-weight:700;margin-bottom:16px">새 입금 기록</p>
+      <form class="form" id="entry" onsubmit="event.preventDefault();addRow();">
+        <label>회원 (번호·이름)<input id="f-member" type="text" value="261012-009 배혜숙"></label>
+        <label>날짜<input id="f-date" type="date" value="2026-10-12"></label>
+        <label>입금액<input id="f-amount" type="text" value="1,700,000" style="text-align:right"></label>
+        <label>결제<select id="f-pay"><option>카드</option><option>현금</option><option>계좌</option><option>포인트</option></select></label>
+        <div class="ro">현금 수당 (자동)<div id="f-cash">400,000</div></div>
+        <div class="ro">포인트 적립 (자동)<div id="f-point">400,000</div></div>
+        <button class="btn" type="submit">저장</button>
+      </form>
+      <div style="display:flex;gap:24px;font-size:12px;color:var(--muted);margin-top:14px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="f-tax"> 세금계산서 발행</label>
+        <span>현재 비율: 입금 170만 원당 현금 40만 · 포인트 40만 (수당 비율 설정에서 변경)</span>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;overflow:hidden">
+      <div class="filters">
+        <div class="f"><button class="on" type="button">전체</button><button type="button">수당 미지급</button><button type="button">계산서 미발행</button></div>
+        <input type="text" placeholder="회원 검색" style="height:32px;width:200px;border:1px solid var(--line2);border-radius:16px;padding:0 14px;font-family:inherit;font-size:12px">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>날짜</th><th>회원번호</th><th>이름</th><th class="r">입금</th><th>결제</th><th class="r">현금 수당</th><th>지급일</th><th class="r">포인트 적립</th><th class="r">잔여 포인트</th><th>계산서</th><th></th></tr></thead>
+          <tbody id="rows">
+            <tr><td>10.12</td><td class="en" style="font-size:16px">261012-009</td><td><b>배혜숙</b></td><td class="r">1,700,000</td><td>카드</td><td class="r">400,000</td><td><span class="tag">미지급</span></td><td class="r">400,000</td><td class="r">400,000</td><td><input type="checkbox"></td><td><button class="pill" type="button">지급 처리</button></td></tr>
+            <tr><td>10.12</td><td class="en" style="font-size:16px">261012-003</td><td><b>최○○</b></td><td class="r">1,700,000</td><td>현금</td><td class="r">400,000</td><td>10.18</td><td class="r">400,000</td><td class="r">1,200,000</td><td><input type="checkbox" checked></td><td style="color:var(--light);font-size:11px">완료</td></tr>
+            <tr><td>10.05</td><td class="en" style="font-size:16px">261012-011</td><td><b>김○○</b></td><td class="r">1,700,000</td><td>카드</td><td class="r">400,000</td><td>10.11</td><td class="r">400,000</td><td class="r">800,000</td><td><input type="checkbox"></td><td style="color:var(--light);font-size:11px">완료</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="note" style="margin:0">이름·주소·연락처는 예시 또는 비식별 처리. 실제 데이터는 기존 서류철과 고객카드에서 이관합니다.</p>
+  </main>
+</div>
+<script>
+/* 데모: 비율 계산 — 실제 구현 시 서버에서 '수당 비율 설정' 값을 읽어 계산 */
+var RATE = { base: 1700000, cash: 400000, point: 400000 };
+function won(n){ return Math.round(n).toLocaleString('ko-KR'); }
+function num(s){ return +String(s).replace(/[^\d]/g,'') || 0; }
+function calc(){ var a = num(document.getElementById('f-amount').value); var k = a / RATE.base;
+  document.getElementById('f-cash').textContent = won(RATE.cash * k); document.getElementById('f-point').textContent = won(RATE.point * k); }
+document.getElementById('f-amount').addEventListener('input', calc); calc();
+function addRow(){
+  var m = document.getElementById('f-member').value.split(' '); var d = document.getElementById('f-date').value.slice(5).replace('-', '.');
+  var a = num(document.getElementById('f-amount').value); var k = a / RATE.base; var tax = document.getElementById('f-tax').checked;
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td>'+d+'</td><td class="en" style="font-size:16px">'+(m[0]||'')+'</td><td><b>'+(m[1]||'')+'</b></td><td class="r">'+won(a)+'</td><td>'+document.getElementById('f-pay').value+'</td><td class="r">'+won(RATE.cash*k)+'</td><td><span class="tag">미지급</span></td><td class="r">'+won(RATE.point*k)+'</td><td class="r">'+won(RATE.point*k)+'</td><td><input type="checkbox"'+(tax?' checked':'')+'></td><td><button class="pill" type="button">지급 처리</button></td>';
+  document.getElementById('rows').prepend(tr);
+}
+</script>
+</body>
+</html>

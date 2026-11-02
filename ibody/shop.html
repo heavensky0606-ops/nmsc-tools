@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쇼핑몰 | i-body 아이바디</title>
+<meta name="description" content="아이바디 공식 쇼핑몰 · 회원가 · 포인트 결제">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,700&family=Montserrat:wght@900&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="header">
+  <div class="inner">
+    <a class="wordmark" href="index.html" aria-label="i-body 홈"><img src="assets/logo.svg" alt="">i-body</a>
+    <nav class="gnb" aria-label="주 메뉴">
+      <a href="about.html">About</a>
+      <a href="product.html">Product</a>
+      <a href="shop.html">Shop</a>
+      <a href="camp.html">Camp</a>
+      <a href="story.html">Story</a>
+      <a href="mypage.html">Member</a>
+    </nav>
+    <div class="util">
+      <a class="hide-m" href="login.html">로그인</a>
+      <a class="hide-m" href="login.html">회원가입</a>
+      <a class="cart" href="shop.html" aria-label="장바구니"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="1.8" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M6 6L5 3H2"/></svg>0</a>
+      <button class="menu-toggle" aria-label="메뉴 열기" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="inner">
+    <div class="sub_head">
+      <h1>Shop</h1>
+      <p style="font-size:15px;color:var(--muted);padding-bottom:24px">회원 로그인 시 회원가가 표시됩니다 · 포인트는 100만 원 단위로 사용</p>
+    </div>
+
+    <section class="sub_body shop_grid" style="padding-bottom:120px">
+      <div class="products">
+        <article class="product">
+          <div class="img"><span class="badge">BEST</span><img src="assets/img/pouch.jpg" alt="아이바디 1박스"></div>
+          <div class="meta"><div><p class="name">i-body</p><small>아이바디 · 1박스 (125ml × 30포)</small></div><p class="price">199,000원</p></div>
+          <div class="actions"><button class="btn outline sm" type="button" data-add="아이바디 1박스|199000">장바구니</button><button class="btn sm" type="button">바로 구매</button></div>
+        </article>
+        <article class="product">
+          <div class="img" style="background:#EAF1F7"><img src="assets/img/m7.jpg" alt="메디워터 7 1박스"></div>
+          <div class="meta"><div><p class="name">Medi Water 7</p><small>메디워터 7 · 1박스</small></div><p class="price">66,000원</p></div>
+          <div class="actions"><button class="btn outline sm" type="button" data-add="메디워터 7|66000">장바구니</button><button class="btn sm" type="button">바로 구매</button></div>
+        </article>
+        <article class="product">
+          <div class="img"><img src="assets/img/pouch.jpg" alt="" style="width:40%;left:38%"><img src="assets/img/m7.jpg" alt="" style="width:36%;left:70%"></div>
+          <div class="meta"><div><p class="name">Weekly Set</p><small>아이바디 1박스 + 메디워터 7 1박스</small></div><p class="price">250,000원</p></div>
+          <div class="actions"><button class="btn outline sm" type="button" data-add="Weekly Set|250000">장바구니</button><button class="btn sm" type="button">바로 구매</button></div>
+        </article>
+        <article class="product">
+          <div class="img" style="background:var(--black);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:32px"><p class="en" style="font-size:22px;text-transform:uppercase;color:#aaa">Member Pack</p><div><p class="en" style="font-size:44px;font-weight:600;line-height:1">1,000,000</p><p style="font-size:14px;color:#aaa;margin-top:10px">포인트로 결제 가능한 구성</p></div></div>
+          <div class="meta"><div><p class="name">Member Pack</p><small>아이바디 5박스 + 메디워터 1박스</small></div><p class="price">1,000,000원</p></div>
+          <div class="actions"><button class="btn outline sm" type="button" data-add="Member Pack|1000000">장바구니</button><button class="btn sm" type="button">포인트로 구매</button></div>
+        </article>
+      </div>
+
+      <!-- 주문서: 실제 구현 시 서버 세션/장바구니 API 연동 -->
+      <aside class="order" id="order">
+        <h2>Order</h2>
+        <div id="cart-lines">
+          <div class="row"><span>아이바디 1박스 × 1</span><span class="en" style="font-size:18px">199,000</span></div>
+          <div class="row"><span>메디워터 7 × 1</span><span class="en" style="font-size:18px">66,000</span></div>
+        </div>
+        <div class="row total"><span>합계</span><span class="price" id="cart-total">265,000원</span></div>
+        <fieldset>
+          <legend>결제 방법</legend>
+          <label class="opt"><input type="radio" name="pay" value="card" checked> 카드 결제</label>
+          <label class="opt"><input type="radio" name="pay" value="bank"> 계좌 입금 (우리은행 1005-704-769931)</label>
+          <label class="opt point"><span style="display:flex;align-items:center;gap:10px"><input type="radio" name="pay" value="point"> 포인트 사용</span><small>잔여 포인트 1,200,000 · 사용 가능 1,000,000</small></label>
+        </fieldset>
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px"><input type="checkbox" name="tax"> 세금계산서 발행</label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label for="addr" style="font-size:14px;font-weight:700">배송지</label>
+          <input id="addr" type="text" placeholder="주소를 입력하세요">
+        </div>
+        <button class="btn" type="button" id="checkout">265,000원 결제하기</button>
+        <p class="note" style="margin:0">선결제 후 출고. 주문이 확인되면 관리자 장부에 입금·수당이 자동 기록됩니다.</p>
+      </aside>
+    </section>
+  </div>
+</main>
+<script>
+/* 데모용 장바구니 — 실제 구현 시 서버 API로 교체 */
+(function(){
+  var lines=[['아이바디 1박스',199000],['메디워터 7',66000]];
+  var box=document.getElementById('cart-lines'),tot=document.getElementById('cart-total'),btn=document.getElementById('checkout');
+  function won(n){return n.toLocaleString('ko-KR');}
+  function render(){box.innerHTML='';var sum=0;lines.forEach(function(l){sum+=l[1];var d=document.createElement('div');d.className='row';d.innerHTML='<span>'+l[0]+' × 1</span><span class="en" style="font-size:18px">'+won(l[1])+'</span>';box.appendChild(d);});tot.textContent=won(sum)+'원';btn.textContent=won(sum)+'원 결제하기';}
+  document.querySelectorAll('[data-add]').forEach(function(b){b.addEventListener('click',function(){var p=b.dataset.add.split('|');lines.push([p[0],+p[1]]);render();document.getElementById('order').scrollIntoView({behavior:'smooth',block:'start'});});});
+  render();
+})();
+</script>
+<footer class="footer">
+  <div class="wrap">
+    <div class="cols">
+      <a class="wordmark" href="index.html">i-body</a>
+      <ul>
+        <li><h3>Company</h3><strong>주식회사 아이바디</strong><p>대표 강신빈<br>사업자등록번호 721-81-3122<br>경기도 양주시 장흥면 호국로73번길 185 아이바디체험관</p></li>
+        <li><h3>Customer</h3><strong>010-6365-3336</strong><p>캠프 문의 010-8696-7853<br>jihyun502@naver.com<br>평일 10:00–18:00</p></li>
+        <li class="sns"><h3>SNS</h3><a href="#">Instagram</a><a href="#">Facebook</a><a href="#">KakaoStory</a></li>
+      </ul>
+    </div>
+    <p class="copyright">Copyright © 주식회사 아이바디. All rights reserved.</p>
+  </div>
+</footer>
+<script src="js/main.js"></script>
+</body>
+</html>
